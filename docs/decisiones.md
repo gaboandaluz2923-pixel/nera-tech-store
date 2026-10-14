@@ -29,5 +29,5 @@ Registro corto de decisiones técnicas y de negocio, con fecha, para no volver a
 
 ## Fase actual
 Fase 1 — Proveedores, listas y mejor precio: terminada.
-Fase 2 — Catálogo y tienda: construida y probada en local con una copia de producción. Falta en producción:
-correr 0003, la corrección de Idecom, la unificación JBL y las fichas; fijar precios de venta de los 12 productos.
+Fase 2 — Catálogo y tienda: terminada y en producción (14 oct 2026), con 12 productos publicados y precios aprobados.
+Fase 3 — Carrito, checkout, Wompi y pedidos: plan propuesto, esperando "ok" de Gabriel.
