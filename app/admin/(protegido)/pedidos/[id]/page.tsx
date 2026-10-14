@@ -33,6 +33,7 @@ type Pedido = PedidoBase & {
   entrega: {
     nombre: string;
     telefono: string;
+    telefono_alterno?: string | null;
     correo: string;
     municipio: string;
     departamento: string | null;
@@ -43,7 +44,8 @@ type Pedido = PedidoBase & {
   factura_numero: string | null;
   factura_archivo: string | null;
   factura_emitida_en: string | null;
-  clientes: { correo: string | null; auth_user_id: string | null } | null;
+  cliente_id: string | null;
+  clientes: { correo: string | null; auth_user_id: string | null; telefono_alterno: string | null; cumple_dia: number | null; cumple_mes: number | null } | null;
   lineas_pedido: { id: string; nombre: string; cantidad: number; precio_unitario: number }[];
   pagos: { id: string; metodo: string; monto: number; estado: string; referencia_externa: string | null; created_at: string }[];
   pedido_eventos: { id: string; estado_anterior: string | null; estado_nuevo: string; nota: string | null; usuario: string | null; created_at: string }[];
@@ -67,7 +69,7 @@ async function Detalle({ params }: { params: PageProps<"/admin/pedidos/[id]">["p
     .select(
       `id, numero, token, estado, forma_pago, subtotal, envio, total, notas, created_at, entrega, facturacion,
        pagado_en, confirmado_en, entregado_en, factura_estado, factura_numero, factura_archivo, factura_emitida_en,
-       clientes(correo, auth_user_id),
+       cliente_id, clientes(correo, auth_user_id, telefono_alterno, cumple_dia, cumple_mes),
        lineas_pedido(id, nombre, cantidad, precio_unitario),
        pagos(id, metodo, monto, estado, referencia_externa, created_at),
        pedido_eventos(id, estado_anterior, estado_nuevo, nota, usuario, created_at)`
@@ -90,6 +92,14 @@ async function Detalle({ params }: { params: PageProps<"/admin/pedidos/[id]">["p
   const waCliente = (m: string) => enlaceWhatsAppA(tel, m);
   const eventos = [...p.pedido_eventos].sort((a, b) => b.created_at.localeCompare(a.created_at));
   const facturar = porFacturar(p);
+  const { count: pedidosCliente } = p.cliente_id
+    ? await supabase
+        .from("pedidos")
+        .select("id", { count: "exact", head: true })
+        .eq("cliente_id", p.cliente_id)
+        .not("estado", "in", "(cancelado,devuelto)")
+    : { count: 0 };
+  const alterno = p.entrega.telefono_alterno || p.clientes?.telefono_alterno;
 
   return (
     <div className="space-y-6">
@@ -300,6 +310,15 @@ async function Detalle({ params }: { params: PageProps<"/admin/pedidos/[id]">["p
             <dl>
               <Dato etiqueta="Nombre">{p.entrega.nombre}</Dato>
               <Dato etiqueta="Teléfono">{p.entrega.telefono}</Dato>
+              {alterno ? <Dato etiqueta="Teléfono alterno">{alterno}</Dato> : null}
+              {(pedidosCliente ?? 0) > 1 ? (
+                <Dato etiqueta="Cliente">
+                  <span className="rounded-full bg-marca/10 px-2 py-0.5 text-xs font-medium text-marca">Frecuente · {pedidosCliente} pedidos</span>
+                </Dato>
+              ) : null}
+              {p.clientes?.cumple_dia && p.clientes?.cumple_mes ? (
+                <Dato etiqueta="Cumpleaños">{`${p.clientes.cumple_dia}/${p.clientes.cumple_mes}`}</Dato>
+              ) : null}
               <Dato etiqueta="Correo">{p.entrega.correo}</Dato>
               <Dato etiqueta="Dirección">
                 {p.entrega.direccion}, {[p.entrega.municipio, p.entrega.departamento].filter(Boolean).join(", ")}

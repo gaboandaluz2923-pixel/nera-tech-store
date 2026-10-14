@@ -40,11 +40,16 @@ async function Contenido() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
         <span>Entraste como {user.email}</span>
-        <form action={salir}>
-          <Button type="submit" variant="ghost" size="sm">
-            Salir
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/mi-cuenta" />}>
+            Mi cuenta
           </Button>
-        </form>
+          <form action={salir}>
+            <Button type="submit" variant="ghost" size="sm">
+              Salir
+            </Button>
+          </form>
+        </div>
       </div>
       {pedidos.length ? (
         <ul className="divide-y rounded-xl border">

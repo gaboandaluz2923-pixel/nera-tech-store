@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { Search, UserRound } from "lucide-react";
 import { CATEGORIAS } from "@/lib/tienda/formato";
 import { catalogo } from "@/lib/tienda/datos";
 import { CarritoBoton } from "./carrito-hoja";
@@ -27,6 +27,13 @@ export async function Encabezado() {
             className="h-10 w-full rounded-full border bg-muted/40 pr-3 pl-9 text-sm outline-none focus-visible:border-marca focus-visible:ring-3 focus-visible:ring-marca/30"
           />
         </form>
+        <Link
+          href="/mi-cuenta"
+          aria-label="Mi cuenta"
+          className="flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-muted"
+        >
+          <UserRound className="size-6" aria-hidden />
+        </Link>
         <CarritoBoton />
       </div>
       <nav aria-label="Categorías" className="mx-auto max-w-6xl overflow-x-auto px-2">

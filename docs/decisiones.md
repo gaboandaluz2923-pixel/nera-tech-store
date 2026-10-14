@@ -37,6 +37,8 @@ Registro corto de decisiones técnicas y de negocio, con fecha, para no volver a
 | 2026-10-14 | Envío gratis "con accesorio" = pedido con un celular y al menos un accesorio | Premia el bundle (Completá tu equipo); se activa en Configuración |
 | 2026-10-14 | Al confirmar un pedido se descuentan las unidades propias en bodega | El stock propio refleja lo vendido sin pasos extra |
 
+| 2026-10-14 | "Mi cuenta": datos, teléfono alterno, cumpleaños (día y mes, sin año), hasta 5 direcciones y permiso de ofertas | Pedido de Gabriel; el permiso explícito hace falta antes de mandar promociones |
+| 2026-10-14 | Puntos (fase 4): opción B, 1 punto por cada $10 (1 punto = $0.10), se ganan con pedido entregado y pagado, vencen a 12 meses; regalo de cumpleaños de $5. Reglas editables | Decisión de Gabriel; con margen de 8–12% en celulares cuesta ~10% de la ganancia |
 ## Fase actual
 Fase 1 — Proveedores, listas y mejor precio: terminada.
 Fase 2 — Catálogo y tienda: terminada y en producción (14 oct 2026).

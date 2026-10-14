@@ -161,6 +161,14 @@ el estado, cómo pagar (cuentas para transferencia, botón para reintentar la ta
 0%), y la factura cuando la subís. Puede entrar con Google para ver todos sus pedidos en **Mis pedidos**;
 aparecen solos los que hizo con el mismo correo, y puede agregar otros con número de pedido y teléfono.
 
+## Mi cuenta (lo que ve el cliente con Google)
+El ícono de persona arriba a la derecha de la tienda lleva a **Mi cuenta**. Ahí el cliente guarda su nombre,
+teléfono, teléfono alterno, cumpleaños (solo día y mes), hasta 5 direcciones con punto de referencia, y si
+quiere recibir ofertas por WhatsApp o correo. Si compra con la sesión abierta, el formulario de compra se
+llena solo y puede elegir la dirección con un toque; si escribe una dirección nueva, se guarda en su cuenta.
+En cada pedido del panel ves el **teléfono alterno**, el **cumpleaños** y la etiqueta **Frecuente** si ya
+tiene más de un pedido.
+
 ## Equipo (quién entra al panel)
 Solo entran al panel los correos de la lista de equipo (tabla `equipo` en Supabase). Los clientes que
 entran con Google no pueden ver el panel. Para agregar a alguien del equipo: Supabase → SQL Editor →

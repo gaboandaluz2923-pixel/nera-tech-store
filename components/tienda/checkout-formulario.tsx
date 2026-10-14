@@ -3,9 +3,26 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useSyncExternalStore, useTransition } from "react";
-import { Banknote, CreditCard, Landmark, Lock, Percent, ShieldCheck } from "lucide-react";
-import { confirmarPedido } from "@/app/(tienda)/checkout/actions";
+import {
+  useEffect,
+  useState,
+  useSyncExternalStore,
+  useTransition,
+} from "react";
+import {
+  Banknote,
+  CreditCard,
+  Landmark,
+  Lock,
+  Percent,
+  ShieldCheck,
+} from "lucide-react";
+import {
+  confirmarPedido,
+  datosCuentaParaCheckout,
+  type DatosCuenta,
+} from "@/app/(tienda)/checkout/actions";
+import type { Direccion } from "@/lib/tienda/cuentas";
 import { Button } from "@/components/ui/button";
 import { vaciarCarrito } from "@/lib/tienda/carrito";
 import { usd2, cuota } from "@/lib/tienda/formato";
@@ -65,27 +82,70 @@ export function CheckoutFormulario(p: Props) {
   const [errores, setErrores] = useState<Record<string, string>>({});
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [zona, setZona] = useState(p.zonasContraEntrega[0] ?? p.otraZona);
-  const [forma, setForma] = useState<FormaPago>(p.zonasContraEntrega.length ? "contra_entrega" : "wompi");
+  const [forma, setForma] = useState<FormaPago>(
+    p.zonasContraEntrega.length ? "contra_entrega" : "wompi",
+  );
   const [creditoFiscal, setCreditoFiscal] = useState(false);
+  // Con sesión de Google: datos y direcciones guardadas para llenar el formulario solo
+  const [cuenta, setCuenta] = useState<DatosCuenta>(null);
+  const [dirSel, setDirSel] = useState<Direccion | null>(null);
+  const [guardarDir, setGuardarDir] = useState(true);
+  useEffect(() => {
+    let vigente = true;
+    datosCuentaParaCheckout()
+      .then((c) => {
+        if (!vigente || !c) return;
+        setCuenta(c);
+        const d = c.direcciones.find((x) => x.principal) ?? c.direcciones[0];
+        if (d) usarDireccion(d);
+      })
+      .catch(() => {});
+    return () => {
+      vigente = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  function usarDireccion(d: Direccion | null) {
+    setDirSel(d);
+    if (d)
+      setZona(
+        p.zonasContraEntrega.includes(d.zona) || d.zona === p.otraZona
+          ? d.zona
+          : p.otraZona,
+      );
+  }
 
   const contraEntrega = zona !== p.otraZona;
   const total = resumen?.total ?? 0;
   const tasaCero = total >= p.minimoTasaCero;
-  const formaValida: FormaPago = forma === "contra_entrega" && !contraEntrega ? "wompi" : forma === "tasa_cero" && !tasaCero ? "wompi" : forma;
+  const formaValida: FormaPago =
+    forma === "contra_entrega" && !contraEntrega
+      ? "wompi"
+      : forma === "tasa_cero" && !tasaCero
+        ? "wompi"
+        : forma;
 
   // En el servidor no hay carrito: hasta que el navegador lo lea, mostrar un esqueleto
   const montado = useSyncExternalStore(
     () => () => {},
     () => true,
-    () => false
+    () => false,
   );
-  if (!montado) return <div className="h-96 animate-pulse rounded-2xl bg-muted" aria-hidden />;
+  if (!montado)
+    return (
+      <div className="h-96 animate-pulse rounded-2xl bg-muted" aria-hidden />
+    );
 
   if (!lineas.length && !enviando) {
     return (
       <div className="rounded-xl border border-dashed p-8 text-center">
         <p className="font-medium">Tu carrito está vacío.</p>
-        <Button className="mt-4" size="lg" nativeButton={false} render={<Link href="/celulares" />}>
+        <Button
+          className="mt-4"
+          size="lg"
+          nativeButton={false}
+          render={<Link href="/celulares" />}
+        >
           Ver celulares
         </Button>
       </div>
@@ -101,6 +161,8 @@ export function CheckoutFormulario(p: Props) {
       sitio: g("sitio"),
       nombre: g("nombre"),
       telefono: g("telefono"),
+      telefonoAlterno: g("telefonoAlterno"),
+      guardarDireccion: Boolean(cuenta && !dirSel && guardarDir),
       correo: g("correo"),
       zona,
       departamento: g("departamento"),
@@ -129,27 +191,53 @@ export function CheckoutFormulario(p: Props) {
       setErrores(r.campos ?? {});
       setMensaje(r.mensaje);
       const primero = Object.keys(r.campos ?? {})[0];
-      const el = primero ? document.getElementById(`co-${primero}`) : document.getElementById("co-mensaje");
+      const el = primero
+        ? document.getElementById(`co-${primero}`)
+        : document.getElementById("co-mensaje");
       el?.scrollIntoView({ behavior: "smooth", block: "center" });
-      if (primero) (el as HTMLInputElement | null)?.focus({ preventScroll: true });
+      if (primero)
+        (el as HTMLInputElement | null)?.focus({ preventScroll: true });
     });
   }
 
-  const opciones: { id: FormaPago; titulo: string; texto: string; icono: typeof Banknote; activa: boolean; nota?: string }[] = [
+  const opciones: {
+    id: FormaPago;
+    titulo: string;
+    texto: string;
+    icono: typeof Banknote;
+    activa: boolean;
+    nota?: string;
+  }[] = [
     {
       id: "contra_entrega",
       titulo: "Efectivo al recibir",
       texto: "Pagás cuando te lo entregamos.",
       icono: Banknote,
       activa: contraEntrega,
-      nota: contraEntrega ? undefined : `Solo en ${p.zonasContraEntrega.join(", ")}.`,
+      nota: contraEntrega
+        ? undefined
+        : `Solo en ${p.zonasContraEntrega.join(", ")}.`,
     },
-    { id: "wompi", titulo: "Tarjeta de crédito o débito", texto: "Pago seguro con Wompi. Visa y Mastercard.", icono: CreditCard, activa: true },
-    { id: "transferencia", titulo: "Transferencia bancaria", texto: "Te mostramos las cuentas al confirmar.", icono: Landmark, activa: true },
+    {
+      id: "wompi",
+      titulo: "Tarjeta de crédito o débito",
+      texto: "Pago seguro con Wompi. Visa y Mastercard.",
+      icono: CreditCard,
+      activa: true,
+    },
+    {
+      id: "transferencia",
+      titulo: "Transferencia bancaria",
+      texto: "Te mostramos las cuentas al confirmar.",
+      icono: Landmark,
+      activa: true,
+    },
     {
       id: "tasa_cero",
       titulo: `Tasa 0% hasta ${p.mesesTasaCero} meses`,
-      texto: tasaCero ? `${p.mesesTasaCero} cuotas de ${usd2(cuota(total, p.mesesTasaCero))}. Lo procesamos por WhatsApp.` : "",
+      texto: tasaCero
+        ? `${p.mesesTasaCero} cuotas de ${usd2(cuota(total, p.mesesTasaCero))}. Lo procesamos por WhatsApp.`
+        : "",
       icono: Percent,
       activa: tasaCero,
       nota: tasaCero ? undefined : `Para compras desde $${p.minimoTasaCero}.`,
@@ -157,14 +245,18 @@ export function CheckoutFormulario(p: Props) {
   ];
 
   const textoBoton =
-    formaValida === "wompi" ? `Pagar ${usd2(total)} con tarjeta` : `Confirmar pedido · ${usd2(total)}`;
+    formaValida === "wompi"
+      ? `Pagar ${usd2(total)} con tarjeta`
+      : `Confirmar pedido · ${usd2(total)}`;
 
   return (
     <form
       onSubmit={enviar}
       onInput={(e) => {
         // Al corregir un campo, su aviso rojo desaparece
-        const nombre = (e.target as HTMLInputElement).name || (e.target as HTMLElement).id.replace(/^co-/, "");
+        const nombre =
+          (e.target as HTMLInputElement).name ||
+          (e.target as HTMLElement).id.replace(/^co-/, "");
         if (nombre && errores[nombre]) {
           setErrores((previos) => {
             const resto = { ...previos };
@@ -176,18 +268,53 @@ export function CheckoutFormulario(p: Props) {
       noValidate
       className="grid gap-8 lg:grid-cols-[1fr_380px]"
     >
-      <input type="text" name="sitio" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden />
+      <input
+        type="text"
+        name="sitio"
+        tabIndex={-1}
+        autoComplete="off"
+        className="hidden"
+        aria-hidden
+      />
 
       <div className="space-y-8">
-        <section aria-labelledby="t-datos" className="space-y-4">
-          <h2 id="t-datos" className="text-lg font-bold">
-            1. Tus datos
-          </h2>
-          <Campo id="co-nombre" etiqueta="Nombre y apellido" error={errores.nombre}>
-            <input id="co-nombre" name="nombre" autoComplete="name" className={claseEntrada(errores.nombre)} />
+        <section
+          key={cuenta ? "cuenta" : "visita"}
+          aria-labelledby="t-datos"
+          className="space-y-4"
+        >
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 id="t-datos" className="text-lg font-bold">
+              1. Tus datos
+            </h2>
+            {!cuenta ? (
+              <Link
+                href="/cuenta/entrar?volver=/checkout"
+                className="text-sm text-muted-foreground underline"
+              >
+                ¿Tenés cuenta? Entrá y se llena solo
+              </Link>
+            ) : null}
+          </div>
+          <Campo
+            id="co-nombre"
+            etiqueta="Nombre y apellido"
+            error={errores.nombre}
+          >
+            <input
+              id="co-nombre"
+              name="nombre"
+              autoComplete="name"
+              defaultValue={cuenta?.nombre}
+              className={claseEntrada(errores.nombre)}
+            />
           </Campo>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Campo id="co-telefono" etiqueta="Teléfono (WhatsApp)" error={errores.telefono}>
+            <Campo
+              id="co-telefono"
+              etiqueta="Teléfono (WhatsApp)"
+              error={errores.telefono}
+            >
               <input
                 id="co-telefono"
                 name="telefono"
@@ -195,92 +322,219 @@ export function CheckoutFormulario(p: Props) {
                 inputMode="tel"
                 autoComplete="tel-national"
                 placeholder="7123 4567"
+                defaultValue={cuenta?.telefono}
                 className={claseEntrada(errores.telefono)}
               />
             </Campo>
-            <Campo id="co-correo" etiqueta="Correo" error={errores.correo} ayuda="Ahí te llega la factura.">
+            <Campo
+              id="co-correo"
+              etiqueta="Correo"
+              error={errores.correo}
+              ayuda="Ahí te llega la factura."
+            >
               <input
                 id="co-correo"
                 name="correo"
                 type="email"
                 inputMode="email"
                 autoComplete="email"
+                defaultValue={cuenta?.correo}
                 className={claseEntrada(errores.correo)}
               />
             </Campo>
           </div>
+          <Campo
+            id="co-telefonoAlterno"
+            etiqueta="Teléfono alterno (opcional)"
+            error={errores.telefonoAlterno}
+            ayuda="Por si no te encontramos en el primero."
+          >
+            <input
+              id="co-telefonoAlterno"
+              name="telefonoAlterno"
+              type="tel"
+              inputMode="tel"
+              defaultValue={cuenta?.telefonoAlterno}
+              className={claseEntrada(errores.telefonoAlterno)}
+            />
+          </Campo>
         </section>
 
         <section aria-labelledby="t-entrega" className="space-y-4">
           <h2 id="t-entrega" className="text-lg font-bold">
             2. ¿Dónde lo recibís?
           </h2>
-          <Campo id="co-zona" etiqueta="Municipio" error={errores.zona}>
-            <select id="co-zona" value={zona} onChange={(e) => setZona(e.target.value)} className={claseEntrada(errores.zona)}>
-              {p.zonasContraEntrega.map((z) => (
-                <option key={z} value={z}>
-                  {z}
-                </option>
+          {cuenta?.direcciones.length ? (
+            <div
+              className="flex flex-wrap gap-2"
+              role="group"
+              aria-label="Tus direcciones"
+            >
+              {cuenta.direcciones.map((d) => (
+                <button
+                  key={d.id}
+                  type="button"
+                  onClick={() => usarDireccion(d)}
+                  aria-pressed={dirSel?.id === d.id}
+                  className={`rounded-full border px-3 py-1.5 text-sm font-medium ${dirSel?.id === d.id ? "border-marca bg-marca text-white" : "hover:bg-muted"}`}
+                >
+                  {d.nombre}
+                </button>
               ))}
-              <option value={p.otraZona}>{p.otraZona} del país</option>
-            </select>
-          </Campo>
-          {!contraEntrega ? (
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Campo id="co-departamento" etiqueta="Departamento" error={errores.departamento}>
-                <select id="co-departamento" name="departamento" defaultValue="" className={claseEntrada(errores.departamento)}>
-                  <option value="" disabled>
-                    Elegí uno
-                  </option>
-                  {p.departamentos.map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
-                  ))}
-                </select>
-              </Campo>
-              <Campo id="co-municipio" etiqueta="Municipio o distrito" error={errores.municipio}>
-                <input id="co-municipio" name="municipio" className={claseEntrada(errores.municipio)} />
-              </Campo>
+              <button
+                type="button"
+                onClick={() => usarDireccion(null)}
+                aria-pressed={!dirSel}
+                className={`rounded-full border px-3 py-1.5 text-sm font-medium ${!dirSel ? "border-marca bg-marca text-white" : "hover:bg-muted"}`}
+              >
+                Otra dirección
+              </button>
             </div>
           ) : null}
-          <Campo id="co-direccion" etiqueta="Dirección" error={errores.direccion} ayuda="Colonia, calle o pasaje y número de casa.">
-            <input id="co-direccion" name="direccion" autoComplete="street-address" className={claseEntrada(errores.direccion)} />
-          </Campo>
-          <Campo id="co-referencia" etiqueta="Punto de referencia (opcional)" error={errores.referencia}>
-            <input id="co-referencia" name="referencia" placeholder="Ej. frente al parque, portón negro" className={claseEntrada()} />
-          </Campo>
+          <div key={dirSel?.id ?? "nueva"} className="space-y-4">
+            <Campo id="co-zona" etiqueta="Municipio" error={errores.zona}>
+              <select
+                id="co-zona"
+                value={zona}
+                onChange={(e) => setZona(e.target.value)}
+                className={claseEntrada(errores.zona)}
+              >
+                {p.zonasContraEntrega.map((z) => (
+                  <option key={z} value={z}>
+                    {z}
+                  </option>
+                ))}
+                <option value={p.otraZona}>{p.otraZona} del país</option>
+              </select>
+            </Campo>
+            {!contraEntrega ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Campo
+                  id="co-departamento"
+                  etiqueta="Departamento"
+                  error={errores.departamento}
+                >
+                  <select
+                    id="co-departamento"
+                    name="departamento"
+                    defaultValue={dirSel?.departamento ?? ""}
+                    className={claseEntrada(errores.departamento)}
+                  >
+                    <option value="" disabled>
+                      Elegí uno
+                    </option>
+                    {p.departamentos.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                </Campo>
+                <Campo
+                  id="co-municipio"
+                  etiqueta="Municipio o distrito"
+                  error={errores.municipio}
+                >
+                  <input
+                    id="co-municipio"
+                    name="municipio"
+                    defaultValue={
+                      dirSel?.zona === p.otraZona
+                        ? (dirSel?.municipio ?? "")
+                        : ""
+                    }
+                    className={claseEntrada(errores.municipio)}
+                  />
+                </Campo>
+              </div>
+            ) : null}
+            <Campo
+              id="co-direccion"
+              etiqueta="Dirección"
+              error={errores.direccion}
+              ayuda="Colonia, calle o pasaje y número de casa."
+            >
+              <input
+                id="co-direccion"
+                name="direccion"
+                autoComplete="street-address"
+                defaultValue={dirSel?.direccion}
+                className={claseEntrada(errores.direccion)}
+              />
+            </Campo>
+            <Campo
+              id="co-referencia"
+              etiqueta="Punto de referencia (opcional)"
+              error={errores.referencia}
+            >
+              <input
+                id="co-referencia"
+                name="referencia"
+                placeholder="Ej. frente al parque, portón negro"
+                defaultValue={dirSel?.referencia ?? ""}
+                className={claseEntrada()}
+              />
+            </Campo>
+          </div>
+          {cuenta && !dirSel ? (
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={guardarDir}
+                onChange={(e) => setGuardarDir(e.target.checked)}
+                className="size-4 accent-[var(--marca)]"
+              />
+              Guardar esta dirección en mi cuenta
+            </label>
+          ) : null}
         </section>
 
         <section aria-labelledby="t-pago" className="space-y-3">
           <h2 id="t-pago" className="text-lg font-bold">
             3. ¿Cómo pagás?
           </h2>
-          <p className="text-sm text-muted-foreground">El mismo precio con cualquier forma de pago.</p>
-          <div className="grid gap-2" role="radiogroup" aria-labelledby="t-pago">
-            {opciones.map(({ id, titulo, texto, icono: Icono, activa, nota }) => (
-              <label
-                key={id}
-                className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-4 transition-colors ${
-                  !activa ? "cursor-not-allowed opacity-50" : formaValida === id ? "border-marca bg-marca/5" : "hover:border-foreground/30"
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="formaPago"
-                  value={id}
-                  checked={formaValida === id}
-                  disabled={!activa}
-                  onChange={() => setForma(id)}
-                  className="mt-1 size-4 accent-[var(--marca)]"
-                />
-                <Icono className="mt-0.5 size-5 shrink-0 text-marca" aria-hidden />
-                <span>
-                  <span className="block font-semibold">{titulo}</span>
-                  <span className="block text-sm text-muted-foreground">{activa ? texto : nota}</span>
-                </span>
-              </label>
-            ))}
+          <p className="text-sm text-muted-foreground">
+            El mismo precio con cualquier forma de pago.
+          </p>
+          <div
+            className="grid gap-2"
+            role="radiogroup"
+            aria-labelledby="t-pago"
+          >
+            {opciones.map(
+              ({ id, titulo, texto, icono: Icono, activa, nota }) => (
+                <label
+                  key={id}
+                  className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-4 transition-colors ${
+                    !activa
+                      ? "cursor-not-allowed opacity-50"
+                      : formaValida === id
+                        ? "border-marca bg-marca/5"
+                        : "hover:border-foreground/30"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="formaPago"
+                    value={id}
+                    checked={formaValida === id}
+                    disabled={!activa}
+                    onChange={() => setForma(id)}
+                    className="mt-1 size-4 accent-[var(--marca)]"
+                  />
+                  <Icono
+                    className="mt-0.5 size-5 shrink-0 text-marca"
+                    aria-hidden
+                  />
+                  <span>
+                    <span className="block font-semibold">{titulo}</span>
+                    <span className="block text-sm text-muted-foreground">
+                      {activa ? texto : nota}
+                    </span>
+                  </span>
+                </label>
+              ),
+            )}
           </div>
         </section>
 
@@ -288,7 +542,9 @@ export function CheckoutFormulario(p: Props) {
           <h2 id="t-factura" className="text-lg font-bold">
             4. Factura
           </h2>
-          <p className="text-sm text-muted-foreground">Te enviamos factura electrónica de consumidor final a tu correo.</p>
+          <p className="text-sm text-muted-foreground">
+            Te enviamos factura electrónica de consumidor final a tu correo.
+          </p>
           <label className="flex items-center gap-2 text-sm font-medium">
             <input
               type="checkbox"
@@ -300,22 +556,53 @@ export function CheckoutFormulario(p: Props) {
           </label>
           {creditoFiscal ? (
             <div className="grid gap-4 rounded-xl border p-4 sm:grid-cols-2">
-              <Campo id="co-razonSocial" etiqueta="Nombre o razón social" error={errores.razonSocial}>
-                <input id="co-razonSocial" name="razonSocial" className={claseEntrada(errores.razonSocial)} />
+              <Campo
+                id="co-razonSocial"
+                etiqueta="Nombre o razón social"
+                error={errores.razonSocial}
+              >
+                <input
+                  id="co-razonSocial"
+                  name="razonSocial"
+                  className={claseEntrada(errores.razonSocial)}
+                />
               </Campo>
-              <Campo id="co-giro" etiqueta="Giro o actividad" error={errores.giro}>
-                <input id="co-giro" name="giro" className={claseEntrada(errores.giro)} />
+              <Campo
+                id="co-giro"
+                etiqueta="Giro o actividad"
+                error={errores.giro}
+              >
+                <input
+                  id="co-giro"
+                  name="giro"
+                  className={claseEntrada(errores.giro)}
+                />
               </Campo>
               <Campo id="co-nit" etiqueta="NIT" error={errores.nit}>
-                <input id="co-nit" name="nit" inputMode="numeric" className={claseEntrada(errores.nit)} />
+                <input
+                  id="co-nit"
+                  name="nit"
+                  inputMode="numeric"
+                  className={claseEntrada(errores.nit)}
+                />
               </Campo>
               <Campo id="co-nrc" etiqueta="NRC" error={errores.nrc}>
-                <input id="co-nrc" name="nrc" inputMode="numeric" className={claseEntrada(errores.nrc)} />
+                <input
+                  id="co-nrc"
+                  name="nrc"
+                  inputMode="numeric"
+                  className={claseEntrada(errores.nrc)}
+                />
               </Campo>
             </div>
           ) : null}
           <Campo id="co-notas" etiqueta="Nota para tu pedido (opcional)">
-            <textarea id="co-notas" name="notas" rows={2} className={`${claseEntrada()} h-auto py-2`} />
+            <textarea
+              id="co-notas"
+              name="notas"
+              rows={2}
+              className={`${claseEntrada()} h-auto py-2`}
+            />
           </Campo>
         </section>
       </div>
@@ -325,16 +612,31 @@ export function CheckoutFormulario(p: Props) {
           <h2 className="font-bold">Tu pedido</h2>
           <ul className="space-y-3" aria-busy={cargando}>
             {(resumen?.lineas ?? []).map((l) => (
-              <li key={l.varianteId} className="flex items-center gap-3 text-sm">
+              <li
+                key={l.varianteId}
+                className="flex items-center gap-3 text-sm"
+              >
                 <span className="relative size-14 shrink-0 overflow-hidden rounded-md border bg-white">
-                  {l.imagen ? <Image src={l.imagen.url} alt="" fill sizes="56px" className="object-contain p-1" /> : null}
+                  {l.imagen ? (
+                    <Image
+                      src={l.imagen.url}
+                      alt=""
+                      fill
+                      sizes="56px"
+                      className="object-contain p-1"
+                    />
+                  ) : null}
                   <span className="absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-foreground text-[11px] text-background">
                     {l.cantidad}
                   </span>
                 </span>
                 <span className="min-w-0 flex-1 leading-tight">
                   {l.nombreProducto}
-                  {l.detalle ? <span className="block text-xs text-muted-foreground">{l.detalle}</span> : null}
+                  {l.detalle ? (
+                    <span className="block text-xs text-muted-foreground">
+                      {l.detalle}
+                    </span>
+                  ) : null}
                 </span>
                 <span className="font-medium">{usd2(l.total)}</span>
               </li>
@@ -348,7 +650,13 @@ export function CheckoutFormulario(p: Props) {
               </div>
               <div className="flex justify-between">
                 <dt>Envío</dt>
-                <dd>{resumen.envio === 0 ? <span className="font-medium text-green-700">Gratis</span> : usd2(resumen.envio)}</dd>
+                <dd>
+                  {resumen.envio === 0 ? (
+                    <span className="font-medium text-green-700">Gratis</span>
+                  ) : (
+                    usd2(resumen.envio)
+                  )}
+                </dd>
               </div>
               <div className="flex justify-between pt-1 text-lg font-bold">
                 <dt>Total</dt>
@@ -358,17 +666,29 @@ export function CheckoutFormulario(p: Props) {
           ) : null}
 
           {mensaje ? (
-            <p id="co-mensaje" role="alert" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+            <p
+              id="co-mensaje"
+              role="alert"
+              className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive"
+            >
               {mensaje}
             </p>
           ) : null}
-          <Button type="submit" size="lg" className="h-12 w-full text-base" disabled={enviando || !resumen || cargando}>
-            {formaValida === "wompi" ? <Lock className="size-4" aria-hidden /> : null}
+          <Button
+            type="submit"
+            size="lg"
+            className="h-12 w-full text-base"
+            disabled={enviando || !resumen || cargando}
+          >
+            {formaValida === "wompi" ? (
+              <Lock className="size-4" aria-hidden />
+            ) : null}
             {enviando ? "Enviando…" : textoBoton}
           </Button>
           <p className="flex items-start gap-2 text-xs text-muted-foreground">
             <ShieldCheck className="size-4 shrink-0 text-marca" aria-hidden />
-            Garantía Nera Tech por escrito. Usamos tus datos solo para tu pedido y tu factura.
+            Garantía Nera Tech por escrito. Usamos tus datos solo para tu pedido
+            y tu factura.
           </p>
         </div>
       </aside>

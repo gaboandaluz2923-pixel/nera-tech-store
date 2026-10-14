@@ -36,6 +36,12 @@ export const esquemaCheckout = z
       .string()
       .transform((t) => t.replace(/\D/g, "").replace(/^503(?=\d{8}$)/, ""))
       .refine((t) => /^[267]\d{7}$/.test(t), "Escribí un teléfono de 8 dígitos."),
+    telefonoAlterno: z
+      .string()
+      .optional()
+      .default("")
+      .transform((t) => t.replace(/\D/g, "").replace(/^503(?=\d{8}$)/, ""))
+      .refine((t) => t === "" || /^[267]\d{7}$/.test(t), "El teléfono alterno debe tener 8 dígitos."),
     correo: z.string().trim().toLowerCase().email("Revisá tu correo: ahí te llega la factura."),
     zona: texto(80).min(1, "Elegí dónde lo recibís."),
     departamento: texto(40).optional().default(""),
@@ -118,11 +124,21 @@ export async function crearPedido(datos: DatosCheckout, origen: string): Promise
   };
   let clienteId = existente?.id as string | undefined;
   if (clienteId) {
-    await sb.from("clientes").update({ nombre: datos.nombre, telefono: datos.telefono, direccion }).eq("id", clienteId);
+    await sb
+      .from("clientes")
+      .update({ nombre: datos.nombre, telefono: datos.telefono, direccion, ...(datos.telefonoAlterno ? { telefono_alterno: datos.telefonoAlterno } : {}) })
+      .eq("id", clienteId);
   } else {
     const { data: nuevo, error } = await sb
       .from("clientes")
-      .insert({ nombre: datos.nombre, telefono: datos.telefono, correo: datos.correo, direccion, origen: "web" })
+      .insert({
+        nombre: datos.nombre,
+        telefono: datos.telefono,
+        telefono_alterno: datos.telefonoAlterno || null,
+        correo: datos.correo,
+        direccion,
+        origen: "web",
+      })
       .select("id")
       .single();
     if (error) throw error;
@@ -143,7 +159,13 @@ export async function crearPedido(datos: DatosCheckout, origen: string): Promise
       envio: resumen.envio,
       descuento: 0,
       total: resumen.total,
-      entrega: { nombre: datos.nombre, telefono: datos.telefono, correo: datos.correo, ...direccion },
+      entrega: {
+        nombre: datos.nombre,
+        telefono: datos.telefono,
+        telefono_alterno: datos.telefonoAlterno || null,
+        correo: datos.correo,
+        ...direccion,
+      },
       facturacion,
       origen: "web",
       notas: datos.notas || null,

@@ -68,3 +68,90 @@ export async function reclamarPedido(usuarioId: string, numero: number, telefono
   await sb.from("clientes").update({ auth_user_id: usuarioId }).eq("id", p.cliente_id);
   return { ok: true, mensaje: `Listo: el pedido #${numero} ya está en tu cuenta.` };
 }
+
+// ---------------------------------------------------------------------------
+// Mi cuenta
+// ---------------------------------------------------------------------------
+export type Direccion = {
+  id: string;
+  nombre: string;
+  zona: string;
+  departamento: string | null;
+  municipio: string | null;
+  direccion: string;
+  referencia: string | null;
+  principal: boolean;
+};
+
+export type Perfil = {
+  id: string;
+  nombre: string;
+  telefono: string | null;
+  telefono_alterno: string | null;
+  correo: string | null;
+  cumple_dia: number | null;
+  cumple_mes: number | null;
+  acepta_whatsapp: boolean;
+  acepta_correo: boolean;
+  direcciones: Direccion[];
+};
+
+const CAMPOS_PERFIL =
+  "id, nombre, telefono, telefono_alterno, correo, cumple_dia, cumple_mes, acepta_whatsapp, acepta_correo, created_at, direcciones(id, nombre, zona, departamento, municipio, direccion, referencia, principal, created_at)";
+
+/**
+ * Perfil del cliente con sesión: el registro de cliente con su correo de Google (o el más antiguo enlazado).
+ * Si todavía no tiene ninguno, se crea con su nombre y correo de Google.
+ */
+export async function perfilDeUsuario(usuario: User): Promise<Perfil> {
+  const sb = createServiceClient();
+  await enlazarCuenta(usuario);
+  const correo = correoVerificado(usuario);
+  const { data } = await sb
+    .from("clientes")
+    .select(CAMPOS_PERFIL)
+    .eq("auth_user_id", usuario.id)
+    .order("created_at", { ascending: true });
+  type Fila = Perfil & { created_at: string; direcciones: (Direccion & { created_at: string })[] };
+  const filas = (data ?? []) as unknown as Fila[];
+  let fila = filas.find((f) => f.correo && f.correo === correo) ?? filas[0];
+
+  if (!fila) {
+    const nombre =
+      String(usuario.user_metadata?.full_name ?? usuario.user_metadata?.name ?? "").trim() ||
+      (usuario.email ?? "Cliente").split("@")[0];
+    let { data: nuevo, error } = await sb
+      .from("clientes")
+      .insert({ nombre, correo, auth_user_id: usuario.id, origen: "google" })
+      .select(CAMPOS_PERFIL)
+      .single();
+    // Si ese correo ya es de un cliente enlazado a otra cuenta, se crea el perfil sin correo
+    if (error?.code === "23505") {
+      ({ data: nuevo, error } = await sb
+        .from("clientes")
+        .insert({ nombre, auth_user_id: usuario.id, origen: "google" })
+        .select(CAMPOS_PERFIL)
+        .single());
+    }
+    if (error) throw error;
+    fila = nuevo as unknown as Fila;
+  }
+  return {
+    ...fila,
+    direcciones: [...(fila.direcciones ?? [])].sort(
+      (a, b) => Number(b.principal) - Number(a.principal) || a.created_at.localeCompare(b.created_at)
+    ),
+  };
+}
+
+/** Verifica que la dirección sea de alguno de los registros de cliente del usuario. */
+export async function direccionDelUsuario(usuarioId: string, direccionId: string) {
+  const sb = createServiceClient();
+  const { data } = await sb
+    .from("direcciones")
+    .select("id, cliente_id, clientes!inner(auth_user_id)")
+    .eq("id", direccionId)
+    .eq("clientes.auth_user_id", usuarioId)
+    .maybeSingle();
+  return data ? (data.cliente_id as string) : null;
+}
