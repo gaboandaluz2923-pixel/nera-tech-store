@@ -25,8 +25,6 @@ la tienda al instante:
   (una cosa por línea).
 
 Más abajo, **Conexiones** muestra con un punto verde qué claves ya están cargadas en Vercel.
-Muestra qué conexiones están listas (verde) y cuáles faltan (gris). No muestra claves. Los valores se cargan en Vercel.
-
 ## Proveedores
 Una tarjeta por proveedor (Total Link, Maverik, Idecom, Intcomex ya vienen creados).
 - **Días de crédito**: si dos proveedores tienen el mismo costo, gana el que te da más días.
