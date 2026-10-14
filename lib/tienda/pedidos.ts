@@ -3,9 +3,9 @@ import { after } from "next/server";
 import { z } from "zod";
 import { avisarPagoConfirmado, avisarPedidoNuevo } from "@/lib/correos/avisos";
 import { createServiceClient } from "@/lib/supabase/server";
-import { calcularCarrito, type ResumenCarrito } from "@/lib/tienda/calculo";
+import { cotizarPedido, otorgarPuntos } from "@/lib/tienda/beneficios";
+import type { ResumenCarrito } from "@/lib/tienda/calculo";
 import { configTienda } from "@/lib/tienda/datos";
-import { descuentoSinTarjeta } from "@/lib/tienda/formato";
 import { crearEnlacePago, ErrorWompi } from "@/lib/wompi";
 
 // Pedidos de la tienda: se crean y se actualizan SOLO desde el servidor (clave de servicio).
@@ -58,6 +58,10 @@ export const esquemaCheckout = z
     razonSocial: texto(150).optional().default(""),
     giro: texto(150).optional().default(""),
     notas: texto(300).optional().default(""),
+    cupon: texto(40).optional().default(""),
+    usarPuntos: z.boolean().optional().default(false),
+    /** "No quiero recibir publicidad" (por defecto sí recibe) */
+    noOfertas: z.boolean().optional().default(false),
     totalVisto: z.number().nonnegative(),
     lineas: z.array(z.object({ v: z.string(), c: z.number() })).min(1, "Tu carrito está vacío.").max(30),
   })
@@ -85,18 +89,35 @@ export type ResultadoPedido =
 
 const ahora = () => new Date().toISOString();
 
-/** Crea el pedido completo. Los precios salen de la base, no del navegador. */
-export async function crearPedido(datos: DatosCheckout, origen: string): Promise<ResultadoPedido> {
+/** Crea el pedido completo. Los precios y descuentos salen de la base, no del navegador. */
+export async function crearPedido(
+  datos: DatosCheckout,
+  origen: string,
+  opciones: { clientePuntos?: string | null } = {}
+): Promise<ResultadoPedido> {
   const sb = createServiceClient();
-  const [resumen, config] = await Promise.all([calcularCarrito(datos.lineas), configTienda()]);
+  const [cot, config] = await Promise.all([
+    cotizarPedido({
+      lineas: datos.lineas,
+      formaPago: datos.formaPago,
+      cupon: datos.cupon,
+      usarPuntos: datos.usarPuntos,
+      correo: datos.correo,
+      clientePuntos: opciones.clientePuntos ?? null,
+    }),
+    configTienda(),
+  ]);
+  const resumen = cot.resumen;
 
   if (!resumen.lineas.length) return { ok: false, mensaje: "Tu carrito está vacío o los productos ya no están disponibles.", resumen };
   if (resumen.quitadas.length) {
     return { ok: false, mensaje: "Algo de tu carrito ya no está disponible. Revisá el resumen y confirmá de nuevo.", resumen };
   }
-  // Efectivo y transferencia: 6% menos sobre los productos (el envío no se descuenta).
-  const descuento = descuentoSinTarjeta(resumen.subtotal, datos.formaPago);
-  const total = Math.round((resumen.total - descuento) * 100) / 100;
+  if (datos.cupon && cot.cuponError) {
+    return { ok: false, mensaje: cot.cuponError, campos: { cupon: cot.cuponError } };
+  }
+  // Efectivo y transferencia: 6% menos sobre los productos; además un cupón o puntos.
+  const total = cot.total;
   if (Math.abs(total - datos.totalVisto) > 0.009) {
     return { ok: false, mensaje: "El total cambió mientras comprabas. Revisalo y confirmá de nuevo.", resumen };
   }
@@ -129,10 +150,18 @@ export async function crearPedido(datos: DatosCheckout, origen: string): Promise
     referencia: datos.referencia || null,
   };
   let clienteId = existente?.id as string | undefined;
+  // Publicidad: si marcó "No quiero recibir", se respeta; si no marcó, no se cambia lo que ya eligió antes
+  const noOfertas = datos.noOfertas ? { acepta_correo: false, acepta_whatsapp: false, ofertas_elegido_en: ahora() } : {};
   if (clienteId) {
     await sb
       .from("clientes")
-      .update({ nombre: datos.nombre, telefono: datos.telefono, direccion, ...(datos.telefonoAlterno ? { telefono_alterno: datos.telefonoAlterno } : {}) })
+      .update({
+        nombre: datos.nombre,
+        telefono: datos.telefono,
+        direccion,
+        ...(datos.telefonoAlterno ? { telefono_alterno: datos.telefonoAlterno } : {}),
+        ...noOfertas,
+      })
       .eq("id", clienteId);
   } else {
     const { data: nuevo, error } = await sb
@@ -144,6 +173,7 @@ export async function crearPedido(datos: DatosCheckout, origen: string): Promise
         correo: datos.correo,
         direccion,
         origen: "web",
+        ...noOfertas,
       })
       .select("id")
       .single();
@@ -163,7 +193,13 @@ export async function crearPedido(datos: DatosCheckout, origen: string): Promise
       forma_pago: datos.formaPago,
       subtotal: resumen.subtotal,
       envio: resumen.envio,
-      descuento,
+      descuento: cot.descuentoPago,
+      descuento_combos: resumen.descuentoCombos,
+      combos: resumen.combos,
+      cupon_id: cot.cupon?.id ?? null,
+      descuento_cupon: cot.cupon?.monto ?? 0,
+      puntos_usados: cot.puntos?.usados ?? 0,
+      descuento_puntos: cot.puntos?.monto ?? 0,
       total,
       entrega: {
         nombre: datos.nombre,
@@ -187,16 +223,39 @@ export async function crearPedido(datos: DatosCheckout, origen: string): Promise
       nombre: l.nombre,
       cantidad: l.cantidad,
       precio_unitario: l.precio,
+      precio_regular: l.precioRegular,
     }))
   );
   if (e2) {
     await sb.from("pedidos").delete().eq("id", pedido.id);
     throw e2;
   }
+  // Puntos usados: se descuentan del saldo del cliente de la sesión
+  if (cot.puntos && opciones.clientePuntos) {
+    const { error: e3 } = await sb.from("puntos_movimientos").insert({
+      cliente_id: opciones.clientePuntos,
+      pedido_id: pedido.id,
+      tipo: "canje",
+      puntos: -cot.puntos.usados,
+      nota: `Usados en el pedido #${pedido.numero}`,
+      usuario: "cliente",
+    });
+    if (e3) {
+      await sb.from("pedidos").delete().eq("id", pedido.id);
+      throw e3;
+    }
+  }
   await sb.from("pedido_eventos").insert({
     pedido_id: pedido.id,
     estado_nuevo: "pendiente_confirmar",
-    nota: "Pedido hecho en la tienda en línea",
+    nota: [
+      "Pedido hecho en la tienda en línea",
+      cot.cupon ? `cupón ${cot.cupon.codigo} (−$${cot.cupon.monto.toFixed(2)})` : "",
+      cot.puntos ? `${cot.puntos.usados} Puntos Nera (−$${cot.puntos.monto.toFixed(2)})` : "",
+      datos.noOfertas ? "no quiere recibir publicidad" : "",
+    ]
+      .filter(Boolean)
+      .join(" · "),
     usuario: "cliente",
   });
 
@@ -321,6 +380,8 @@ export async function marcarPagado(p: {
     const sitio = p.sitio;
     after(() => avisarPagoConfirmado(p.pedidoId, sitio).catch((e) => console.error("avisarPagoConfirmado", e)));
   }
+  // Puntos Nera: se ganan cuando el pedido está entregado y pagado
+  if (pedido.estado === "entregado") await otorgarPuntos(p.pedidoId).catch((e) => console.error("otorgarPuntos", e));
   return true;
 }
 

@@ -6,7 +6,8 @@ export type DatosPedidoCorreo = {
   nombre: string;
   total: number;
   envio: number;
-  descuento: number; // 6% por efectivo o transferencia; 0 si no aplica
+  /** Combos, 6% por efectivo o transferencia, cupón y puntos (ver lib/tienda/descuentos.ts) */
+  descuentos: { texto: string; monto: number }[];
   formaPago: string;
   pagado: boolean;
   lineas: { nombre: string; cantidad: number; precio: number }[];
@@ -57,7 +58,12 @@ function tablaProductos(d: DatosPedidoCorreo) {
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #eee;border-bottom:1px solid #eee;margin:16px 0">
 ${filas}
 <tr><td style="padding:6px 0;font-size:14px;color:#666">Envío</td><td style="padding:6px 0;font-size:14px;color:#666;text-align:right">${d.envio ? usd(d.envio) : "Gratis"}</td></tr>
-${d.descuento > 0 ? `<tr><td style="padding:6px 0;font-size:14px;color:#1f9d55">Descuento por ${d.formaPago === "contra_entrega" ? "pago en efectivo" : "transferencia"}</td><td style="padding:6px 0;font-size:14px;color:#1f9d55;text-align:right">−${usd(d.descuento)}</td></tr>` : ""}
+${d.descuentos
+  .map(
+    (x) =>
+      `<tr><td style="padding:6px 0;font-size:14px;color:#1f9d55">${esc(x.texto)}</td><td style="padding:6px 0;font-size:14px;color:#1f9d55;text-align:right">−${usd(x.monto)}</td></tr>`
+  )
+  .join("")}
 <tr><td style="padding:8px 0;font-size:16px;font-weight:bold;color:#1c1c1c">Total</td><td style="padding:8px 0;font-size:16px;font-weight:bold;color:#1c1c1c;text-align:right">${usd(d.total)}</td></tr>
 </table>`;
 }
@@ -116,7 +122,7 @@ export type Correo = { asunto: string; html: string; texto: string };
 const textoProductos = (d: DatosPedidoCorreo) =>
   d.lineas.map((l) => `- ${l.cantidad} x ${l.nombre}: ${usd(l.precio * l.cantidad)}`).join("\n") +
   `\nEnvío: ${d.envio ? usd(d.envio) : "Gratis"}` +
-  (d.descuento > 0 ? `\nDescuento (${d.formaPago === "contra_entrega" ? "efectivo" : "transferencia"}): -${usd(d.descuento)}` : "") +
+  d.descuentos.map((x) => `\n${x.texto}: -${usd(x.monto)}`).join("") +
   `\nTotal: ${usd(d.total)}`;
 
 export function correoPedidoRecibido(d: DatosPedidoCorreo): Correo {

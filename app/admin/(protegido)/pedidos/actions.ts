@@ -8,6 +8,7 @@ import type { EstadoAccion } from "@/components/admin/formulario-accion";
 import { SIGUIENTES, type EstadoPedido } from "@/lib/admin/pedidos";
 import { equipo } from "@/lib/admin/sesion";
 import { ETIQUETA_CATALOGO } from "@/lib/tienda/datos";
+import { otorgarPuntos, revertirPuntos } from "@/lib/tienda/beneficios";
 import { marcarPagado } from "@/lib/tienda/pedidos";
 
 // Acciones de la sección Pedidos. Todas verifican que quien las usa sea del equipo.
@@ -101,6 +102,9 @@ export async function cambiarEstadoPedido(_prev: EstadoAccion, form: FormData): 
       nota: "Cobrado en efectivo al entregar",
     });
   }
+  // Puntos Nera: se ganan al quedar entregado y pagado; al cancelar o devolver se revierten
+  if (nuevo === "entregado") await otorgarPuntos(id).catch((e) => console.error("otorgarPuntos", e));
+  if (nuevo === "cancelado" || nuevo === "devuelto") await revertirPuntos(id, usuario).catch((e) => console.error("revertirPuntos", e));
   refrescar(id);
   return ok("Estado actualizado");
 }

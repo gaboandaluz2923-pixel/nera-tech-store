@@ -1,17 +1,19 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useRef, useState } from "react";
-import { Banknote } from "lucide-react";
+import Image from "next/image";
+import { useActionState, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { Banknote, Clock, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   avisarStock,
   type EstadoAviso,
 } from "@/app/(tienda)/producto/[slug]/actions";
-import type { VarianteTienda } from "@/lib/tienda/datos";
+import type { ComboTienda, VarianteTienda } from "@/lib/tienda/datos";
 import {
   DESCUENTO_SIN_TARJETA,
   TEXTO_DISPONIBILIDAD,
   cuota,
+  finDeOferta,
   precioConDescuento,
   usd,
   usd2,
@@ -27,6 +29,7 @@ type Props = {
   productoId: string;
   nombre: string;
   variantes: VarianteTienda[];
+  combos: ComboTienda[];
   whatsapp: string;
   mesesTasaCero: number;
   costoEnvio: number;
@@ -66,9 +69,20 @@ function Opcion({
   );
 }
 
-export function CompraProducto(p: Props) {
+// Minuto actual en el navegador (0 en el servidor): si una oferta ya terminó y la página
+// quedó guardada, se muestra el precio normal sin esperar a que se refresque.
+const sinCambios = () => () => {};
+const minutoActual = () => Math.floor(Date.now() / 60_000) * 60_000;
+function vigente(v: VarianteTienda, ahora: number): VarianteTienda {
+  if (!ahora || !v.oferta?.fin || !v.precioRegular) return v;
+  return new Date(v.oferta.fin).getTime() < ahora ? { ...v, precio: v.precioRegular, precioRegular: null, oferta: null } : v;
+}
+
+export function CompraProducto(props: Props) {
+  const ahora = useSyncExternalStore(sinCambios, minutoActual, () => 0);
+  const p = { ...props, variantes: props.variantes.map((v) => vigente(v, ahora)) };
   // Arranca en la opción disponible más barata, en negro si existe (es el color de las fotos).
-  const [elegida, setElegida] = useState<VarianteTienda>(() => {
+  const [elegidaBase, setElegida] = useState<VarianteTienda>(() => {
     const disponibles = p.variantes.filter(
       (v) => v.disponibilidad !== "agotado",
     );
@@ -79,6 +93,9 @@ export function CompraProducto(p: Props) {
       baratas.find((v) => /negro|black/i.test(v.color ?? "")) ?? baratas[0]
     );
   });
+
+  // Con el precio vigente (si la oferta terminó, el normal)
+  const elegida = p.variantes.find((v) => v.id === elegidaBase.id) ?? elegidaBase;
 
   // La barra fija de abajo aparece cuando el botón principal no está en pantalla
   // (todavía no llegaste o ya lo pasaste): siempre hay un solo botón de compra a la vista.
@@ -169,6 +186,11 @@ export function CompraProducto(p: Props) {
     agregarAlCarrito(elegida.id);
     abrirCarrito();
   };
+  const comprarCombo = (c: ComboTienda) => {
+    agregarAlCarrito(elegida.id);
+    c.items.forEach((i) => agregarAlCarrito(i.varianteId, i.cantidad));
+    abrirCarrito();
+  };
   const envioGratis =
     p.envioGratisDesde !== null && elegida.precio >= p.envioGratisDesde;
 
@@ -176,8 +198,26 @@ export function CompraProducto(p: Props) {
     <div className="space-y-5">
       {/* Precio */}
       <div>
+        {elegida.precioRegular ? (
+          <p className="mb-1 flex flex-wrap items-center gap-2 text-sm">
+            <span className="rounded-md bg-marca px-2 py-0.5 font-semibold text-white">
+              Oferta · ahorrás {usd2(elegida.precioRegular - elegida.precio)}
+            </span>
+            {elegida.oferta?.fin ? (
+              <span className="inline-flex items-center gap-1 text-muted-foreground">
+                <Clock className="size-3.5" aria-hidden />
+                {finDeOferta(elegida.oferta.fin, ahora ? new Date(ahora) : null)}
+              </span>
+            ) : null}
+          </p>
+        ) : null}
         <p className="text-3xl font-bold tracking-tight">
           {usd(elegida.precio)}
+          {elegida.precioRegular ? (
+            <span className="ml-2 text-lg font-normal text-muted-foreground line-through">
+              {usd(elegida.precioRegular)}
+            </span>
+          ) : null}
         </p>
         {conCuotas ? (
           <p className="mt-0.5 text-sm">
@@ -313,6 +353,45 @@ export function CompraProducto(p: Props) {
           </div>
         )}
       </div>
+
+      {/* Combos "Completá tu equipo" */}
+      {!agotada && p.combos.length ? (
+        <section aria-labelledby="t-combos" className="space-y-2">
+          <h2 id="t-combos" className="text-sm font-semibold">
+            Completá tu equipo y ahorrá
+          </h2>
+          {p.combos.slice(0, 2).map((c) => {
+            const normal = elegida.precio + c.items.reduce((s, i) => s + i.precio * i.cantidad, 0);
+            const ahorro = Math.min(c.ahorro, c.items.reduce((s, i) => s + i.precio * i.cantidad, 0));
+            return (
+              <div key={c.id} className="rounded-xl border-2 border-dashed border-marca/50 bg-marca/5 p-3">
+                <div className="flex items-center gap-1.5">
+                  {c.items.map((i) => (
+                    <span key={i.varianteId} className="flex items-center gap-1.5">
+                      <Plus className="size-3.5 text-muted-foreground" aria-hidden />
+                      <span className="relative size-12 overflow-hidden rounded-md border bg-white">
+                        {i.imagen ? <Image src={i.imagen.url} alt={i.imagen.alt} fill sizes="48px" className="object-contain p-0.5" /> : null}
+                      </span>
+                    </span>
+                  ))}
+                </div>
+                <p className="mt-2 text-sm font-semibold">{c.nombre}</p>
+                <p className="text-xs text-muted-foreground">
+                  {c.items.map((i) => `${i.cantidad > 1 ? `${i.cantidad} × ` : ""}${i.nombre}`).join(" + ")}
+                </p>
+                <p className="mt-1 text-sm">
+                  <strong>{usd2(normal - ahorro)}</strong>{" "}
+                  <span className="text-muted-foreground line-through">{usd2(normal)}</span>{" "}
+                  <span className="font-semibold text-green-700">ahorrás {usd2(ahorro)}</span>
+                </p>
+                <Button size="sm" variant="outline" className="mt-2" onClick={() => comprarCombo(c)}>
+                  Agregar combo
+                </Button>
+              </div>
+            );
+          })}
+        </section>
+      ) : null}
 
       {/* Barra fija en el teléfono */}
       <div

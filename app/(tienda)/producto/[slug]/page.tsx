@@ -166,6 +166,7 @@ async function Ficha({ params }: { params: PageProps<"/producto/[slug]">["params
               productoId={p.id}
               nombre={p.nombre}
               variantes={p.variantes}
+              combos={p.combos}
               whatsapp={c.whatsapp}
               mesesTasaCero={c.tasaCero.meses}
               costoEnvio={c.envio.costo}

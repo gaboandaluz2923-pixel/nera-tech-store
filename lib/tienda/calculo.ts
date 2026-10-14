@@ -21,17 +21,37 @@ export type LineaCalculada = {
   detalle: string | null; // "8 GB + 256 GB · Negro"
   categoria: string;
   imagen: { url: string; alt: string } | null;
+  /** Precio que se cobra (el de oferta si hay una vigente) */
   precio: number;
+  /** Precio normal tachado cuando hay oferta; null si no hay */
+  precioRegular: number | null;
+  oferta: { nombre: string; fin: string | null } | null;
   cantidad: number;
   total: number;
   disponibilidad: Disponibilidad;
+};
+
+export type ComboAplicado = { id: string; nombre: string; veces: number; descuento: number };
+
+/** Combo al que le faltan accesorios: se ofrece con un toque en el carrito */
+export type ComboSugerido = {
+  id: string;
+  nombre: string;
+  ahorro: number;
+  faltan: { varianteId: string; nombre: string; cantidad: number; precio: number }[];
 };
 
 export type ResumenCarrito = {
   lineas: LineaCalculada[];
   /** Variantes que ya no se pueden comprar (agotadas, ocultas o sin precio) */
   quitadas: string[];
+  /** Suma de las líneas (con precio de oferta) */
   subtotal: number;
+  combos: ComboAplicado[];
+  descuentoCombos: number;
+  /** Lo que se paga por los productos: subtotal − combos (base del 6%, cupones y envío gratis) */
+  productos: number;
+  combosSugeridos: ComboSugerido[];
   envio: number;
   envioGratis: "monto" | "accesorio" | null;
   faltaParaEnvioGratis: number | null;
@@ -80,6 +100,10 @@ export async function calcularCarrito(entrada: unknown): Promise<ResumenCarrito>
     lineas: [],
     quitadas: [],
     subtotal: 0,
+    combos: [],
+    descuentoCombos: 0,
+    productos: 0,
+    combosSugeridos: [],
     envio: 0,
     envioGratis: null,
     faltaParaEnvioGratis: null,
@@ -88,7 +112,7 @@ export async function calcularCarrito(entrada: unknown): Promise<ResumenCarrito>
   if (!ids.length) return vacio;
 
   const sb = clientePublico();
-  const [{ data, error }, { data: disp, error: e2 }] = await Promise.all([
+  const [{ data, error }, { data: disp, error: e2 }, ofertas] = await Promise.all([
     sb
       .from("variantes")
       .select(
@@ -96,6 +120,7 @@ export async function calcularCarrito(entrada: unknown): Promise<ResumenCarrito>
       )
       .in("id", ids),
     sb.from("disponibilidad_publica").select("variante_id, en_bodega, con_proveedor").in("variante_id", ids),
+    preciosDeOferta(ids),
   ]);
   if (error) throw error;
   if (e2) throw e2;
@@ -125,7 +150,9 @@ export async function calcularCarrito(entrada: unknown): Promise<ResumenCarrito>
           ? formatoAlmacenamiento(f.almacenamiento_gb)
           : `${f.ram_gb} GB + ${formatoAlmacenamiento(f.almacenamiento_gb)}`;
     const imagen = [...p.imagenes].sort((a, b) => Number(b.principal) - Number(a.principal) || a.orden - b.orden)[0];
-    const precio = Number(f.precio);
+    const normal = Number(f.precio);
+    const oferta = ofertas.get(f.id);
+    const precio = oferta && oferta.precio < normal ? oferta.precio : normal;
     lineas.push({
       varianteId: f.id,
       productoId: p.id,
@@ -136,6 +163,8 @@ export async function calcularCarrito(entrada: unknown): Promise<ResumenCarrito>
       categoria: p.categorias?.slug ?? "otros",
       imagen: imagen ? { url: imagen.url, alt: imagen.alt || p.nombre } : null,
       precio,
+      precioRegular: precio < normal ? normal : null,
+      oferta: precio < normal && oferta ? { nombre: oferta.nombre, fin: oferta.fin } : null,
       cantidad: c,
       total: redondear(precio * c),
       disponibilidad,
@@ -143,13 +172,16 @@ export async function calcularCarrito(entrada: unknown): Promise<ResumenCarrito>
   }
 
   const subtotal = redondear(lineas.reduce((s, l) => s + l.total, 0));
+  const { combos, sugeridos } = await aplicarCombos(lineas);
+  const descuentoCombos = redondear(combos.reduce((s, c) => s + c.descuento, 0));
+  const productos = redondear(subtotal - descuentoCombos);
   const hayEquipo = lineas.some((l) => CATEGORIAS_EQUIPO.has(l.categoria));
   const hayAccesorio = lineas.some((l) => !CATEGORIAS_EQUIPO.has(l.categoria));
   const { costo, gratis_desde, gratis_con_accesorio } = config.envio;
   const envioGratis: ResumenCarrito["envioGratis"] =
     !lineas.length
       ? null
-      : gratis_desde !== null && subtotal >= gratis_desde
+      : gratis_desde !== null && productos >= gratis_desde
         ? "monto"
         : gratis_con_accesorio && hayEquipo && hayAccesorio
           ? "accesorio"
@@ -160,9 +192,125 @@ export async function calcularCarrito(entrada: unknown): Promise<ResumenCarrito>
     lineas,
     quitadas,
     subtotal,
+    combos,
+    descuentoCombos,
+    productos,
+    combosSugeridos: sugeridos,
     envio,
     envioGratis,
-    faltaParaEnvioGratis: gratis_desde !== null && !envioGratis && lineas.length ? redondear(gratis_desde - subtotal) : null,
-    total: redondear(subtotal + envio),
+    faltaParaEnvioGratis: gratis_desde !== null && !envioGratis && lineas.length ? redondear(gratis_desde - productos) : null,
+    total: redondear(productos + envio),
   };
+}
+
+/** Precio de oferta vigente por variante (el más bajo si hay varias ofertas). */
+async function preciosDeOferta(ids: string[]) {
+  const mapa = new Map<string, { precio: number; nombre: string; fin: string | null }>();
+  // La base solo deja ver precios de ofertas activas y dentro de sus fechas
+  const { data, error } = await clientePublico()
+    .from("promocion_precios")
+    .select("variante_id, precio, promociones(nombre, fin)")
+    .in("variante_id", ids);
+  if (error) {
+    console.error("No se pudieron leer las ofertas:", error.message);
+    return mapa;
+  }
+  for (const f of (data ?? []) as unknown as { variante_id: string; precio: number; promociones: { nombre: string; fin: string | null } | null }[]) {
+    if (!f.promociones) continue;
+    const previo = mapa.get(f.variante_id);
+    if (!previo || Number(f.precio) < previo.precio) {
+      mapa.set(f.variante_id, { precio: Number(f.precio), nombre: f.promociones.nombre, fin: f.promociones.fin });
+    }
+  }
+  return mapa;
+}
+
+type FilaCombo = {
+  id: string;
+  nombre: string;
+  producto_principal_id: string;
+  descuento: number;
+  bundle_items: {
+    variante_id: string;
+    cantidad: number;
+    variantes: { id: string; precio: number; activo: boolean; color: string | null; productos: { nombre: string; estado: string } | null } | null;
+  }[];
+};
+
+/**
+ * Combos: cada vez que el carrito lleva una unidad del producto principal (cualquier variante)
+ * y todos los accesorios del combo, se descuenta el ahorro del combo. Los combos más
+ * generosos se aplican primero y cada unidad cuenta para un solo combo.
+ */
+async function aplicarCombos(lineas: LineaCalculada[]): Promise<{ combos: ComboAplicado[]; sugeridos: ComboSugerido[] }> {
+  const principales = [...new Set(lineas.map((l) => l.productoId))];
+  if (!principales.length) return { combos: [], sugeridos: [] };
+  const sb = clientePublico();
+  const { data, error } = await sb
+    .from("bundles")
+    .select("id, nombre, producto_principal_id, descuento, bundle_items(variante_id, cantidad, variantes(id, precio, activo, color, productos(nombre, estado)))")
+    .in("producto_principal_id", principales)
+    .gt("descuento", 0);
+  if (error) {
+    console.error("No se pudieron leer los combos:", error.message);
+    return { combos: [], sugeridos: [] };
+  }
+  const filas = ((data ?? []) as unknown as FilaCombo[]).filter((b) => b.bundle_items.length);
+  if (!filas.length) return { combos: [], sugeridos: [] };
+
+  // Unidades disponibles en el carrito
+  const porVariante = new Map(lineas.map((l) => [l.varianteId, l.cantidad]));
+  const porProducto = new Map<string, number>();
+  for (const l of lineas) porProducto.set(l.productoId, (porProducto.get(l.productoId) ?? 0) + l.cantidad);
+  const precioLinea = new Map(lineas.map((l) => [l.varianteId, l.precio]));
+
+  const combos: ComboAplicado[] = [];
+  const sugeridos: ComboSugerido[] = [];
+  const faltantesIds = new Set<string>();
+  for (const b of [...filas].sort((a, c) => Number(c.descuento) - Number(a.descuento))) {
+    const principal = porProducto.get(b.producto_principal_id) ?? 0;
+    // Si algún accesorio ya no se vende (oculto, inactivo o agotado), el combo no aplica
+    const items = b.bundle_items.filter((i) => i.variantes?.activo && i.variantes.productos && i.variantes.productos.estado !== "agotado");
+    if (!items.length || items.length !== b.bundle_items.length) continue;
+    const veces = Math.min(principal, ...items.map((i) => Math.floor((porVariante.get(i.variante_id) ?? 0) / i.cantidad)));
+    if (veces > 0) {
+      // El ahorro nunca supera lo que cuestan los accesorios del combo
+      const valorItems = items.reduce((s, i) => s + (precioLinea.get(i.variante_id) ?? 0) * i.cantidad, 0);
+      const descuento = redondear(Math.min(Number(b.descuento), valorItems) * veces);
+      combos.push({ id: b.id, nombre: b.nombre, veces, descuento });
+      porProducto.set(b.producto_principal_id, principal - veces);
+      for (const i of items) porVariante.set(i.variante_id, (porVariante.get(i.variante_id) ?? 0) - i.cantidad * veces);
+    } else if (principal > 0) {
+      const faltan = items
+        .filter((i) => (porVariante.get(i.variante_id) ?? 0) < i.cantidad)
+        .map((i) => ({
+          varianteId: i.variante_id,
+          nombre: [i.variantes?.productos?.nombre, i.variantes?.color].filter(Boolean).join(" "),
+          cantidad: i.cantidad - (porVariante.get(i.variante_id) ?? 0),
+          precio: Number(i.variantes?.precio ?? 0),
+        }));
+      faltan.forEach((f) => faltantesIds.add(f.varianteId));
+      sugeridos.push({ id: b.id, nombre: b.nombre, ahorro: Number(b.descuento), faltan });
+    }
+  }
+
+  // Solo se sugieren combos cuyos accesorios faltantes se pueden comprar hoy
+  if (sugeridos.length) {
+    const { data: disp } = await sb
+      .from("disponibilidad_publica")
+      .select("variante_id, en_bodega, con_proveedor")
+      .in("variante_id", [...faltantesIds]);
+    const hay = new Set((disp ?? []).filter((d) => d.en_bodega || d.con_proveedor).map((d) => d.variante_id as string));
+    const ofertas = await preciosDeOferta([...faltantesIds]);
+    return {
+      combos,
+      sugeridos: sugeridos
+        .filter((s) => s.faltan.every((f) => hay.has(f.varianteId)))
+        .map((s) => ({
+          ...s,
+          faltan: s.faltan.map((f) => ({ ...f, precio: Math.min(f.precio, ofertas.get(f.varianteId)?.precio ?? Infinity) })),
+        })),
+    };
+  }
+  return { combos, sugeridos };
 }

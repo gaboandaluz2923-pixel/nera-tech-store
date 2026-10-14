@@ -135,12 +135,41 @@ export function CarritoHoja({ accesorios }: { accesorios: ProductoResumen[] }) {
                             <Plus className="size-4" />
                           </button>
                         </div>
-                        <p className="font-semibold">{usd2(l.total)}</p>
+                        <p className="text-right font-semibold">
+                          {l.precioRegular ? (
+                            <span className="block text-xs font-normal text-muted-foreground line-through">
+                              {usd2(l.precioRegular * l.cantidad)}
+                            </span>
+                          ) : null}
+                          {usd2(l.total)}
+                        </p>
                       </div>
                     </div>
                   </li>
                 ))}
               </ul>
+
+              {resumen?.combosSugeridos.length ? (
+                <section className="mt-6 space-y-2" aria-label="Combos">
+                  {resumen.combosSugeridos.slice(0, 2).map((c) => (
+                    <div key={c.id} className="rounded-xl border-2 border-dashed border-marca/50 bg-marca/5 p-3">
+                      <p className="text-sm font-semibold">
+                        Combo {c.nombre}: ahorrás {usd2(c.ahorro)}
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        Agregá {c.faltan.map((f) => `${f.cantidad > 1 ? `${f.cantidad} × ` : ""}${f.nombre}`).join(" + ")}
+                      </p>
+                      <Button
+                        size="sm"
+                        className="mt-2"
+                        onClick={() => c.faltan.forEach((f) => agregarAlCarrito(f.varianteId, f.cantidad))}
+                      >
+                        Agregar combo
+                      </Button>
+                    </div>
+                  ))}
+                </section>
+              ) : null}
 
               {sugeridos.length ? (
                 <section className="mt-6 rounded-xl bg-muted/50 p-3" aria-labelledby="t-completa-carrito">
@@ -174,6 +203,15 @@ export function CarritoHoja({ accesorios }: { accesorios: ProductoResumen[] }) {
                     <dt>Subtotal</dt>
                     <dd>{usd2(resumen.subtotal)}</dd>
                   </div>
+                  {resumen.combos.map((c) => (
+                    <div key={c.id} className="flex justify-between text-green-700">
+                      <dt>
+                        Combo {c.nombre}
+                        {c.veces > 1 ? ` ×${c.veces}` : ""}
+                      </dt>
+                      <dd className="font-medium">−{usd2(c.descuento)}</dd>
+                    </div>
+                  ))}
                   <div className="flex justify-between">
                     <dt>Envío</dt>
                     <dd>{resumen.envio === 0 ? <span className="font-medium text-green-700">Gratis</span> : usd2(resumen.envio)}</dd>

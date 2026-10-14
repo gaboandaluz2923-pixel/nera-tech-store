@@ -112,3 +112,16 @@ export const fechaHora = (iso: string) =>
     minute: "2-digit",
     timeZone: "America/El_Salvador",
   });
+
+/** "Termina el sábado 18 de octubre" (hora de El Salvador); "Termina hoy" / "Termina mañana". */
+export function finDeOferta(fin: string, ahora: Date | null): string {
+  const zona = "America/El_Salvador";
+  const dia = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: zona });
+  const f = new Date(fin);
+  // Sin hora del navegador (página guardada en el servidor), solo la fecha
+  if (!ahora) return `Termina el ${f.toLocaleDateString("es-SV", { timeZone: zona, weekday: "long", day: "numeric", month: "long" })}`;
+  const manana = new Date(ahora.getTime() + 86_400_000);
+  if (dia(f) === dia(ahora)) return `Termina hoy a las ${f.toLocaleTimeString("es-SV", { timeZone: zona, hour: "numeric", minute: "2-digit" })}`;
+  if (dia(f) === dia(manana)) return "Termina mañana";
+  return `Termina el ${f.toLocaleDateString("es-SV", { timeZone: zona, weekday: "long", day: "numeric", month: "long" })}`;
+}

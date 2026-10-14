@@ -2,6 +2,7 @@ import "server-only";
 import { configCorreo, enviarCorreo } from "@/lib/correo";
 import { createServiceClient } from "@/lib/supabase/server";
 import { configTienda } from "@/lib/tienda/datos";
+import { COLUMNAS_DESCUENTOS, lineasDescuento } from "@/lib/tienda/descuentos";
 import { enlaceWhatsAppA } from "@/lib/whatsapp";
 import {
   correoAvisoEquipo,
@@ -25,6 +26,12 @@ type Pedido = {
   total: number;
   envio: number;
   descuento: number;
+  descuento_combos: number;
+  descuento_cupon: number;
+  puntos_usados: number;
+  descuento_puntos: number;
+  combos: { nombre: string; veces: number; descuento: number }[] | null;
+  cupones: { codigo: string } | null;
   pagado_en: string | null;
   factura_numero: string | null;
   entrega: {
@@ -46,7 +53,9 @@ async function cargar(pedidoId: string, sitio: string) {
   const [{ data }, c, { data: cuentasFila }] = await Promise.all([
     sb
       .from("pedidos")
-      .select("id, numero, token, estado, forma_pago, total, envio, descuento, pagado_en, factura_numero, entrega, lineas_pedido(nombre, cantidad, precio_unitario)")
+      .select(
+        `id, numero, token, estado, forma_pago, total, envio, pagado_en, factura_numero, entrega, ${COLUMNAS_DESCUENTOS}, lineas_pedido(nombre, cantidad, precio_unitario)`
+      )
       .eq("id", pedidoId)
       .single(),
     configTienda(),
@@ -63,7 +72,7 @@ async function cargar(pedidoId: string, sitio: string) {
     mensaje: e.mensaje || null,
     total: Number(p.total),
     envio: Number(p.envio),
-    descuento: Number(p.descuento ?? 0),
+    descuentos: lineasDescuento(p),
     formaPago: p.forma_pago,
     pagado: Boolean(p.pagado_en),
     lineas: p.lineas_pedido.map((l) => ({ nombre: l.nombre, cantidad: l.cantidad, precio: Number(l.precio_unitario) })),

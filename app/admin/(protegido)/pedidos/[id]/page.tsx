@@ -8,6 +8,7 @@ import { IconoWhatsApp } from "@/components/tienda/icono-whatsapp";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { COLUMNAS_DESCUENTOS, lineasDescuento } from "@/lib/tienda/descuentos";
 import { SIGUIENTES, esperandoPago, porFacturar, type EstadoPedido, type PedidoBase } from "@/lib/admin/pedidos";
 import { createClient } from "@/lib/supabase/server";
 import { ESTADO_PEDIDO, FORMA_PAGO, fechaHora, usd2 } from "@/lib/tienda/formato";
@@ -28,6 +29,12 @@ type Pedido = PedidoBase & {
   subtotal: number;
   envio: number;
   descuento: number;
+  descuento_combos: number;
+  descuento_cupon: number;
+  puntos_usados: number;
+  descuento_puntos: number;
+  combos: { nombre: string; veces: number; descuento: number }[] | null;
+  cupones: { codigo: string } | null;
   total: number;
   notas: string | null;
   created_at: string;
@@ -49,7 +56,7 @@ type Pedido = PedidoBase & {
   factura_emitida_en: string | null;
   cliente_id: string | null;
   clientes: { correo: string | null; auth_user_id: string | null; telefono_alterno: string | null; cumple_dia: number | null; cumple_mes: number | null } | null;
-  lineas_pedido: { id: string; nombre: string; cantidad: number; precio_unitario: number }[];
+  lineas_pedido: { id: string; nombre: string; cantidad: number; precio_unitario: number; precio_regular: number | null }[];
   pagos: { id: string; metodo: string; monto: number; estado: string; referencia_externa: string | null; created_at: string }[];
   pedido_eventos: { id: string; estado_anterior: string | null; estado_nuevo: string; nota: string | null; usuario: string | null; created_at: string }[];
 };
@@ -70,10 +77,10 @@ async function Detalle({ params }: { params: PageProps<"/admin/pedidos/[id]">["p
   const { data, error } = await supabase
     .from("pedidos")
     .select(
-      `id, numero, token, estado, forma_pago, subtotal, envio, descuento, total, notas, created_at, entrega, facturacion,
+      `id, numero, token, estado, forma_pago, subtotal, envio, total, notas, ${COLUMNAS_DESCUENTOS}, created_at, entrega, facturacion,
        pagado_en, confirmado_en, entregado_en, factura_estado, factura_numero, factura_archivo, factura_emitida_en,
        cliente_id, clientes(correo, auth_user_id, telefono_alterno, cumple_dia, cumple_mes),
-       lineas_pedido(id, nombre, cantidad, precio_unitario),
+       lineas_pedido(id, nombre, cantidad, precio_unitario, precio_regular),
        pagos(id, metodo, monto, estado, referencia_externa, created_at),
        pedido_eventos(id, estado_anterior, estado_nuevo, nota, usuario, created_at)`
     )
@@ -307,18 +314,23 @@ async function Detalle({ params }: { params: PageProps<"/admin/pedidos/[id]">["p
                   <span>
                     {l.cantidad} × {l.nombre}
                   </span>
-                  <span>{usd2(Number(l.precio_unitario) * l.cantidad)}</span>
+                  <span className="text-right">
+                    {l.precio_regular ? (
+                      <span className="block text-xs text-muted-foreground line-through">{usd2(Number(l.precio_regular) * l.cantidad)}</span>
+                    ) : null}
+                    {usd2(Number(l.precio_unitario) * l.cantidad)}
+                  </span>
                 </li>
               ))}
             </ul>
             <dl className="mt-3 border-t pt-2 text-sm">
               <Dato etiqueta="Subtotal">{usd2(Number(p.subtotal))}</Dato>
               <Dato etiqueta="Envío">{Number(p.envio) ? usd2(Number(p.envio)) : "Gratis"}</Dato>
-              {Number(p.descuento) > 0 ? (
-                <Dato etiqueta="Descuento (efectivo/transferencia)">
-                  <span className="text-green-700">−{usd2(Number(p.descuento))}</span>
+              {lineasDescuento(p).map((d) => (
+                <Dato key={d.texto} etiqueta={d.texto}>
+                  <span className="text-green-700">−{usd2(d.monto)}</span>
                 </Dato>
-              ) : null}
+              ))}
               <Dato etiqueta="Total">
                 <strong>{usd2(Number(p.total))}</strong>
               </Dato>

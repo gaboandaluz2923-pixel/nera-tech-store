@@ -15,8 +15,20 @@ export type VarianteTienda = {
   ramGb: number | null;
   almacenamientoGb: number | null;
   color: string | null;
+  /** Precio a cobrar: el de oferta si hay una vigente */
   precio: number;
+  /** Precio normal (tachado) cuando hay oferta */
+  precioRegular: number | null;
+  oferta: { nombre: string; fin: string | null } | null;
   disponibilidad: Disponibilidad;
+};
+
+/** Combo "Completá tu equipo": el producto + estos accesorios = ahorro */
+export type ComboTienda = {
+  id: string;
+  nombre: string;
+  ahorro: number;
+  items: { varianteId: string; nombre: string; cantidad: number; precio: number; imagen: ImagenTienda | null }[];
 };
 
 export type ImagenTienda = { url: string; alt: string };
@@ -32,6 +44,9 @@ export type ProductoResumen = {
   imagen: ImagenTienda | null;
   precioDesde: number;
   precioHasta: number;
+  /** Precio normal de la opción más barata, cuando está en oferta */
+  precioDesdeRegular: number | null;
+  ofertaFin: string | null;
   memorias: string[];
   ramMax: number | null;
   almacenamientos: number[];
@@ -52,6 +67,7 @@ export type ProductoDetalle = ProductoResumen & {
   faq: { pregunta: string; respuesta: string }[];
   imagenes: ImagenTienda[];
   variantes: VarianteTienda[];
+  combos: ComboTienda[];
   metaTitulo: string | null;
   metaDescripcion: string | null;
   actualizado: string;
@@ -127,25 +143,81 @@ const SELECT_PRODUCTO = `id, slug, nombre, marca, modelo, resumen, descripcion, 
  * Lee el catálogo. Si la base no responde (o falta una migración), devuelve una lista vacía
  * en vez de romper el sitio, y ese resultado vacío solo se guarda unos minutos.
  */
-async function leerCatalogo(): Promise<{ ok: boolean; lista: ProductoDetalle[] }> {
+type Leido = { ok: boolean; lista: ProductoDetalle[]; segundosHastaCambio: number | null };
+
+async function leerCatalogo(): Promise<Leido> {
   try {
-    return { ok: true, lista: await leerCatalogoODaError() };
+    return { ok: true, ...(await leerCatalogoODaError()) };
   } catch (e) {
     console.error("No se pudo leer el catálogo:", e);
-    return { ok: false, lista: [] };
+    return { ok: false, lista: [], segundosHastaCambio: null };
   }
 }
 
-const vida = (ok: boolean) => (ok ? cacheLife("hours") : cacheLife("minutes"));
+/**
+ * Cuánto dura el caché. Normalmente horas (el panel lo refresca al guardar), pero si una
+ * oferta empieza o termina antes, se refresca a esa hora para que el precio cambie solo.
+ */
+const vida = ({ ok, segundosHastaCambio: s }: Leido) => {
+  if (!ok) return cacheLife("minutes");
+  if (s !== null && s < 3600) return cacheLife({ stale: 30, revalidate: Math.max(30, s), expire: 86400 });
+  return cacheLife("hours");
+};
 
-async function leerCatalogoODaError(): Promise<ProductoDetalle[]> {
+type FilaOferta = { variante_id: string; precio: number; promociones: { nombre: string; fin: string | null } | null };
+type FilaComboCat = {
+  id: string;
+  nombre: string;
+  producto_principal_id: string;
+  descuento: number;
+  bundle_items: {
+    variante_id: string;
+    cantidad: number;
+    variantes: {
+      id: string;
+      precio: number;
+      activo: boolean;
+      color: string | null;
+      productos: { nombre: string; estado: string; imagenes: { url: string; alt: string | null; orden: number; principal: boolean }[] } | null;
+    } | null;
+  }[];
+};
+
+async function leerCatalogoODaError(): Promise<Omit<Leido, "ok">> {
   const sb = clientePublico();
-  const [{ data: productos, error }, { data: disp, error: e2 }] = await Promise.all([
+  const [{ data: productos, error }, { data: disp, error: e2 }, ofertasR, proximaR, combosR] = await Promise.all([
     sb.from("productos").select(SELECT_PRODUCTO).neq("estado", "oculto").limit(1000),
     sb.from("disponibilidad_publica").select("variante_id, en_bodega, con_proveedor").limit(5000),
+    // Ofertas vigentes (la base solo deja ver las activas y dentro de sus fechas)
+    sb.from("promocion_precios").select("variante_id, precio, promociones(nombre, fin)").limit(5000),
+    sb.from("promociones_proximas").select("proximo_inicio").maybeSingle(),
+    sb
+      .from("bundles")
+      .select(
+        "id, nombre, producto_principal_id, descuento, bundle_items(variante_id, cantidad, variantes(id, precio, activo, color, productos(nombre, estado, imagenes(url, alt, orden, principal))))"
+      )
+      .gt("descuento", 0)
+      .limit(500),
   ]);
   if (error) throw error;
   if (e2) throw e2;
+  // Si falta la migración de la fase 4, la tienda sigue funcionando sin ofertas ni combos
+  if (ofertasR.error) console.error("Ofertas:", ofertasR.error.message);
+  if (combosR.error) console.error("Combos:", combosR.error.message);
+
+  const ahora = Date.now();
+  const ofertaPorVariante = new Map<string, { precio: number; nombre: string; fin: string | null }>();
+  let proximoCambio = proximaR.data?.proximo_inicio ? new Date(proximaR.data.proximo_inicio as string).getTime() : Infinity;
+  for (const o of (ofertasR.data ?? []) as unknown as FilaOferta[]) {
+    if (!o.promociones) continue;
+    if (o.promociones.fin) proximoCambio = Math.min(proximoCambio, new Date(o.promociones.fin).getTime());
+    const previa = ofertaPorVariante.get(o.variante_id);
+    if (!previa || Number(o.precio) < previa.precio) {
+      ofertaPorVariante.set(o.variante_id, { precio: Number(o.precio), nombre: o.promociones.nombre, fin: o.promociones.fin });
+    }
+  }
+  const segundosHastaCambio = Number.isFinite(proximoCambio) ? Math.max(0, Math.ceil((proximoCambio - ahora) / 1000)) : null;
+
   const dispPorVariante = new Map(
     (disp ?? []).map((d) => [
       d.variante_id as string,
@@ -164,7 +236,7 @@ async function leerCatalogoODaError(): Promise<ProductoDetalle[]> {
         ramGb: v.ram_gb,
         almacenamientoGb: v.almacenamiento_gb,
         color: v.color,
-        precio: Number(v.precio),
+        ...conOferta(Number(v.precio), ofertaPorVariante.get(v.id)),
         disponibilidad: p.estado === "agotado" ? "agotado" : (dispPorVariante.get(v.id) ?? "agotado"),
       }))
       .sort(
@@ -188,6 +260,7 @@ async function leerCatalogoODaError(): Promise<ProductoDetalle[]> {
     const minimo = Math.min(...base.map((v) => v.precio));
     const baratas = base.filter((v) => v.precio === minimo && v.disponibilidad !== "agotado");
     const destacada = baratas.find((v) => /negro|black/i.test(v.color ?? "")) ?? baratas[0] ?? null;
+    const masBarata = base.find((v) => v.precio === minimo) ?? null;
 
     lista.push({
       id: p.id,
@@ -200,6 +273,8 @@ async function leerCatalogoODaError(): Promise<ProductoDetalle[]> {
       imagen: imagenes[0] ?? null,
       precioDesde: Math.min(...base.map((v) => v.precio)),
       precioHasta: Math.max(...precios),
+      precioDesdeRegular: masBarata?.precioRegular ?? null,
+      ofertaFin: masBarata?.oferta?.fin ?? null,
       memorias: [...new Set(variantes.map((v) => v.memoria).filter((m): m is string => Boolean(m)))],
       ramMax: rams.length ? Math.max(...rams) : null,
       almacenamientos,
@@ -216,12 +291,56 @@ async function leerCatalogoODaError(): Promise<ProductoDetalle[]> {
       faq: p.faq ?? [],
       imagenes,
       variantes,
+      combos: combosDe(p.id, (combosR.data ?? []) as unknown as FilaComboCat[], ofertaPorVariante, dispPorVariante),
       metaTitulo: p.meta_titulo,
       metaDescripcion: p.meta_descripcion,
       actualizado: p.updated_at,
     });
   }
-  return lista.sort((a, b) => a.orden - b.orden || a.nombre.localeCompare(b.nombre));
+  return { lista: lista.sort((a, b) => a.orden - b.orden || a.nombre.localeCompare(b.nombre)), segundosHastaCambio };
+}
+
+function conOferta(normal: number, oferta: { precio: number; nombre: string; fin: string | null } | undefined) {
+  return oferta && oferta.precio < normal
+    ? { precio: oferta.precio, precioRegular: normal, oferta: { nombre: oferta.nombre, fin: oferta.fin } }
+    : { precio: normal, precioRegular: null, oferta: null };
+}
+
+/** Combos del producto cuyos accesorios se pueden comprar hoy */
+function combosDe(
+  productoId: string,
+  filas: FilaComboCat[],
+  ofertas: Map<string, { precio: number; nombre: string; fin: string | null }>,
+  disp: Map<string, Disponibilidad>
+): ComboTienda[] {
+  return filas
+    .filter((b) => b.producto_principal_id === productoId && b.bundle_items.length)
+    .filter((b) =>
+      b.bundle_items.every(
+        (i) =>
+          i.variantes?.activo &&
+          i.variantes.productos &&
+          i.variantes.productos.estado !== "agotado" &&
+          (disp.get(i.variante_id) ?? "agotado") !== "agotado"
+      )
+    )
+    .map((b) => ({
+      id: b.id,
+      nombre: b.nombre,
+      ahorro: Number(b.descuento),
+      items: b.bundle_items.map((i) => {
+        const v = i.variantes!;
+        const img = [...(v.productos?.imagenes ?? [])].sort((a, c) => Number(c.principal) - Number(a.principal) || a.orden - c.orden)[0];
+        return {
+          varianteId: i.variante_id,
+          nombre: [v.productos?.nombre, v.color].filter(Boolean).join(" "),
+          cantidad: i.cantidad,
+          precio: conOferta(Number(v.precio), ofertas.get(i.variante_id)).precio,
+          imagen: img ? { url: img.url, alt: img.alt || v.productos?.nombre || "" } : null,
+        };
+      }),
+    }))
+    .sort((a, b) => b.ahorro - a.ahorro);
 }
 
 const aResumen = (p: ProductoDetalle): ProductoResumen => ({
@@ -235,6 +354,8 @@ const aResumen = (p: ProductoDetalle): ProductoResumen => ({
   imagen: p.imagen,
   precioDesde: p.precioDesde,
   precioHasta: p.precioHasta,
+  precioDesdeRegular: p.precioDesdeRegular,
+  ofertaFin: p.ofertaFin,
   memorias: p.memorias,
   ramMax: p.ramMax,
   almacenamientos: p.almacenamientos,
@@ -249,24 +370,25 @@ const aResumen = (p: ProductoDetalle): ProductoResumen => ({
 export async function catalogo(): Promise<ProductoResumen[]> {
   "use cache";
   cacheTag(ETIQUETA_CATALOGO);
-  const { ok, lista } = await leerCatalogo();
-  vida(ok);
-  return lista.map(aResumen);
+  const leido = await leerCatalogo();
+  vida(leido);
+  return leido.lista.map(aResumen);
 }
 
 export async function productoPorSlug(slug: string): Promise<ProductoDetalle | null> {
   "use cache";
   cacheTag(ETIQUETA_CATALOGO);
-  const { ok, lista } = await leerCatalogo();
-  vida(ok);
-  return lista.find((p) => p.slug === slug) ?? null;
+  const leido = await leerCatalogo();
+  vida(leido);
+  return leido.lista.find((p) => p.slug === slug) ?? null;
 }
 
 export async function productosPorSlugs(slugs: string[]): Promise<ProductoDetalle[]> {
   "use cache";
   cacheTag(ETIQUETA_CATALOGO);
-  const { ok, lista: todos } = await leerCatalogo();
-  vida(ok);
+  const leido = await leerCatalogo();
+  vida(leido);
+  const todos = leido.lista;
   return slugs.map((s) => todos.find((p) => p.slug === s)).filter((p): p is ProductoDetalle => Boolean(p));
 }
 
@@ -281,7 +403,8 @@ export async function configTienda(): Promise<ConfigTienda> {
       (e: unknown) => ({ data: null, error: e })
     );
   if (error) console.error("No se pudo leer la configuración:", error);
-  vida(!error);
+  if (error) cacheLife("minutes");
+  else cacheLife("hours");
   const c = new Map((data ?? []).map((r) => [r.clave as string, r.valor]));
   const garantia = c.get("garantia_texto") as Garantia | { texto: string } | undefined;
   return {

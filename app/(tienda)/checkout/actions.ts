@@ -2,6 +2,7 @@
 
 import { sitioActual } from "@/lib/sitio";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { cotizarPedido, type Cotizacion } from "@/lib/tienda/beneficios";
 import { perfilDeUsuario, type Direccion } from "@/lib/tienda/cuentas";
 import { OTRA_ZONA, crearPedido, esquemaCheckout, iniciarPagoWompi, type ResultadoPedido } from "@/lib/tienda/pedidos";
 
@@ -20,7 +21,8 @@ export async function confirmarPedido(entrada: unknown): Promise<ResultadoPedido
     return { ok: false, mensaje: "Revisá los datos marcados en rojo.", campos };
   }
   try {
-    const r = await crearPedido(datos.data, await sitioActual());
+    const clientePuntos = datos.data.usarPuntos ? await clienteDeSesion() : null;
+    const r = await crearPedido(datos.data, await sitioActual(), { clientePuntos });
     // Con sesión: guardar la dirección nueva en su cuenta (si la pidió)
     if (r.ok && (entrada as { guardarDireccion?: boolean })?.guardarDireccion) {
       await guardarDireccionDeCompra(datos.data).catch((e) => console.error("guardarDireccionDeCompra", e));
@@ -30,6 +32,34 @@ export async function confirmarPedido(entrada: unknown): Promise<ResultadoPedido
     console.error("confirmarPedido", e);
     return { ok: false, mensaje: "No pudimos guardar tu pedido. Probá de nuevo o escribinos por WhatsApp." };
   }
+}
+
+/** Cliente de la sesión de Google (para usar Puntos Nera). */
+async function clienteDeSesion(): Promise<string | null> {
+  const {
+    data: { user },
+  } = await (await createClient()).auth.getUser();
+  if (!user) return null;
+  return (await perfilDeUsuario(user)).id;
+}
+
+/** Total del checkout con 6%, cupón o puntos, calculado en el servidor (igual que al confirmar). */
+export async function cotizar(e: {
+  lineas: unknown;
+  formaPago: string;
+  cupon?: string;
+  usarPuntos?: boolean;
+  correo?: string;
+}): Promise<Cotizacion> {
+  const clientePuntos = await clienteDeSesion().catch(() => null);
+  return cotizarPedido({
+    lineas: e.lineas,
+    formaPago: String(e.formaPago ?? ""),
+    cupon: String(e.cupon ?? "").slice(0, 40),
+    usarPuntos: Boolean(e.usarPuntos),
+    correo: String(e.correo ?? "").slice(0, 120),
+    clientePuntos,
+  });
 }
 
 /** Vuelve a abrir el pago con tarjeta de un pedido (desde la página del pedido). */

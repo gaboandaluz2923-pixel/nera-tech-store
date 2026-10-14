@@ -38,7 +38,11 @@ export function TarjetaProducto({
               priority={prioridad}
             />
           ) : null}
-          {etiqueta ? (
+          {p.precioDesdeRegular ? (
+            <span className="absolute top-1.5 left-1.5 rounded-full bg-marca px-2 py-0.5 text-[11px] font-semibold text-white">
+              Oferta −{usd(p.precioDesdeRegular - p.precioDesde)}
+            </span>
+          ) : etiqueta ? (
             <span className="absolute top-1.5 left-1.5 rounded-full bg-marca px-2 py-0.5 text-[11px] font-semibold text-white">
               {etiqueta}
             </span>
@@ -54,6 +58,9 @@ export function TarjetaProducto({
           <p className="text-lg font-bold">
             {p.precioHasta > p.precioDesde ? <span className="text-xs font-normal text-muted-foreground">Desde </span> : null}
             {usd(p.precioDesde)}
+            {p.precioDesdeRegular ? (
+              <span className="ml-1.5 text-sm font-normal text-muted-foreground line-through">{usd(p.precioDesdeRegular)}</span>
+            ) : null}
           </p>
           {!agotado && p.precioDesde >= 100 ? (
             <p className="text-xs text-muted-foreground">

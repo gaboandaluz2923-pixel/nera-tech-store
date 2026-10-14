@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
+import { COLUMNAS_DESCUENTOS, lineasDescuento } from "@/lib/tienda/descuentos";
 import { Check, CircleAlert, Clock, FileText, Landmark, Truck } from "lucide-react";
 import { BotonGoogle } from "@/components/tienda/boton-google";
 import { IconoWhatsApp } from "@/components/tienda/icono-whatsapp";
@@ -24,6 +25,12 @@ type Pedido = {
   subtotal: number;
   envio: number;
   descuento: number;
+  descuento_combos: number;
+  descuento_cupon: number;
+  puntos_usados: number;
+  descuento_puntos: number;
+  combos: { nombre: string; veces: number; descuento: number }[] | null;
+  cupones: { codigo: string } | null;
   total: number;
   entrega: {
     nombre: string;
@@ -45,7 +52,7 @@ type Pedido = {
   factura_archivo: string | null;
   created_at: string;
   clientes: { auth_user_id: string | null } | null;
-  lineas_pedido: { nombre: string; cantidad: number; precio_unitario: number }[];
+  lineas_pedido: { nombre: string; cantidad: number; precio_unitario: number; precio_regular: number | null }[];
 };
 
 const PASOS = [
@@ -64,7 +71,7 @@ async function Detalle({ params, searchParams }: PageProps<"/pedido/[token]">) {
     sb
       .from("pedidos")
       .select(
-        "id, numero, token, estado, forma_pago, subtotal, envio, descuento, total, entrega, facturacion, pagado_en, confirmado_en, entregado_en, factura_estado, factura_numero, factura_archivo, created_at, clientes(auth_user_id), lineas_pedido(nombre, cantidad, precio_unitario)"
+        `id, numero, token, estado, forma_pago, subtotal, envio, total, entrega, ${COLUMNAS_DESCUENTOS}, facturacion, pagado_en, confirmado_en, entregado_en, factura_estado, factura_numero, factura_archivo, created_at, clientes(auth_user_id), lineas_pedido(nombre, cantidad, precio_unitario, precio_regular)`
       )
       .eq("token", token)
       .maybeSingle(),
@@ -271,7 +278,14 @@ async function Detalle({ params, searchParams }: PageProps<"/pedido/[token]">) {
                 {l.cantidad > 1 ? `${l.cantidad} × ` : ""}
                 {l.nombre}
               </span>
-              <span className="font-medium">{usd2(Number(l.precio_unitario) * l.cantidad)}</span>
+              <span className="text-right font-medium">
+                {l.precio_regular ? (
+                  <span className="block text-xs font-normal text-muted-foreground line-through">
+                    {usd2(Number(l.precio_regular) * l.cantidad)}
+                  </span>
+                ) : null}
+                {usd2(Number(l.precio_unitario) * l.cantidad)}
+              </span>
             </li>
           ))}
         </ul>
@@ -280,12 +294,12 @@ async function Detalle({ params, searchParams }: PageProps<"/pedido/[token]">) {
             <dt>Envío</dt>
             <dd>{Number(p.envio) === 0 ? "Gratis" : usd2(Number(p.envio))}</dd>
           </div>
-          {Number(p.descuento) > 0 ? (
-            <div className="flex justify-between text-green-700">
-              <dt>Descuento {p.forma_pago === "contra_entrega" ? "por pago en efectivo" : "por transferencia"}</dt>
-              <dd className="font-medium">−{usd2(Number(p.descuento))}</dd>
+          {lineasDescuento(p).map((d) => (
+            <div key={d.texto} className="flex justify-between text-green-700">
+              <dt>{d.texto}</dt>
+              <dd className="font-medium">−{usd2(d.monto)}</dd>
             </div>
-          ) : null}
+          ))}
           <div className="flex justify-between text-base font-bold">
             <dt>Total</dt>
             <dd>{usd2(total)}</dd>

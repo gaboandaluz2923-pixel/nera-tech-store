@@ -12,27 +12,32 @@ import {
 import {
   Banknote,
   CreditCard,
+  Gift,
   Landmark,
   Lock,
   Percent,
   ShieldCheck,
+  Star,
+  Tag,
+  X,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   confirmarPedido,
+  cotizar,
   datosCuentaParaCheckout,
   type DatosCuenta,
 } from "@/app/(tienda)/checkout/actions";
+import type { Cotizacion } from "@/lib/tienda/beneficios";
 import type { Direccion } from "@/lib/tienda/cuentas";
 import { Button } from "@/components/ui/button";
-import { vaciarCarrito } from "@/lib/tienda/carrito";
+import { quitarDelCarrito, useCarrito, vaciarCarrito } from "@/lib/tienda/carrito";
 import {
   DESCUENTO_SIN_TARJETA,
   cuota,
-  descuentoSinTarjeta,
   tieneDescuentoSinTarjeta,
   usd2,
 } from "@/lib/tienda/formato";
-import { useResumenCarrito } from "./carrito-hoja";
 
 // Una sola página de pago, sin cuenta (Krug): datos, entrega, forma de pago y factura.
 
@@ -82,7 +87,7 @@ const claseEntrada = (error?: string) =>
   }`;
 
 export function CheckoutFormulario(p: Props) {
-  const { lineas, resumen, cargando } = useResumenCarrito();
+  const lineas = useCarrito();
   const router = useRouter();
   const [enviando, iniciar] = useTransition();
   const [errores, setErrores] = useState<Record<string, string>>({});
@@ -121,6 +126,18 @@ export function CheckoutFormulario(p: Props) {
       );
   }
 
+  // Cupón o Puntos Nera (uno solo) y publicidad
+  const [cuponAbierto, setCuponAbierto] = useState(false);
+  const [cuponTexto, setCuponTexto] = useState("");
+  const [cuponAplicado, setCuponAplicado] = useState("");
+  const [correoCupon, setCorreoCupon] = useState("");
+  const [usarPuntos, setUsarPuntos] = useState(false);
+  const [noOfertas, setNoOfertas] = useState(false);
+
+  const [cot, setCot] = useState<Cotizacion | null>(null);
+  const [cargando, iniciarCotizacion] = useTransition();
+  const resumen = cot?.resumen ?? null;
+
   const contraEntrega = zona !== p.otraZona;
   const total = resumen?.total ?? 0;
   const tasaCero = total >= p.minimoTasaCero;
@@ -130,9 +147,45 @@ export function CheckoutFormulario(p: Props) {
       : forma === "tasa_cero" && !tasaCero
         ? "wompi"
         : forma;
-  // Efectivo y transferencia tienen 6% de descuento sobre los productos; el servidor lo recalcula igual.
-  const descuento = descuentoSinTarjeta(resumen?.subtotal ?? 0, formaValida);
-  const totalAPagar = Math.round((total - descuento) * 100) / 100;
+
+  // El total (6%, cupón o puntos, tope de margen) siempre lo calcula el servidor
+  const claveCotizacion = JSON.stringify({ lineas, formaValida, cuponAplicado, usarPuntos, correoCupon });
+  useEffect(() => {
+    let vigente = true;
+    const e = JSON.parse(claveCotizacion);
+    iniciarCotizacion(async () => {
+      const r = await cotizar({
+        lineas: e.lineas,
+        formaPago: e.formaValida,
+        cupon: e.cuponAplicado,
+        usarPuntos: e.usarPuntos,
+        correo: e.correoCupon,
+      }).catch(() => null);
+      if (!vigente || !r) return;
+      setCot(r);
+      if (r.resumen.quitadas.length) {
+        quitarDelCarrito(r.resumen.quitadas);
+        toast.info("Quitamos del carrito algo que ya no está disponible.");
+      }
+    });
+    return () => {
+      vigente = false;
+    };
+  }, [claveCotizacion]);
+
+  const descuento = cot?.descuentoPago ?? 0;
+  const totalAPagar = cot?.total ?? 0;
+
+  function aplicarCupon() {
+    const correo = (document.getElementById("co-correo") as HTMLInputElement | null)?.value ?? "";
+    setCorreoCupon(correo.trim().toLowerCase());
+    setCuponAplicado(cuponTexto.trim().toUpperCase());
+    setUsarPuntos(false);
+  }
+  function quitarCupon() {
+    setCuponAplicado("");
+    setCuponTexto("");
+  }
 
   // En el servidor no hay carrito: hasta que el navegador lo lea, mostrar un esqueleto
   const montado = useSyncExternalStore(
@@ -185,6 +238,9 @@ export function CheckoutFormulario(p: Props) {
       razonSocial: g("razonSocial"),
       giro: g("giro"),
       notas: g("notas"),
+      cupon: cot?.cupon ? cuponAplicado : "",
+      usarPuntos: Boolean(cot?.puntos),
+      noOfertas,
       totalVisto: totalAPagar,
       lineas,
     };
@@ -199,6 +255,10 @@ export function CheckoutFormulario(p: Props) {
       }
       setErrores(r.campos ?? {});
       setMensaje(r.mensaje);
+      if (r.campos?.cupon) {
+        setCuponAplicado("");
+        setCuponAbierto(true);
+      }
       const primero = Object.keys(r.campos ?? {})[0];
       const el = primero
         ? document.getElementById(`co-${primero}`)
@@ -616,6 +676,21 @@ export function CheckoutFormulario(p: Props) {
               </Campo>
             </div>
           ) : null}
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              id="co-noOfertas"
+              type="checkbox"
+              checked={noOfertas}
+              onChange={(e) => setNoOfertas(e.target.checked)}
+              className="mt-0.5 size-4 accent-[var(--marca)]"
+            />
+            <span>
+              No quiero recibir publicidad ni ofertas por correo o WhatsApp.
+              <span className="block text-xs text-muted-foreground">
+                Igual te escribimos sobre tu pedido. Podés cambiarlo cuando quieras.
+              </span>
+            </span>
+          </label>
           <Campo id="co-notas" etiqueta="Nota para tu pedido (opcional)">
             <textarea
               id="co-notas"
@@ -658,7 +733,14 @@ export function CheckoutFormulario(p: Props) {
                     </span>
                   ) : null}
                 </span>
-                <span className="font-medium">{usd2(l.total)}</span>
+                <span className="text-right font-medium">
+                  {l.precioRegular ? (
+                    <span className="block text-xs font-normal text-muted-foreground line-through">
+                      {usd2(l.precioRegular * l.cantidad)}
+                    </span>
+                  ) : null}
+                  {usd2(l.total)}
+                </span>
               </li>
             ))}
           </ul>
@@ -668,6 +750,15 @@ export function CheckoutFormulario(p: Props) {
                 <dt>Subtotal</dt>
                 <dd>{usd2(resumen.subtotal)}</dd>
               </div>
+              {resumen.combos.map((c) => (
+                <div key={c.id} className="flex justify-between text-green-700">
+                  <dt>
+                    Combo {c.nombre}
+                    {c.veces > 1 ? ` ×${c.veces}` : ""}
+                  </dt>
+                  <dd className="font-medium">−{usd2(c.descuento)}</dd>
+                </div>
+              ))}
               <div className="flex justify-between">
                 <dt>Envío</dt>
                 <dd>
@@ -687,26 +778,117 @@ export function CheckoutFormulario(p: Props) {
                   <dd className="font-medium">−{usd2(descuento)}</dd>
                 </div>
               ) : null}
+              {cot?.cupon ? (
+                <div className="flex justify-between text-green-700">
+                  <dt>Cupón {cot.cupon.codigo}</dt>
+                  <dd className="font-medium">−{usd2(cot.cupon.monto)}</dd>
+                </div>
+              ) : null}
+              {cot?.puntos ? (
+                <div className="flex justify-between text-green-700">
+                  <dt>{cot.puntos.usados} Puntos Nera</dt>
+                  <dd className="font-medium">−{usd2(cot.puntos.monto)}</dd>
+                </div>
+              ) : null}
               <div className="flex justify-between pt-1 text-lg font-bold">
                 <dt>Total</dt>
                 <dd>{usd2(totalAPagar)}</dd>
               </div>
             </dl>
           ) : null}
-          {resumen && !tieneDescuentoSinTarjeta(formaValida) && resumen.subtotal > 0 ? (
+          {resumen && !tieneDescuentoSinTarjeta(formaValida) && (cot?.descuentoPagoPosible ?? 0) > 0 ? (
             <p className="text-xs text-muted-foreground">
-              Con efectivo o transferencia pagás{" "}
-              <strong className="text-green-700">
-                {usd2(
-                  Math.round(
-                    (resumen.total -
-                      descuentoSinTarjeta(resumen.subtotal, "transferencia")) *
-                      100,
-                  ) / 100,
-                )}
-              </strong>
-              .
+              Con efectivo o transferencia ahorrás{" "}
+              <strong className="text-green-700">{usd2(cot!.descuentoPagoPosible)}</strong> más.
             </p>
+          ) : null}
+
+          {/* Cupón o puntos: uno solo por pedido */}
+          {resumen ? (
+            <div className="space-y-2 border-t pt-3 text-sm">
+              {cot?.cupon ? (
+                <div className="flex items-center gap-2 rounded-lg bg-green-50 p-2 text-green-800">
+                  <Tag className="size-4 shrink-0" aria-hidden />
+                  <span className="flex-1">
+                    Cupón <strong>{cot.cupon.codigo}</strong> aplicado
+                    {cot.cupon.recortado ? (
+                      <span className="block text-xs">Se aplicó el máximo posible para este pedido.</span>
+                    ) : null}
+                  </span>
+                  <button type="button" onClick={quitarCupon} className="rounded p-1 hover:bg-green-100" aria-label="Quitar cupón">
+                    <X className="size-4" />
+                  </button>
+                </div>
+              ) : cuponAbierto ? (
+                <div className="space-y-1">
+                  <label htmlFor="co-cupon" className="block font-medium">
+                    Código del cupón
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      id="co-cupon"
+                      value={cuponTexto}
+                      onChange={(e) => setCuponTexto(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          if (cuponTexto.trim()) aplicarCupon();
+                        }
+                      }}
+                      autoCapitalize="characters"
+                      autoComplete="off"
+                      className={`${claseEntrada(cot?.cuponError && cuponAplicado ? "x" : errores.cupon)} h-11 uppercase`}
+                    />
+                    <Button type="button" variant="outline" className="h-11" disabled={!cuponTexto.trim() || cargando} onClick={aplicarCupon}>
+                      Aplicar
+                    </Button>
+                  </div>
+                  {cot?.cuponError && cuponAplicado ? (
+                    <p className="text-sm text-destructive" role="alert">
+                      {cot.cuponError}
+                    </p>
+                  ) : errores.cupon ? (
+                    <p className="text-sm text-destructive">{errores.cupon}</p>
+                  ) : null}
+                </div>
+              ) : (
+                <button type="button" onClick={() => setCuponAbierto(true)} className="flex items-center gap-1.5 font-medium text-marca underline">
+                  <Tag className="size-4" aria-hidden /> ¿Tenés un cupón?
+                </button>
+              )}
+
+              {cot?.saldoPuntos ? (
+                <label className={`flex items-start gap-2 rounded-lg border p-2 ${cot.cupon ? "opacity-50" : "cursor-pointer"}`}>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(cot.puntos) || (usarPuntos && cargando)}
+                    disabled={Boolean(cot.cupon)}
+                    onChange={(e) => setUsarPuntos(e.target.checked)}
+                    className="mt-0.5 size-4 accent-[var(--marca)]"
+                  />
+                  <Star className="mt-0.5 size-4 shrink-0 text-marca" aria-hidden />
+                  <span>
+                    Usar mis Puntos Nera
+                    <span className="block text-xs text-muted-foreground">
+                      {cot.cupon
+                        ? "Usá un cupón o tus puntos, no los dos."
+                        : cot.puntos
+                          ? `Usás ${cot.puntos.usados} de ${cot.saldoPuntos} puntos${cot.puntos.recortado ? " (lo máximo para este pedido)" : ""}.`
+                          : `Tenés ${cot.saldoPuntos} puntos = ${usd2(cot.saldoPuntos * cot.valorPunto)}.`}
+                    </span>
+                  </span>
+                </label>
+              ) : !cuenta ? (
+                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Gift className="size-3.5 shrink-0" aria-hidden />
+                  ¿Tenés Puntos Nera?{" "}
+                  <Link href="/cuenta/entrar?volver=/checkout" className="underline">
+                    Entrá con Google
+                  </Link>{" "}
+                  para usarlos.
+                </p>
+              ) : null}
+            </div>
           ) : null}
 
           {mensaje ? (
@@ -731,8 +913,8 @@ export function CheckoutFormulario(p: Props) {
           </Button>
           <p className="flex items-start gap-2 text-xs text-muted-foreground">
             <ShieldCheck className="size-4 shrink-0 text-marca" aria-hidden />
-            Garantía Nera Tech por escrito. Usamos tus datos solo para tu pedido
-            y tu factura.
+            Garantía Nera Tech por escrito. Usamos tus datos para tu pedido, tu
+            factura y, si no lo desactivás, para enviarte ofertas.
           </p>
         </div>
       </aside>
