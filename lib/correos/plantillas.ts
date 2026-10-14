@@ -11,6 +11,11 @@ export type DatosPedidoCorreo = {
   pagado: boolean;
   lineas: { nombre: string; cantidad: number; precio: number }[];
   direccion: string;
+  telefono: string;
+  /** Quién lleva el pedido (lo pone el equipo al marcarlo "en camino") */
+  repartidor: { nombre: string; telefono: string } | null;
+  /** Mensaje del equipo para el cliente en el último cambio de estado */
+  mensaje: string | null;
   enlacePedido: string;
   whatsapp: string; // enlace wa.me ya armado
   negocio: { nombre: string; nit: string; direccion: string };
@@ -19,13 +24,27 @@ export type DatosPedidoCorreo = {
 };
 
 const NARANJA = "#C85000";
+const VERDE_WA = "#1f9d55";
 const usd = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
+const tel = (t: string) => t.replace(/^(\d{4})(\d{4})$/, "$1 $2");
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-function boton(texto: string, url: string, color = NARANJA) {
-  return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:20px 0"><tr><td style="border-radius:10px;background:${color}">
-<a href="${esc(url)}" style="display:inline-block;padding:14px 22px;font-size:16px;font-weight:bold;color:#ffffff;text-decoration:none;border-radius:10px">${esc(texto)}</a>
+function boton(texto: string, url: string, color = NARANJA, ancho = false) {
+  return `<table role="presentation" cellpadding="0" cellspacing="0" ${ancho ? 'width="100%"' : ""} style="margin:20px 0"><tr><td align="center" style="border-radius:12px;background:${color}">
+<a href="${esc(url)}" style="display:${ancho ? "block" : "inline-block"};padding:${ancho ? "16px 22px" : "14px 22px"};font-size:${ancho ? "17px" : "16px"};font-weight:bold;color:#ffffff;text-decoration:none;border-radius:12px;text-align:center">${esc(texto)}</a>
 </td></tr></table>`;
+}
+
+/** Recuadro de entrega: a quién, dónde y teléfono */
+function bloqueEntrega(d: DatosPedidoCorreo) {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;background:#f7f7f8;border-radius:12px"><tr><td style="padding:14px 16px;font-size:14px;line-height:1.5;color:#333">
+<strong style="color:#1c1c1c">Entrega</strong><br>${esc(d.nombre)}<br>${esc(d.direccion)}<br>Tel. ${esc(tel(d.telefono))}
+</td></tr></table>`;
+}
+
+/** Recuadro destacado (repartidor o mensaje del equipo) */
+function destacado(html: string) {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;background:#fff4ec;border-left:4px solid #E96000;border-radius:8px"><tr><td style="padding:14px 16px;font-size:15px;line-height:1.5;color:#1c1c1c">${html}</td></tr></table>`;
 }
 
 function tablaProductos(d: DatosPedidoCorreo) {
@@ -50,11 +69,17 @@ function base(d: DatosPedidoCorreo, titulo: string, cuerpo: string, previa: stri
 <span style="display:none;max-height:0;overflow:hidden">${esc(previa)}</span>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5"><tr><td align="center" style="padding:24px 12px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px">
-<tr><td style="padding:24px 24px 0"><img src="${esc(new URL(d.enlacePedido).origin)}/marca/logo-claro.png" width="96" height="56" alt="Nera Tech" style="display:block;border:0"></td></tr>
-<tr><td style="padding:16px 24px 24px">
+<tr><td align="center" style="padding:24px;background:#1C1C1C;border-radius:16px 16px 0 0">
+<img src="${esc(new URL(d.enlacePedido).origin)}/marca/logo-oscuro.png" width="140" height="82" alt="Nera Tech" style="display:block;margin:0 auto;border:0">
+</td></tr>
+<tr><td style="padding:24px">
 <h1 style="margin:0 0 12px;font-size:22px;line-height:1.3;color:#1c1c1c">${esc(titulo)}</h1>
 ${cuerpo}
-<p style="margin:20px 0 0;font-size:13px;color:#666">¿Dudas? Respondé este correo o <a href="${esc(d.whatsapp)}" style="color:${NARANJA}">escribinos por WhatsApp</a>.</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;border-top:1px solid #eee"><tr><td style="padding-top:20px;text-align:center">
+<p style="margin:0;font-size:15px;color:#333"><strong>¿Tenés alguna duda?</strong> Estamos para ayudarte.</p>
+${boton("Escribinos por WhatsApp", d.whatsapp, VERDE_WA, true)}
+<p style="margin:0;font-size:13px;color:#666">O respondé este correo.</p>
+</td></tr></table>
 </td></tr></table>
 <p style="max-width:560px;margin:16px auto 0;font-size:11px;color:#999;text-align:center">${pie}<br>Recibís este correo porque hiciste un pedido en Nera Tech.</p>
 </td></tr></table></body></html>`;
@@ -101,7 +126,7 @@ export function correoPedidoRecibido(d: DatosPedidoCorreo): Correo {
     p("Lo estamos revisando y te escribimos por WhatsApp para confirmar la entrega.") +
     instruccionesPago(d) +
     tablaProductos(d) +
-    p(`<strong>Entrega:</strong> ${esc(d.direccion)}`) +
+    bloqueEntrega(d) +
     boton("Ver mi pedido", d.enlacePedido);
   return {
     asunto: `Recibimos tu pedido #${d.numero}`,
@@ -115,6 +140,7 @@ export function correoPagoConfirmado(d: DatosPedidoCorreo): Correo {
   const cuerpo =
     p(`Recibimos tu pago de <strong>${usd(d.total)}</strong>. Te escribimos para coordinar la entrega.`) +
     tablaProductos(d) +
+    bloqueEntrega(d) +
     boton("Ver mi pedido", d.enlacePedido);
   return {
     asunto: `Pago recibido · pedido #${d.numero}`,
@@ -146,16 +172,28 @@ const MENSAJES_ESTADO: Record<string, { asunto: string; titulo: string; texto: s
   },
 };
 
-export function correoEstado(d: DatosPedidoCorreo, estado: string, nota?: string | null): Correo | null {
+export function correoEstado(d: DatosPedidoCorreo, estado: string): Correo | null {
   const m = MENSAJES_ESTADO[estado];
   if (!m) return null;
   const n = (s: string) => s.replace("#N", `#${d.numero}`);
-  const extra = estado === "en_camino" && d.formaPago === "contra_entrega" && !d.pagado ? p(`Tené listo <strong>${usd(d.total)}</strong> en efectivo.`) : "";
-  const cuerpo = p(m.texto) + extra + (nota && estado === "cancelado" ? p(`Motivo: ${esc(nota)}`) : "") + tablaProductos(d) + boton("Ver mi pedido", d.enlacePedido);
+  const efectivo = estado === "en_camino" && d.formaPago === "contra_entrega" && !d.pagado ? p(`Tené listo <strong>${usd(d.total)}</strong> en efectivo.`) : "";
+  const repartidor =
+    estado === "en_camino" && d.repartidor && (d.repartidor.nombre || d.repartidor.telefono)
+      ? destacado(
+          `<strong>Te lo lleva ${esc(d.repartidor.nombre || "nuestro repartidor")}</strong>${
+            d.repartidor.telefono
+              ? `<br>Tel. <a href="tel:+503${esc(d.repartidor.telefono)}" style="color:${NARANJA};font-weight:bold">${esc(tel(d.repartidor.telefono))}</a>`
+              : ""
+          }`
+        )
+      : "";
+  const mensaje = d.mensaje ? destacado(`<strong>Mensaje de Nera Tech:</strong><br>${esc(d.mensaje).replace(/\n/g, "<br>")}`) : "";
+  const cuerpo =
+    p(m.texto) + repartidor + mensaje + efectivo + (estado === "cancelado" ? "" : bloqueEntrega(d)) + tablaProductos(d) + boton("Ver mi pedido", d.enlacePedido);
   return {
     asunto: n(m.asunto),
     html: base(d, n(m.titulo), cuerpo, n(m.texto)),
-    texto: `${n(m.titulo)}\n\n${m.texto}\n\n${textoProductos(d)}\n\nVer tu pedido: ${d.enlacePedido}`,
+    texto: `${n(m.titulo)}\n\n${m.texto}${d.repartidor && estado === "en_camino" ? `\nTe lo lleva ${d.repartidor.nombre || "nuestro repartidor"}${d.repartidor.telefono ? ` (tel. ${d.repartidor.telefono})` : ""}` : ""}${d.mensaje ? `\n\nMensaje de Nera Tech: ${d.mensaje}` : ""}\n\n${textoProductos(d)}\n\nVer tu pedido: ${d.enlacePedido}`,
   };
 }
 

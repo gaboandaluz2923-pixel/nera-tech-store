@@ -40,6 +40,8 @@ type Pedido = PedidoBase & {
     departamento: string | null;
     direccion: string;
     referencia: string | null;
+    repartidor?: { nombre: string; telefono: string } | null;
+    mensaje?: string | null;
   };
   facturacion: { tipo: string; nit?: string; nrc?: string; nombre?: string; giro?: string };
   factura_numero: string | null;
@@ -136,9 +138,26 @@ async function Detalle({ params }: { params: PageProps<"/admin/pedidos/[id]">["p
           {siguientes.length ? (
             <FormularioAccion key={p.estado} accion={cambiarEstadoPedido} className="space-y-3">
               <input type="hidden" name="id" value={p.id} />
+              {siguientes.some((s) => s.estado === "en_camino") || p.estado === "en_camino" ? (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <Label htmlFor="rep-nombre">Repartidor (nombre)</Label>
+                    <Input id="rep-nombre" name="repartidor_nombre" defaultValue={p.entrega.repartidor?.nombre ?? ""} placeholder="Ej. Carlos" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="rep-tel">Teléfono del repartidor</Label>
+                    <Input id="rep-tel" name="repartidor_telefono" inputMode="tel" defaultValue={p.entrega.repartidor?.telefono ?? ""} placeholder="7123 4567" />
+                  </div>
+                  <p className="text-xs text-muted-foreground sm:col-span-2">Se le muestra al cliente en el correo de &quot;Va en camino&quot; y en su pedido.</p>
+                </div>
+              ) : null}
               <div className="space-y-1">
-                <Label htmlFor="nota-estado">Nota (opcional; obligatoria para cancelar)</Label>
-                <Input id="nota-estado" name="nota" placeholder="Ej. sale con el motorista a las 3 pm" />
+                <Label htmlFor="mensaje-cliente">Mensaje para el cliente (opcional; sale en el correo)</Label>
+                <Input id="mensaje-cliente" name="mensaje_cliente" maxLength={500} placeholder="Ej. Llegamos entre 2 y 4 pm, tené el efectivo listo" />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="nota-estado">Nota interna (solo el equipo; obligatoria para cancelar)</Label>
+                <Input id="nota-estado" name="nota" placeholder="Ej. cliente pidió cancelar por WhatsApp" />
               </div>
               <div className="flex flex-wrap gap-2">
                 {siguientes.map((s) => (
@@ -331,6 +350,9 @@ async function Detalle({ params }: { params: PageProps<"/admin/pedidos/[id]">["p
               </Dato>
               {p.entrega.referencia ? <Dato etiqueta="Referencia">{p.entrega.referencia}</Dato> : null}
               {p.notas ? <Dato etiqueta="Nota del cliente">{p.notas}</Dato> : null}
+              {p.entrega.repartidor ? (
+                <Dato etiqueta="Repartidor">{[p.entrega.repartidor.nombre, p.entrega.repartidor.telefono].filter(Boolean).join(" · ")}</Dato>
+              ) : null}
               <Dato etiqueta="Cuenta">
                 {p.clientes?.auth_user_id ? `Enlazado a ${p.clientes.correo}` : `Sin cuenta (se enlaza si entra con ${p.clientes?.correo ?? p.entrega.correo})`}
               </Dato>

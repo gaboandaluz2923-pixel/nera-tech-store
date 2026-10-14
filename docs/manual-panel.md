@@ -145,8 +145,16 @@ Confirmado, En camino, Entregado), si está **Pagado** o **Sin pagar**, y si toc
 
 **Dentro de un pedido**, de arriba hacia abajo:
 1. **Siguiente paso**: botones para pasar al siguiente estado (Confirmar pedido → Marcar en camino →
-   Marcar entregado). La nota es opcional, salvo para **Cancelar** (pide el motivo). Al confirmar, se
-   descuentan solas las unidades propias en bodega. **Escribirle al cliente** abre WhatsApp con su número.
+   Marcar entregado). Arriba de los botones hay tres cajas:
+   - **Repartidor (nombre)** y **Teléfono del repartidor** (aparecen cuando el pedido puede salir o ya va en
+     camino): llená antes de tocar **Marcar en camino**. El cliente los ve en el correo "Va en camino" (con el
+     teléfono para tocar y llamar) y en la página de su pedido. El teléfono es de 8 dígitos.
+   - **Mensaje para el cliente** (opcional): sale en el correo de ese cambio y en su pedido, en un recuadro
+     "Mensaje de Nera Tech". Ej.: "Llegamos entre 2 y 4 pm". Vale solo para ese cambio de estado.
+   - **Nota interna** (solo el equipo): queda en el Historial; el cliente **no** la ve. Es obligatoria para
+     **Cancelar**. Si querés explicarle al cliente por qué se canceló, usá el mensaje para el cliente.
+   Al confirmar, se descuentan solas las unidades propias en bodega. **Escribirle al cliente** abre WhatsApp
+   con su número.
 2. **Pago**: forma de pago y si ya está pagado. Los pagos con tarjeta se marcan solos cuando Wompi los
    aprueba. Para transferencia o tasa 0%, cuando confirmes el pago tocá **Marcar como pagado** (podés
    anotar la referencia). En contra entrega, al marcar **entregado** queda cobrado solo.
@@ -193,4 +201,7 @@ La tienda manda estos correos sola, con tu logo y un botón "Ver mi pedido":
 | Pago recibido | Cuando Wompi aprueba la tarjeta o marcás un pago a mano (no en contra entrega) |
 | Confirmado / En camino / Entregado / Cancelado | Cuando cambiás el estado en el panel |
 | Tu factura está lista | Cuando guardás la factura por primera vez o subís un PDF nuevo |
+Los correos al cliente llevan el recuadro **Entrega** (nombre, dirección completa con referencia y teléfono)
+y abajo un botón verde grande **Escribinos por WhatsApp**. El de "En camino" incluye el repartidor si lo
+llenaste, y cualquier correo de cambio de estado incluye el **Mensaje para el cliente** si escribiste uno.
 Cada correo enviado (o que no se pudo enviar, con el motivo) queda en el **Historial** del pedido.

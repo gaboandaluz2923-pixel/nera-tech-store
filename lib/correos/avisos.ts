@@ -27,7 +27,17 @@ type Pedido = {
   descuento: number;
   pagado_en: string | null;
   factura_numero: string | null;
-  entrega: { nombre: string; telefono: string; correo: string; direccion: string; municipio: string | null; departamento: string | null; referencia: string | null };
+  entrega: {
+    nombre: string;
+    telefono: string;
+    correo: string;
+    direccion: string;
+    municipio: string | null;
+    departamento: string | null;
+    referencia: string | null;
+    repartidor?: { nombre: string; telefono: string } | null;
+    mensaje?: string | null;
+  };
   lineas_pedido: { nombre: string; cantidad: number; precio_unitario: number }[];
 };
 
@@ -48,6 +58,9 @@ async function cargar(pedidoId: string, sitio: string) {
   const datos: DatosPedidoCorreo = {
     numero: p.numero,
     nombre: e.nombre,
+    telefono: e.telefono,
+    repartidor: e.repartidor?.nombre || e.repartidor?.telefono ? e.repartidor : null,
+    mensaje: e.mensaje || null,
     total: Number(p.total),
     envio: Number(p.envio),
     descuento: Number(p.descuento ?? 0),
@@ -101,10 +114,10 @@ export async function avisarPagoConfirmado(pedidoId: string, sitio: string) {
   await enviarYAnotar(x.p, x.p.entrega.correo, x.p.entrega.nombre, correoPagoConfirmado(x.datos), "pago-confirmado", "cliente");
 }
 
-export async function avisarEstado(pedidoId: string, estado: string, nota: string | null, sitio: string) {
+export async function avisarEstado(pedidoId: string, estado: string, sitio: string) {
   const x = await cargar(pedidoId, sitio);
   if (!x) return;
-  const correo = correoEstado(x.datos, estado, nota);
+  const correo = correoEstado(x.datos, estado);
   if (correo) await enviarYAnotar(x.p, x.p.entrega.correo, x.p.entrega.nombre, correo, `estado-${estado}`, "cliente");
 }
 

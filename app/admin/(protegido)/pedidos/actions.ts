@@ -25,10 +25,14 @@ export async function cambiarEstadoPedido(_prev: EstadoAccion, form: FormData): 
   const id = texto(form.get("id"));
   const nuevo = texto(form.get("estado")) as EstadoPedido;
   const nota = texto(form.get("nota"));
+  const mensaje = texto(form.get("mensaje_cliente")).slice(0, 500);
+  const repNombre = texto(form.get("repartidor_nombre")).slice(0, 80);
+  const repTel = texto(form.get("repartidor_telefono")).replace(/\D/g, "").replace(/^503(?=\d{8}$)/, "");
+  if (repTel && !/^[267]\d{7}$/.test(repTel)) return falla("El teléfono del repartidor debe tener 8 dígitos (ej. 7123 4567).");
   const { supabase, usuario } = await equipo();
   const { data: p } = await supabase
     .from("pedidos")
-    .select("id, estado, forma_pago, total, pagado_en, confirmado_en, lineas_pedido(variante_id, cantidad)")
+    .select("id, estado, forma_pago, total, pagado_en, confirmado_en, entrega, lineas_pedido(variante_id, cantidad)")
     .eq("id", id)
     .single();
   if (!p) return falla("No se encontró el pedido.");
@@ -46,13 +50,26 @@ export async function cambiarEstadoPedido(_prev: EstadoAccion, form: FormData): 
   }
   if (nuevo === "pendiente_confirmar") cambios.confirmado_en = null;
 
+  // El mensaje para el cliente vale solo para este cambio; el repartidor se guarda hasta que se cambie
+  const entrega = { ...((p.entrega ?? {}) as Record<string, unknown>) };
+  entrega.mensaje = mensaje || null;
+  if (repNombre || repTel) entrega.repartidor = { nombre: repNombre, telefono: repTel };
+  cambios.entrega = entrega;
+
   const { error } = await supabase.from("pedidos").update(cambios).eq("id", id).eq("estado", p.estado);
   if (error) return falla(`No se pudo guardar: ${error.message}`);
   await supabase.from("pedido_eventos").insert({
     pedido_id: id,
     estado_anterior: p.estado,
     estado_nuevo: nuevo,
-    nota: nota || null,
+    nota:
+      [
+        nota,
+        repNombre || repTel ? `Repartidor: ${[repNombre, repTel].filter(Boolean).join(" · ")}` : "",
+        mensaje ? `Mensaje al cliente: "${mensaje}"` : "",
+      ]
+        .filter(Boolean)
+        .join(" — ") || null,
     usuario,
   });
 
@@ -71,7 +88,7 @@ export async function cambiarEstadoPedido(_prev: EstadoAccion, form: FormData): 
   // Correo al cliente con el nuevo estado
   const sitio = await sitioActual();
   if (["confirmado", "en_camino", "entregado", "cancelado"].includes(nuevo)) {
-    after(() => avisarEstado(id, nuevo, nota || null, sitio).catch((e) => console.error("avisarEstado", e)));
+    after(() => avisarEstado(id, nuevo, sitio).catch((e) => console.error("avisarEstado", e)));
   }
 
   // Contra entrega: entregado = cobrado

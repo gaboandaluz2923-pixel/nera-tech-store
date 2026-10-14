@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { Check, CircleAlert, Clock, FileText, Landmark } from "lucide-react";
+import { Check, CircleAlert, Clock, FileText, Landmark, Truck } from "lucide-react";
 import { BotonGoogle } from "@/components/tienda/boton-google";
 import { IconoWhatsApp } from "@/components/tienda/icono-whatsapp";
 import { PagarConTarjeta } from "@/components/tienda/pagar-tarjeta";
@@ -25,7 +25,17 @@ type Pedido = {
   envio: number;
   descuento: number;
   total: number;
-  entrega: { nombre: string; telefono: string; correo: string; municipio: string; departamento: string | null; direccion: string; referencia: string | null };
+  entrega: {
+    nombre: string;
+    telefono: string;
+    correo: string;
+    municipio: string;
+    departamento: string | null;
+    direccion: string;
+    referencia: string | null;
+    repartidor?: { nombre: string; telefono: string } | null;
+    mensaje?: string | null;
+  };
   facturacion: { tipo: string; nombre?: string; nit?: string };
   pagado_en: string | null;
   confirmado_en: string | null;
@@ -123,6 +133,27 @@ async function Detalle({ params, searchParams }: PageProps<"/pedido/[token]">) {
             </li>
           ))}
         </ol>
+      ) : null}
+
+      {/* Repartidor y mensaje del equipo */}
+      {p.estado === "en_camino" && (p.entrega.repartidor?.nombre || p.entrega.repartidor?.telefono) ? (
+        <div className="flex items-center gap-3 rounded-2xl border-2 border-marca/40 bg-marca/5 p-4">
+          <Truck className="size-6 shrink-0 text-marca" aria-hidden />
+          <div className="text-sm">
+            <p className="font-bold">Te lo lleva {p.entrega.repartidor?.nombre || "nuestro repartidor"}</p>
+            {p.entrega.repartidor?.telefono ? (
+              <a href={`tel:+503${p.entrega.repartidor.telefono}`} className="font-medium text-marca underline">
+                Tel. {p.entrega.repartidor.telefono}
+              </a>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+      {p.entrega.mensaje && !cancelado ? (
+        <div className="rounded-2xl bg-muted/60 p-4 text-sm">
+          <p className="font-semibold">Mensaje de Nera Tech</p>
+          <p className="mt-1">{p.entrega.mensaje}</p>
+        </div>
       ) : null}
 
       {/* Qué sigue: el paso que le toca al cliente */}
