@@ -143,3 +143,8 @@ export function hashWebhookValido(cuerpo: string, hash: string | null) {
   if (!hash) return false;
   return iguales(hmac(cuerpo), hash);
 }
+
+/** Datos del negocio en Wompi; estaProductivo = false significa modo pruebas (no cobra de verdad). */
+export function datosNegocio() {
+  return api<{ estaProductivo?: boolean; nombre?: string; nombreNegocio?: string }>("/Aplicativo");
+}

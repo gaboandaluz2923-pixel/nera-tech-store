@@ -4,7 +4,7 @@ import { revalidatePath, updateTag } from "next/cache";
 import type { EstadoAccion } from "@/components/admin/formulario-accion";
 import { equipo } from "@/lib/admin/sesion";
 import { ETIQUETA_CATALOGO } from "@/lib/tienda/datos";
-import { ErrorWompi, tokenWompi } from "@/lib/wompi";
+import { ErrorWompi, datosNegocio, tokenWompi } from "@/lib/wompi";
 
 // Datos del negocio que usa la tienda (WhatsApp, envío, contra entrega, tasa 0%, pie de página, garantía).
 
@@ -104,7 +104,14 @@ export async function probarWompi(): Promise<EstadoAccion> {
   await equipo();
   try {
     await tokenWompi();
-    return { ok: true, mensaje: "Conexión con Wompi correcta: las claves funcionan.", vez: Date.now() };
+    const negocio = await datosNegocio().catch(() => null);
+    const modo =
+      negocio?.estaProductivo === true
+        ? " Modo PRODUCCIÓN: los pagos se cobran de verdad."
+        : negocio?.estaProductivo === false
+          ? " Modo PRUEBAS: los pagos NO se cobran."
+          : "";
+    return { ok: true, mensaje: `Conexión con Wompi correcta: las claves funcionan.${modo}`, vez: Date.now() };
   } catch (e) {
     return falla(e instanceof ErrorWompi ? e.message : "No se pudo contactar a Wompi. Probá de nuevo en un minuto.");
   }
