@@ -42,5 +42,6 @@ Registro corto de decisiones técnicas y de negocio, con fecha, para no volver a
 ## Fase actual
 Fase 1 — Proveedores, listas y mejor precio: terminada.
 Fase 2 — Catálogo y tienda: terminada y en producción (14 oct 2026).
-Fase 3 — Carrito, checkout sin cuenta, Wompi, Ver mi pedido, Mis pedidos con Google, Pedidos y Por facturar en el panel:
-construida y probada en local (Wompi simulado). Falta: correr 0004 en producción, activar Google en Supabase, compra de prueba real.
+Fase 3 — Carrito, checkout sin cuenta, Wompi, Ver mi pedido, Mis pedidos y Mi cuenta con Google, Pedidos y Por facturar:
+terminada y en producción (14 oct 2026). Primera compra real con tarjeta: pedido #1001, aprobada.
+Fase 4 — Promociones, cupones, puntos (opción B), regalo de cumpleaños y correos con Brevo: por proponer.
