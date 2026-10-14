@@ -20,11 +20,14 @@ la tienda al instante:
 - **Envío**: costo, desde qué monto es gratis (vacío = nunca) y si es gratis al llevar un accesorio.
 - **Contra entrega**: municipios o zonas donde se paga en efectivo al recibir, uno por línea.
 - **Tasa 0%**: hasta cuántos meses (con eso se calcula la cuota que ve el cliente) y con qué tarjetas.
+- **Cuentas para transferencia**: una por línea, así: Banco | Tipo | Número | Titular. Solo las ve quien
+  eligió pagar por transferencia, en la página de su pedido.
 - **Datos para el pie de página**: nombre, NIT, dirección y correo.
 - **Garantía**: meses, días de cambio inmediato y las listas de qué cubre, qué no y cómo reclamar
   (una cosa por línea).
 
-Más abajo, **Conexiones** muestra con un punto verde qué claves ya están cargadas en Vercel.
+Más abajo, **Conexiones** muestra con un punto verde qué claves ya están cargadas en Vercel, y
+**Probar conexión con Wompi** confirma que las claves de Wompi funcionan.
 ## Proveedores
 Una tarjeta por proveedor (Total Link, Maverik, Idecom, Intcomex ya vienen creados).
 - **Días de crédito**: si dos proveedores tienen el mismo costo, gana el que te da más días.
@@ -120,3 +123,45 @@ ven en la tienda en el momento.
   disponibilidad, **Comprar por WhatsApp** (el mensaje ya lleva modelo, memoria, color y precio) y
   **Quiero tasa 0%**. Si está agotado: "Avisame cuando haya" (guarda el correo en Suscriptores).
 - **Garantía** y **Envíos y pagos**: salen de Configuración.
+
+## Pedidos
+Todos los pedidos de la tienda en línea. Arriba hay vistas con el número de pedidos en cada una:
+- **Activos**: todo lo que no está entregado ni cancelado.
+- **Por confirmar**: pedidos nuevos. Revisá que haya stock y escribile al cliente.
+- **Esperando pago**: tarjeta, transferencia o tasa 0% que todavía no están pagados.
+- **Por facturar**: los que ya tenés que facturar (ver abajo).
+- **Entregados**, **Cancelados** y **Todos**.
+El buscador encuentra por número de pedido, nombre o teléfono. Cada fila muestra el estado (Recibido,
+Confirmado, En camino, Entregado), si está **Pagado** o **Sin pagar**, y si toca **Facturar**.
+
+**Dentro de un pedido**, de arriba hacia abajo:
+1. **Siguiente paso**: botones para pasar al siguiente estado (Confirmar pedido → Marcar en camino →
+   Marcar entregado). La nota es opcional, salvo para **Cancelar** (pide el motivo). Al confirmar, se
+   descuentan solas las unidades propias en bodega. **Escribirle al cliente** abre WhatsApp con su número.
+2. **Pago**: forma de pago y si ya está pagado. Los pagos con tarjeta se marcan solos cuando Wompi los
+   aprueba. Para transferencia o tasa 0%, cuando confirmes el pago tocá **Marcar como pagado** (podés
+   anotar la referencia). En contra entrega, al marcar **entregado** queda cobrado solo.
+3. **Factura electrónica**: dice si es consumidor final o crédito fiscal (con NIT, NRC, razón social y
+   giro que dio el cliente) y si ya toca emitirla. Emitila en tu sistema de facturación, escribí el
+   código de generación o número de control, subí el PDF y tocá **Guardar factura**. Desde ese momento
+   el cliente la descarga en su pedido. **Avisarle por WhatsApp** le manda el enlace. Si un pedido no
+   lleva factura, tocá **No lleva factura**.
+4. **Productos**, **Cliente y entrega** (dirección, referencia, nota del cliente).
+   **Enlazar a otro correo de Google**: si el cliente quiere ver el pedido en su cuenta pero compró con
+   otro correo, escribí aquí su correo de Google.
+5. **Historial**: todo lo que pasó con el pedido, con fecha y quién lo hizo. Podés agregar notas internas
+   (el cliente no las ve).
+
+**¿Cuándo aparece en "Por facturar"?**
+- Tarjeta, transferencia y tasa 0%: cuando está **pagado y confirmado**.
+- Contra entrega: desde el **día siguiente** a la entrega.
+
+**Lo que ve el cliente**: al comprar llega a la página privada de su pedido (enlace "Ver mi pedido"), con
+el estado, cómo pagar (cuentas para transferencia, botón para reintentar la tarjeta, WhatsApp para tasa
+0%), y la factura cuando la subís. Puede entrar con Google para ver todos sus pedidos en **Mis pedidos**;
+aparecen solos los que hizo con el mismo correo, y puede agregar otros con número de pedido y teléfono.
+
+## Equipo (quién entra al panel)
+Solo entran al panel los correos de la lista de equipo (tabla `equipo` en Supabase). Los clientes que
+entran con Google no pueden ver el panel. Para agregar a alguien del equipo: Supabase → SQL Editor →
+`insert into equipo (correo) values ('correo@ejemplo.com');` y crearle su usuario en Authentication.

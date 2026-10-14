@@ -10,6 +10,7 @@ import type { VarianteTienda } from "@/lib/tienda/datos";
 import { TEXTO_DISPONIBILIDAD, cuota, usd, usd2 } from "@/lib/tienda/formato";
 import { enlaceWhatsAppA, mensajeProducto } from "@/lib/whatsapp";
 import { IconoWhatsApp } from "./icono-whatsapp";
+import { abrirCarrito, agregarAlCarrito } from "@/lib/tienda/carrito";
 
 // Caja de compra de la ficha: elegir memoria y color, ver precio, cuota, disponibilidad y comprar.
 // En el teléfono, una barra fija abajo mantiene precio y botón siempre a la vista.
@@ -156,6 +157,10 @@ export function CompraProducto(p: Props) {
       codigoPagina: "ficha",
     }),
   );
+  const comprar = () => {
+    agregarAlCarrito(elegida.id);
+    abrirCarrito();
+  };
   const envioGratis =
     p.envioGratisDesde !== null && elegida.precio >= p.envioGratisDesde;
 
@@ -262,20 +267,8 @@ export function CompraProducto(p: Props) {
           />
         ) : (
           <div className="space-y-2">
-            <Button
-              size="lg"
-              className="h-12 w-full text-base"
-              nativeButton={false}
-              render={
-                <a
-                  href={enlaceComprar}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                />
-              }
-            >
-              <IconoWhatsApp className="size-5" />
-              Comprar por WhatsApp
+            <Button size="lg" className="h-12 w-full text-base" onClick={comprar}>
+              Comprar
             </Button>
             {conCuotas ? (
               <Button
@@ -294,10 +287,15 @@ export function CompraProducto(p: Props) {
                 Quiero tasa 0% en {p.mesesTasaCero} cuotas
               </Button>
             ) : null}
-            <p className="text-center text-xs text-muted-foreground">
-              Te respondemos el pedido con dirección y forma de pago. Sin crear
-              cuenta.
-            </p>
+            <a
+              href={enlaceComprar}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-1.5 py-1 text-sm font-medium text-muted-foreground hover:text-foreground"
+            >
+              <IconoWhatsApp className="size-4" />
+              ¿Preferís comprar por WhatsApp?
+            </a>
           </div>
         )}
       </div>
@@ -328,18 +326,7 @@ export function CompraProducto(p: Props) {
               Avisame
             </Button>
           ) : (
-            <Button
-              size="lg"
-              className="h-11 px-5"
-              nativeButton={false}
-              render={
-                <a
-                  href={enlaceComprar}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                />
-              }
-            >
+            <Button size="lg" className="h-11 px-5" onClick={comprar}>
               Comprar
             </Button>
           )}

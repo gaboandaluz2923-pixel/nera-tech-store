@@ -1,8 +1,10 @@
-// Se ejecuta antes de cada petición a /admin.
+// Se ejecuta antes de cada petición a /admin y a las páginas de cuenta del cliente.
 // 1) Refresca la sesión de Supabase (cookies) para que no caduque a mitad de uso.
-// 2) Si no hay usuario y la ruta es del panel, manda a /admin/login.
+// 2) Panel: sin sesión → /admin/login. Con sesión pero sin estar en la lista de equipo
+//    (por ejemplo un cliente que entró con Google) → también al login, con un aviso.
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { esDelEquipo } from "@/lib/supabase/equipo";
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -41,16 +43,21 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
-  const esLogin = pathname.startsWith("/admin/login");
+  if (!pathname.startsWith("/admin")) return response; // páginas del cliente: solo refrescar la sesión
 
-  if (!user && !esLogin) {
+  const esLogin = pathname.startsWith("/admin/login");
+  const esEquipo = user ? await esDelEquipo(supabase) : false;
+
+  if (!esEquipo && !esLogin) {
     const url = request.nextUrl.clone();
     url.pathname = "/admin/login";
+    url.search = "";
     url.searchParams.set("volver", pathname);
+    if (user) url.searchParams.set("aviso", "sin-acceso");
     return NextResponse.redirect(url);
   }
 
-  if (user && esLogin) {
+  if (esEquipo && esLogin) {
     const url = request.nextUrl.clone();
     url.pathname = "/admin";
     url.search = "";
@@ -61,5 +68,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ["/admin/:path*", "/mis-pedidos/:path*"],
 };

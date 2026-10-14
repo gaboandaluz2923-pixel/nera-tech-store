@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 import { cerrarSesion } from "../login/actions";
+import { esDelEquipo } from "@/lib/supabase/equipo";
 
 export const metadata: Metadata = {
   title: "Panel",
@@ -25,7 +26,7 @@ const SECCIONES: { nombre: string; href: string; fase: number }[] = [
   { nombre: "Configuración", href: "/admin/configuracion", fase: 0 },
 ];
 
-const FASE_ACTUAL = 2;
+const FASE_ACTUAL = 3;
 
 async function Encabezado() {
   const supabase = await createClient();
@@ -34,6 +35,7 @@ async function Encabezado() {
   } = await supabase.auth.getUser();
 
   if (!user) redirect("/admin/login");
+  if (!(await esDelEquipo(supabase))) redirect("/admin/login?aviso=sin-acceso");
 
   return (
     <header className="flex items-center justify-between border-b px-4 py-3">

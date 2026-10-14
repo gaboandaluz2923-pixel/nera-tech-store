@@ -62,6 +62,16 @@ export async function guardarConfiguracion(_prev: EstadoAccion, form: FormData):
       };
       break;
     }
+    case "cuentas_bancarias": {
+      const cuentas = lineas(form.get("cuentas")).map((l) => {
+        const [banco = "", tipo = "", numero = "", titular = ""] = l.split("|").map((x) => x.trim());
+        return { banco, tipo, numero, titular };
+      });
+      const mala = cuentas.find((c) => !c.banco || !c.numero || !c.titular);
+      if (mala) return falla("Cada cuenta va en una línea así: Banco | Tipo | Número | Titular");
+      valor = cuentas;
+      break;
+    }
     case "garantia_texto": {
       const plazo = Math.round(numero(form.get("plazo_meses")));
       const dias = Math.round(numero(form.get("cambio_inmediato_dias")) || 0);

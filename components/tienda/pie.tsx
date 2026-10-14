@@ -34,6 +34,11 @@ export async function Pie() {
           <p className="mb-2 text-sm font-semibold">Ayuda</p>
           <ul className="space-y-1.5 text-sm text-white/70">
             <li>
+              <Link href="/mis-pedidos" className="hover:text-white">
+                Mis pedidos
+              </Link>
+            </li>
+            <li>
               <Link href="/garantia" className="hover:text-white">
                 Garantía
               </Link>

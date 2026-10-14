@@ -17,10 +17,19 @@ export const metadata: Metadata = {
 async function Formulario({
   searchParams,
 }: {
-  searchParams: Promise<{ volver?: string }>;
+  searchParams: Promise<{ volver?: string; aviso?: string }>;
 }) {
-  const { volver } = await searchParams;
-  return <FormularioLogin volver={volver ?? "/admin"} />;
+  const { volver, aviso } = await searchParams;
+  return (
+    <>
+      {aviso === "sin-acceso" ? (
+        <p className="mb-4 rounded-md bg-amber-50 p-3 text-sm text-amber-900">
+          Esa cuenta no tiene acceso al panel. Entrá con tu cuenta del equipo.
+        </p>
+      ) : null}
+      <FormularioLogin volver={volver ?? "/admin"} />
+    </>
+  );
 }
 
 export default function PaginaLogin(props: PageProps<"/admin/login">) {

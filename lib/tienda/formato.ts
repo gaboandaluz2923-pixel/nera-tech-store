@@ -58,3 +58,33 @@ export const NOMBRE_CARACTERISTICA: Record<string, string> = {
 
 /** Las 4 características que deciden la compra de un celular (se muestran primero y en el comparador). */
 export const CLAVES_DECISIVAS = ["pantalla", "camara", "bateria", "procesador"];
+
+/** Cómo se le muestra al cliente (y al equipo) cada estado del pedido. */
+export const ESTADO_PEDIDO: Record<string, { texto: string; clase: string }> = {
+  pendiente_confirmar: { texto: "Recibido", clase: "bg-amber-100 text-amber-900" },
+  confirmado: { texto: "Confirmado", clase: "bg-blue-100 text-blue-900" },
+  pagado: { texto: "Confirmado", clase: "bg-blue-100 text-blue-900" },
+  en_camino: { texto: "En camino", clase: "bg-violet-100 text-violet-900" },
+  entregado: { texto: "Entregado", clase: "bg-green-100 text-green-800" },
+  cancelado: { texto: "Cancelado", clase: "bg-muted text-muted-foreground" },
+  devuelto: { texto: "Devuelto", clase: "bg-muted text-muted-foreground" },
+};
+
+export const FORMA_PAGO: Record<string, string> = {
+  contra_entrega: "Efectivo al recibir",
+  transferencia: "Transferencia bancaria",
+  wompi: "Tarjeta (Wompi)",
+  tasa_cero: "Tasa 0% (por WhatsApp)",
+};
+
+export const fechaCorta = (iso: string) =>
+  new Date(iso).toLocaleDateString("es-SV", { day: "numeric", month: "short", year: "numeric", timeZone: "America/El_Salvador" });
+
+export const fechaHora = (iso: string) =>
+  new Date(iso).toLocaleString("es-SV", {
+    day: "numeric",
+    month: "short",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "America/El_Salvador",
+  });

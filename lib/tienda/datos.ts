@@ -40,6 +40,8 @@ export type ProductoResumen = {
   colecciones: string[];
   orden: number;
   publicadoEn: string | null;
+  /** Variante que se agrega con un toque desde "Completá tu equipo" (la disponible más barata, en negro si hay) */
+  varianteDestacada: string | null;
 };
 
 export type ProductoDetalle = ProductoResumen & {
@@ -183,6 +185,9 @@ async function leerCatalogoODaError(): Promise<ProductoDetalle[]> {
     const almacenamientos = [...new Set(variantes.map((v) => v.almacenamientoGb).filter((n): n is number => n !== null))];
     const rams = variantes.map((v) => v.ramGb).filter((n): n is number => n !== null);
     const red = String(p.caracteristicas?.red ?? "");
+    const minimo = Math.min(...base.map((v) => v.precio));
+    const baratas = base.filter((v) => v.precio === minimo && v.disponibilidad !== "agotado");
+    const destacada = baratas.find((v) => /negro|black/i.test(v.color ?? "")) ?? baratas[0] ?? null;
 
     lista.push({
       id: p.id,
@@ -203,6 +208,7 @@ async function leerCatalogoODaError(): Promise<ProductoDetalle[]> {
       colecciones: p.coleccion_producto.map((c) => c.colecciones?.slug).filter((s): s is string => Boolean(s)),
       orden: p.orden,
       publicadoEn: p.publicado_en,
+      varianteDestacada: destacada?.id ?? null,
       descripcion: p.descripcion,
       caracteristicas: p.caracteristicas ?? {},
       incluye: p.incluye,
@@ -237,6 +243,7 @@ const aResumen = (p: ProductoDetalle): ProductoResumen => ({
   colecciones: p.colecciones,
   orden: p.orden,
   publicadoEn: p.publicadoEn,
+  varianteDestacada: p.varianteDestacada,
 });
 
 export async function catalogo(): Promise<ProductoResumen[]> {

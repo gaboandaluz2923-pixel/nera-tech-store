@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Search } from "lucide-react";
 import { CATEGORIAS } from "@/lib/tienda/formato";
 import { catalogo } from "@/lib/tienda/datos";
+import { CarritoBoton } from "./carrito-hoja";
 
 // Encabezado de la tienda (Krug: logo al inicio, buscador arriba, secciones visibles, nada que adivinar).
 export async function Encabezado() {
@@ -26,6 +27,7 @@ export async function Encabezado() {
             className="h-10 w-full rounded-full border bg-muted/40 pr-3 pl-9 text-sm outline-none focus-visible:border-marca focus-visible:ring-3 focus-visible:ring-marca/30"
           />
         </form>
+        <CarritoBoton />
       </div>
       <nav aria-label="Categorías" className="mx-auto max-w-6xl overflow-x-auto px-2">
         <ul className="flex gap-1 pb-2 text-sm whitespace-nowrap">

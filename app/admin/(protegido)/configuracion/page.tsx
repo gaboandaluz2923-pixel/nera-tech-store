@@ -152,6 +152,24 @@ async function DatosNegocio() {
       </Seccion>
 
       <Seccion
+        clave="cuentas_bancarias"
+        titulo="Cuentas para transferencia"
+        descripcion="Se muestran solo en la página del pedido de quien eligió pagar por transferencia."
+        valor={c.cuentas_bancarias}
+      >
+        <Campo
+          nombre="cuentas"
+          etiqueta="Una cuenta por línea: Banco | Tipo | Número | Titular"
+          valor={(Array.isArray(c.cuentas_bancarias) ? c.cuentas_bancarias : [])
+            .map((k: { banco: string; tipo: string; numero: string; titular: string }) => [k.banco, k.tipo, k.numero, k.titular].join(" | "))
+            .join("\n")}
+          largo
+          filas={3}
+          placeholder="Banco Agrícola | Cuenta de ahorro | 3000000000 | Nera Tech S.A. de C.V."
+        />
+      </Seccion>
+
+      <Seccion
         clave="negocio"
         titulo="Datos para el pie de página"
         descripcion="NIT y dirección dan confianza: aparecen al final de todas las páginas."

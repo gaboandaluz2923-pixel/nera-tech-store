@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { esDelEquipo } from "@/lib/supabase/equipo";
 
 export type EstadoLogin = { error?: string };
 
@@ -25,6 +26,11 @@ export async function iniciarSesion(
 
   if (error) {
     return { error: "Correo o contraseña incorrectos." };
+  }
+
+  if (!(await esDelEquipo(supabase))) {
+    await supabase.auth.signOut();
+    return { error: "Esa cuenta no tiene acceso al panel." };
   }
 
   redirect(volver.startsWith("/admin") ? volver : "/admin");

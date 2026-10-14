@@ -1,11 +1,12 @@
+import { Suspense } from "react";
 import { configTienda } from "@/lib/tienda/datos";
 import { enlaceWhatsAppA } from "@/lib/whatsapp";
 import { IconoWhatsApp } from "./icono-whatsapp";
-
+import { OcultarEn } from "./ocultar-en";
 
 export async function WhatsAppFlotante() {
   const c = await configTienda();
-  return (
+  const boton = (
     <a
       href={enlaceWhatsAppA(c.whatsapp, "Hola, quiero información. [flotante]")}
       target="_blank"
@@ -15,6 +16,12 @@ export async function WhatsAppFlotante() {
     >
       <IconoWhatsApp className="size-8" />
     </a>
+  );
+  // En el checkout se oculta (tapa los campos en el teléfono). Leer la ruta exige Suspense.
+  return (
+    <Suspense fallback={null}>
+      <OcultarEn rutas={["/checkout"]}>{boton}</OcultarEn>
+    </Suspense>
   );
 }
 
