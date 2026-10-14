@@ -289,3 +289,12 @@ export async function cambiarEstado(_prev: EstadoAccion, form: FormData): Promis
   refrescar(id);
   return ok(estado === "oculto" ? "Oculto: ya no se ve en la tienda" : estado === "agotado" ? "Se muestra como agotado" : "Publicado en la tienda");
 }
+
+// ---------------------------------------------------------------------------
+// Refrescar la tienda a mano (por ejemplo después de correr un SQL en Supabase)
+// ---------------------------------------------------------------------------
+export async function refrescarTienda(): Promise<EstadoAccion> {
+  await equipo();
+  refrescar();
+  return ok("Listo: la tienda ya muestra los datos actuales");
+}

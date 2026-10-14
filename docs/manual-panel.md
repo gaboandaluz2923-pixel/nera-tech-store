@@ -73,6 +73,10 @@ Una fila por configuración (modelo + memoria; los colores van juntos).
 ## Catálogo
 Aquí se completa cómo se ve cada producto en la tienda.
 
+**Actualizar la tienda ahora** (botón arriba a la derecha): la tienda guarda sus páginas en memoria
+para cargar rápido y se refresca sola cada vez que guardás algo en el panel. Si cambiaste datos directo
+en Supabase con un SQL, tocá este botón para que la tienda los muestre de inmediato.
+
 **La lista** (Catálogo): arriba, cuántos productos están en la tienda y cuántos ocultos. Cada fila
 muestra la foto principal, la categoría, cuántas variantes tienen precio y cuántas fotos hay, y unas
 etiquetas grises con lo que falta ("Sin fotos", "Sin precio", "Sin descripción", "Sin características").

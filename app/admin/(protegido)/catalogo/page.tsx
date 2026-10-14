@@ -3,7 +3,9 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { BotonGuardar, FormularioAccion } from "@/components/admin/formulario-accion";
 import { createClient } from "@/lib/supabase/server";
+import { refrescarTienda } from "./actions";
 
 type Filtros = { q?: string; cat?: string; estado?: string; falta?: string };
 
@@ -176,11 +178,18 @@ async function Contenido({ searchParams }: { searchParams: Promise<Filtros> }) {
 export default function Catalogo(props: PageProps<"/admin/catalogo">) {
   return (
     <div className="max-w-4xl space-y-4">
-      <div>
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <h1 className="text-xl font-semibold">Catálogo</h1>
+        <FormularioAccion accion={refrescarTienda}>
+          <BotonGuardar variant="outline" size="sm">
+            Actualizar la tienda ahora
+          </BotonGuardar>
+        </FormularioAccion>
+      </div>
+      <div>
         <p className="text-sm text-muted-foreground">
           Fotos, textos y características de cada producto. Un producto aparece en la tienda cuando está publicado y tiene
-          foto y precio.
+          foto y precio. Si cambiaste algo directo en Supabase (con SQL), tocá “Actualizar la tienda ahora”.
         </p>
       </div>
       <Suspense fallback={<p className="text-sm text-muted-foreground">Cargando…</p>}>
