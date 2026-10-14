@@ -189,6 +189,12 @@ export function interpretar(descripcionOriginal: string): Interpretacion {
 
   const categoria = categoriaSugerida(t, almacenamientoGb !== null);
 
+  // En audífonos, el conector ("USB-C", "Type-C") describe el modelo, no lo distingue:
+  // "JBL TUNE 310C USB-C RED" y "JBL TUNE 310C BLACK USB-C" son el mismo producto en dos colores.
+  if (categoria === "audifonos" && !encontrado) {
+    antes = antes.replace(/\b(usb|type)[\s-]?c\b/g, " ").replace(/\s+/g, " ").trim();
+  }
+
   // 4) Modelo: lo que está antes de la memoria, sin marca, códigos ni ruido
   const quitarMarca = new Set(def?.quitar ?? []);
   let tokensModelo = antes

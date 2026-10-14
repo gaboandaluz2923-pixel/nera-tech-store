@@ -4,6 +4,11 @@ const nextConfig: NextConfig = {
   /* config options here */
   cacheComponents: true,
   partialPrefetching: true,
+  images: {
+    // Fotos subidas desde el panel (Supabase Storage)
+    remotePatterns: [{ protocol: "https", hostname: "*.supabase.co", pathname: "/storage/v1/object/public/**" }],
+    formats: ["image/avif", "image/webp"],
+  },
   turbopack: {
     rules: {
       "*.css": {

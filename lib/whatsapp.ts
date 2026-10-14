@@ -6,9 +6,15 @@ export type IntencionWhatsApp = "pregunta" | "tasa_cero" | "comprar" | "pedido";
 
 const NUMERO = process.env.NEXT_PUBLIC_WHATSAPP_NUMERO ?? "";
 
+/** Limpia el número: solo dígitos (ej. "+503 7123-4567" → "50371234567"). */
+const limpiar = (n: string) => n.replace(/\D/g, "");
+
+export function enlaceWhatsAppA(numero: string, mensaje: string) {
+  return `https://wa.me/${limpiar(numero || NUMERO)}?text=${encodeURIComponent(mensaje)}`;
+}
+
 export function enlaceWhatsApp(mensaje: string) {
-  const texto = encodeURIComponent(mensaje);
-  return `https://wa.me/${NUMERO}?text=${texto}`;
+  return enlaceWhatsAppA(NUMERO, mensaje);
 }
 
 export function mensajeProducto(opts: {

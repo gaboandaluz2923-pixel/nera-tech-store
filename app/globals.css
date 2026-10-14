@@ -5,6 +5,9 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --color-marca: var(--marca);
+  --color-marca-oscuro: var(--marca-oscuro);
+  --color-marca-gris: var(--marca-gris);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
@@ -49,14 +52,20 @@
 }
 
 :root {
+  /* Marca Nera Tech: naranja #E96000, negro #1C1C1C, gris #A7A7A9.
+     Los botones usan un naranja un poco más oscuro (#C85000) para que el texto blanco
+     cumpla el contraste mínimo de lectura (4.5:1). */
+  --marca: #E96000;
+  --marca-oscuro: #1C1C1C;
+  --marca-gris: #A7A7A9;
   --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --foreground: #1C1C1C;
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
+  --primary: #C85000;
+  --primary-foreground: #FFFFFF;
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
@@ -66,7 +75,7 @@
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --ring: #E96000;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
