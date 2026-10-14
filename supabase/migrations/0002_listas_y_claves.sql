@@ -1,7 +1,7 @@
 -- =====================================================================
 -- Nera Tech Store — Migración 0002: claves para emparejar listas de proveedores
 -- Cómo ejecutarla: Supabase → SQL Editor → New query → pegar todo → Run.
--- Requiere haber corrido la 0001.
+-- Requiere haber corrido la 0001. Se puede correr más de una vez sin problema.
 -- =====================================================================
 
 -- Productos: clave normalizada (marca|modelo) para emparejar entre proveedores
@@ -46,7 +46,11 @@ select v.nombre, 'local'::public.tipo_proveedor, 0
 from (values ('Total Link'), ('Maverik'), ('Idecom'), ('Intcomex')) as v(nombre)
 where not exists (select 1 from public.proveedores p where p.nombre = v.nombre);
 
-alter table public.proveedores add constraint proveedores_nombre_key unique (nombre);
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'proveedores_nombre_key') then
+    alter table public.proveedores add constraint proveedores_nombre_key unique (nombre);
+  end if;
+end $$;
 
 -- Líneas que el equipo decide no vender (ej. televisores): se recuerdan por proveedor + código
 create table if not exists public.skus_ignorados (
@@ -57,6 +61,7 @@ create table if not exists public.skus_ignorados (
   primary key (proveedor_id, sku_proveedor)
 );
 alter table public.skus_ignorados enable row level security;
+drop policy if exists "equipo_todo" on public.skus_ignorados;
 create policy "equipo_todo" on public.skus_ignorados
   for all to authenticated using (true) with check (true);
 
