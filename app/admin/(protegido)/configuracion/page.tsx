@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { createClient } from "@/lib/supabase/server";
-import { guardarConfiguracion } from "./actions";
+import { guardarConfiguracion, probarWompi } from "./actions";
 
 // Datos del negocio que usa la tienda (se editan aquí) y estado de las variables de entorno
 // (que se cargan en Vercel y nunca se muestran).
@@ -203,7 +203,14 @@ export default function Configuracion() {
       <Suspense fallback={<p className="text-sm text-muted-foreground">Cargando…</p>}>
         <DatosNegocio />
       </Suspense>
-      <h2 className="pt-4 text-lg font-semibold">Conexiones</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-4">
+        <h2 className="text-lg font-semibold">Conexiones</h2>
+        <FormularioAccion accion={probarWompi}>
+          <BotonGuardar variant="outline" size="sm">
+            Probar conexión con Wompi
+          </BotonGuardar>
+        </FormularioAccion>
+      </div>
       <p className="text-sm text-muted-foreground">
         Las claves se cargan en Vercel (Settings → Environment Variables) y nunca se muestran aquí.
       </p>

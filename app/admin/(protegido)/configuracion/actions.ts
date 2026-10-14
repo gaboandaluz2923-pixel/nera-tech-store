@@ -4,6 +4,7 @@ import { revalidatePath, updateTag } from "next/cache";
 import type { EstadoAccion } from "@/components/admin/formulario-accion";
 import { equipo } from "@/lib/admin/sesion";
 import { ETIQUETA_CATALOGO } from "@/lib/tienda/datos";
+import { ErrorWompi, tokenWompi } from "@/lib/wompi";
 
 // Datos del negocio que usa la tienda (WhatsApp, envío, contra entrega, tasa 0%, pie de página, garantía).
 
@@ -86,4 +87,15 @@ export async function guardarConfiguracion(_prev: EstadoAccion, form: FormData):
   revalidatePath("/admin/configuracion");
   updateTag(ETIQUETA_CATALOGO);
   return { ok: true, mensaje: "Guardado. Ya se ve en la tienda.", vez: Date.now() };
+}
+
+/** Pide un token a Wompi con las claves de Vercel para confirmar que funcionan (no muestra las claves). */
+export async function probarWompi(): Promise<EstadoAccion> {
+  await equipo();
+  try {
+    await tokenWompi();
+    return { ok: true, mensaje: "Conexión con Wompi correcta: las claves funcionan.", vez: Date.now() };
+  } catch (e) {
+    return falla(e instanceof ErrorWompi ? e.message : "No se pudo contactar a Wompi. Probá de nuevo en un minuto.");
+  }
 }
