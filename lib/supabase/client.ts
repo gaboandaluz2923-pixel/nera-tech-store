@@ -1,0 +1,10 @@
+// Cliente de Supabase para el navegador (componentes con "use client").
+// Usa la clave pública (anon): solo puede leer lo que las políticas RLS permiten.
+import { createBrowserClient } from "@supabase/ssr";
+
+export function createClient() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
