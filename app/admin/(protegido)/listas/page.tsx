@@ -25,7 +25,8 @@ async function Contenido() {
     lineas_lista: { count: number }[];
   };
   const filas = (listas.data ?? []) as unknown as Fila[];
-  const vistas = new Set<string>();
+  // Vigentes: todas las listas de la fecha más reciente de cada proveedor (puede haber varias partes)
+  const fechaVigente = new Map<string, string>();
 
   return (
     <div className="space-y-6">
@@ -56,8 +57,8 @@ async function Contenido() {
             <tbody>
               {filas.map((l) => {
                 const proveedor = l.proveedores?.nombre ?? "—";
-                const vigente = !vistas.has(proveedor);
-                vistas.add(proveedor);
+                if (!fechaVigente.has(proveedor)) fechaVigente.set(proveedor, l.fecha);
+                const vigente = fechaVigente.get(proveedor) === l.fecha;
                 return (
                   <tr key={l.id} className="border-t">
                     <td className="p-2 tabular-nums">{l.fecha}</td>
@@ -91,7 +92,7 @@ export default function Listas() {
         <div>
           <h1 className="text-2xl font-semibold">Listas de precios</h1>
           <p className="text-muted-foreground">
-            La última lista de cada proveedor es la vigente; las anteriores quedan como historial.
+            La lista más reciente de cada proveedor es la vigente (si la manda en varias partes el mismo día, todas cuentan); las anteriores quedan como historial.
           </p>
         </div>
         <Button nativeButton={false} render={<Link href="/admin/listas/nueva" />}>Importar lista</Button>

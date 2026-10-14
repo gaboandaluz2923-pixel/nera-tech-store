@@ -16,5 +16,9 @@ Registro corto de decisiones técnicas y de negocio, con fecha, para no volver a
 | 2026-10-13 | La comparación de proveedores es por configuración (modelo + memoria), no por color | El color casi nunca cambia el costo y simplifica la tabla |
 | 2026-10-13 | Los PDF no se leen automáticamente; se pide Excel o se pega la tabla | Las tablas en PDF se extraen mal; pegar desde Excel es confiable |
 
+| 2026-10-13 | La tabla azul es de Idecom (no Intcomex). Un proveedor puede mandar su lista en varias partes: todas las de la fecha más reciente son vigentes | Corrección de Gabriel; Idecom manda 3 archivos |
+| 2026-10-13 | Los precios de los proveedores incluyen IVA | Confirmado por Gabriel |
+| 2026-10-13 | Garantía: 12 meses (texto base a revisar) | Indicación de Gabriel |
+
 ## Fase actual
 Fase 1 — Proveedores, listas y mejor precio: construida y probada con las listas reales; falta que Gabriel corra la migración 0002 e importe las listas en producción.

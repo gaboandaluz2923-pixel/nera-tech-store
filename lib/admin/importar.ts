@@ -84,11 +84,13 @@ export async function importarListaEn(supabase: SupabaseClient, p: Importacion) 
     if (error) throw error;
   }
 
-  // Lo que no vino en esta lista ya no está disponible con este proveedor
+  // Lo que no vino en listas de esta fecha ya no está disponible con este proveedor.
+  // Las otras partes de la lista del mismo día (misma fecha) no se tocan.
   const { error: e2 } = await supabase
     .from("producto_proveedor")
     .update({ activo: false })
-    .eq("proveedor_id", p.proveedorId);
+    .eq("proveedor_id", p.proveedorId)
+    .lt("ultima_fecha", p.fecha);
   if (e2) throw e2;
 
   const vinculables = filas.filter((f) => f.variante_id);

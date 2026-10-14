@@ -43,17 +43,24 @@ export type LineaPendiente = {
   categoria_slug: string;
 };
 
-/** Últimas listas de cada proveedor (id de lista por proveedor). */
+/**
+ * Listas vigentes: por proveedor, todas las de su fecha más reciente.
+ * (Un proveedor puede mandar su lista en varias partes el mismo día: Idecom manda 3.)
+ * Devuelve id de lista → id de proveedor.
+ */
 export async function ultimasListas(supabase: SupabaseClient) {
   const { data, error } = await supabase
     .from("listas_precios")
-    .select("id, proveedor_id, fecha, created_at")
-    .order("fecha", { ascending: false })
-    .order("created_at", { ascending: false });
+    .select("id, proveedor_id, fecha")
+    .order("fecha", { ascending: false });
   if (error) throw error;
-  const porProveedor = new Map<string, string>();
-  for (const l of data ?? []) if (!porProveedor.has(l.proveedor_id)) porProveedor.set(l.proveedor_id, l.id);
-  return porProveedor;
+  const fechaVigente = new Map<string, string>();
+  const vigentes = new Map<string, string>();
+  for (const l of data ?? []) {
+    if (!fechaVigente.has(l.proveedor_id)) fechaVigente.set(l.proveedor_id, l.fecha);
+    if (fechaVigente.get(l.proveedor_id) === l.fecha) vigentes.set(l.id, l.proveedor_id);
+  }
+  return vigentes;
 }
 
 /** Líneas de las últimas listas que todavía no están vinculadas a una variante ni ignoradas. */
@@ -65,7 +72,7 @@ export async function lineasPendientes(supabase: SupabaseClient): Promise<LineaP
       supabase
         .from("lineas_lista")
         .select("id, lista_id, descripcion, sku_clave, precio, stock, precio_sugerido, clave, categoria_slug")
-        .in("lista_id", [...ultimas.values()])
+        .in("lista_id", [...ultimas.keys()])
         .order("id")
         .range(a, b)
     ),
@@ -76,7 +83,7 @@ export async function lineasPendientes(supabase: SupabaseClient): Promise<LineaP
     todo((a, b) => supabase.from("proveedores").select("id, nombre").range(a, b)),
   ]);
 
-  const listaAProveedor = new Map([...ultimas].map(([prov, lista]) => [lista, prov]));
+  const listaAProveedor = ultimas;
   const nombres = new Map(proveedores.map((p) => [p.id, p.nombre as string]));
   const resueltos = new Set(
     [...vinculos, ...ignorados].map((v) => `${v.proveedor_id}::${v.sku_proveedor}`)
