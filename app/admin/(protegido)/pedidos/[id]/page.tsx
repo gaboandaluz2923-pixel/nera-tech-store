@@ -27,6 +27,7 @@ type Pedido = PedidoBase & {
   token: string;
   subtotal: number;
   envio: number;
+  descuento: number;
   total: number;
   notas: string | null;
   created_at: string;
@@ -67,7 +68,7 @@ async function Detalle({ params }: { params: PageProps<"/admin/pedidos/[id]">["p
   const { data, error } = await supabase
     .from("pedidos")
     .select(
-      `id, numero, token, estado, forma_pago, subtotal, envio, total, notas, created_at, entrega, facturacion,
+      `id, numero, token, estado, forma_pago, subtotal, envio, descuento, total, notas, created_at, entrega, facturacion,
        pagado_en, confirmado_en, entregado_en, factura_estado, factura_numero, factura_archivo, factura_emitida_en,
        cliente_id, clientes(correo, auth_user_id, telefono_alterno, cumple_dia, cumple_mes),
        lineas_pedido(id, nombre, cantidad, precio_unitario),
@@ -294,6 +295,11 @@ async function Detalle({ params }: { params: PageProps<"/admin/pedidos/[id]">["p
             <dl className="mt-3 border-t pt-2 text-sm">
               <Dato etiqueta="Subtotal">{usd2(Number(p.subtotal))}</Dato>
               <Dato etiqueta="Envío">{Number(p.envio) ? usd2(Number(p.envio)) : "Gratis"}</Dato>
+              {Number(p.descuento) > 0 ? (
+                <Dato etiqueta="Descuento (efectivo/transferencia)">
+                  <span className="text-green-700">−{usd2(Number(p.descuento))}</span>
+                </Dato>
+              ) : null}
               <Dato etiqueta="Total">
                 <strong>{usd2(Number(p.total))}</strong>
               </Dato>

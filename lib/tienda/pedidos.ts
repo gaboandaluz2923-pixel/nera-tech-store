@@ -5,6 +5,7 @@ import { avisarPagoConfirmado, avisarPedidoNuevo } from "@/lib/correos/avisos";
 import { createServiceClient } from "@/lib/supabase/server";
 import { calcularCarrito, type ResumenCarrito } from "@/lib/tienda/calculo";
 import { configTienda } from "@/lib/tienda/datos";
+import { descuentoSinTarjeta } from "@/lib/tienda/formato";
 import { crearEnlacePago, ErrorWompi } from "@/lib/wompi";
 
 // Pedidos de la tienda: se crean y se actualizan SOLO desde el servidor (clave de servicio).
@@ -93,7 +94,10 @@ export async function crearPedido(datos: DatosCheckout, origen: string): Promise
   if (resumen.quitadas.length) {
     return { ok: false, mensaje: "Algo de tu carrito ya no está disponible. Revisá el resumen y confirmá de nuevo.", resumen };
   }
-  if (Math.abs(resumen.total - datos.totalVisto) > 0.009) {
+  // Efectivo y transferencia: 6% menos sobre los productos (el envío no se descuenta).
+  const descuento = descuentoSinTarjeta(resumen.subtotal, datos.formaPago);
+  const total = Math.round((resumen.total - descuento) * 100) / 100;
+  if (Math.abs(total - datos.totalVisto) > 0.009) {
     return { ok: false, mensaje: "El total cambió mientras comprabas. Revisalo y confirmá de nuevo.", resumen };
   }
   const contraEntrega = config.municipiosContraEntrega.includes(datos.zona);
@@ -159,8 +163,8 @@ export async function crearPedido(datos: DatosCheckout, origen: string): Promise
       forma_pago: datos.formaPago,
       subtotal: resumen.subtotal,
       envio: resumen.envio,
-      descuento: 0,
-      total: resumen.total,
+      descuento,
+      total,
       entrega: {
         nombre: datos.nombre,
         telefono: datos.telefono,

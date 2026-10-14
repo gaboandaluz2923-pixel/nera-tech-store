@@ -24,6 +24,7 @@ type Pedido = {
   forma_pago: string;
   total: number;
   envio: number;
+  descuento: number;
   pagado_en: string | null;
   factura_numero: string | null;
   entrega: { nombre: string; telefono: string; correo: string; direccion: string; municipio: string | null; departamento: string | null; referencia: string | null };
@@ -35,7 +36,7 @@ async function cargar(pedidoId: string, sitio: string) {
   const [{ data }, c, { data: cuentasFila }] = await Promise.all([
     sb
       .from("pedidos")
-      .select("id, numero, token, estado, forma_pago, total, envio, pagado_en, factura_numero, entrega, lineas_pedido(nombre, cantidad, precio_unitario)")
+      .select("id, numero, token, estado, forma_pago, total, envio, descuento, pagado_en, factura_numero, entrega, lineas_pedido(nombre, cantidad, precio_unitario)")
       .eq("id", pedidoId)
       .single(),
     configTienda(),
@@ -49,6 +50,7 @@ async function cargar(pedidoId: string, sitio: string) {
     nombre: e.nombre,
     total: Number(p.total),
     envio: Number(p.envio),
+    descuento: Number(p.descuento ?? 0),
     formaPago: p.forma_pago,
     pagado: Boolean(p.pagado_en),
     lineas: p.lineas_pedido.map((l) => ({ nombre: l.nombre, cantidad: l.cantidad, precio: Number(l.precio_unitario) })),

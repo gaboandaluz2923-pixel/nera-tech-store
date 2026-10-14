@@ -3,13 +3,13 @@ import { Banknote, CreditCard, Landmark, Percent, Truck, Wallet } from "lucide-r
 import { Button } from "@/components/ui/button";
 import { IconoWhatsApp } from "@/components/tienda/icono-whatsapp";
 import { configTienda } from "@/lib/tienda/datos";
-import { usd } from "@/lib/tienda/formato";
+import { DESCUENTO_SIN_TARJETA, usd } from "@/lib/tienda/formato";
 import { enlaceWhatsAppA } from "@/lib/whatsapp";
 
 export const metadata: Metadata = {
   title: "Envíos y formas de pago",
   description:
-    "Pagá al recibir en San Salvador, con transferencia, tarjeta o tasa 0%. Envíos a todo El Salvador en 24 a 48 horas.",
+    "6% de descuento al pagar con efectivo o transferencia. Pagá al recibir en San Salvador, con transferencia, tarjeta o tasa 0%. Envíos a todo El Salvador en 24 a 48 horas.",
   alternates: { canonical: "/envios-y-pagos" },
 };
 
@@ -17,13 +17,20 @@ export default async function PaginaEnvios() {
   const c = await configTienda();
   const { envio, tasaCero } = c;
 
-  const pagos = [
+  const insignia = `${DESCUENTO_SIN_TARJETA.porcentaje}% de descuento`;
+  const pagos: { icono: typeof Wallet; titulo: string; texto: string; insignia?: string }[] = [
     {
       icono: Wallet,
       titulo: "Efectivo al recibir",
       texto: `En ${c.municipiosContraEntrega.join(", ")}. Pagás en efectivo al repartidor cuando lo recibís.`,
+      insignia,
     },
-    { icono: Landmark, titulo: "Transferencia bancaria", texto: "Te damos los datos de la cuenta al confirmar tu pedido." },
+    {
+      icono: Landmark,
+      titulo: "Transferencia bancaria",
+      texto: "Te damos los datos de la cuenta al confirmar tu pedido.",
+      insignia,
+    },
     { icono: CreditCard, titulo: "Tarjeta de crédito o débito", texto: "Pago seguro con Wompi (Banco Agrícola). Visa y Mastercard." },
     {
       icono: Percent,
@@ -35,7 +42,9 @@ export default async function PaginaEnvios() {
   return (
     <div className="mx-auto max-w-3xl px-4 pt-6 pb-16">
       <h1 className="text-2xl font-bold sm:text-3xl">Envíos y formas de pago</h1>
-      <p className="mt-2 text-muted-foreground">El mismo precio con cualquier forma de pago. Sin crear cuenta.</p>
+      <p className="mt-2 text-muted-foreground">
+        {DESCUENTO_SIN_TARJETA.texto}. El descuento es sobre los productos; el envío no cambia. Sin crear cuenta.
+      </p>
 
       <section aria-labelledby="t-envios" className="mt-8">
         <h2 id="t-envios" className="mb-4 flex items-center gap-2 text-xl font-bold">
@@ -74,11 +83,16 @@ export default async function PaginaEnvios() {
           <Banknote className="size-6 text-marca" aria-hidden /> Formas de pago
         </h2>
         <ul className="grid gap-3 sm:grid-cols-2">
-          {pagos.map(({ icono: Icono, titulo, texto }) => (
+          {pagos.map(({ icono: Icono, titulo, texto, insignia }) => (
             <li key={titulo} className="flex gap-3 rounded-xl border p-4">
               <Icono className="mt-0.5 size-5 shrink-0 text-marca" aria-hidden />
               <span>
-                <span className="block font-semibold">{titulo}</span>
+                <span className="flex flex-wrap items-center gap-x-2 gap-y-1 font-semibold">
+                  {titulo}
+                  {insignia ? (
+                    <span className="rounded-md bg-green-100 px-1.5 py-0.5 text-xs font-semibold text-green-800">{insignia}</span>
+                  ) : null}
+                </span>
                 <span className="block text-sm text-muted-foreground">{texto}</span>
               </span>
             </li>

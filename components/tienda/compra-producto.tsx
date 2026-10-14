@@ -1,13 +1,21 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { Banknote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   avisarStock,
   type EstadoAviso,
 } from "@/app/(tienda)/producto/[slug]/actions";
 import type { VarianteTienda } from "@/lib/tienda/datos";
-import { TEXTO_DISPONIBILIDAD, cuota, usd, usd2 } from "@/lib/tienda/formato";
+import {
+  DESCUENTO_SIN_TARJETA,
+  TEXTO_DISPONIBILIDAD,
+  cuota,
+  precioConDescuento,
+  usd,
+  usd2,
+} from "@/lib/tienda/formato";
 import { enlaceWhatsAppA, mensajeProducto } from "@/lib/whatsapp";
 import { IconoWhatsApp } from "./icono-whatsapp";
 import { abrirCarrito, agregarAlCarrito } from "@/lib/tienda/carrito";
@@ -180,9 +188,15 @@ export function CompraProducto(p: Props) {
             sin intereses (tasa 0%)
           </p>
         ) : null}
+        <p className="mt-1.5 inline-flex items-center gap-1.5 rounded-md bg-green-50 px-2 py-1 text-sm font-medium text-green-800">
+          <Banknote className="size-4 shrink-0" aria-hidden />
+          <span>
+            {DESCUENTO_SIN_TARJETA.texto}:{" "}
+            <strong>{usd2(precioConDescuento(elegida.precio))}</strong>
+          </span>
+        </p>
         <p className="mt-1 text-sm text-muted-foreground">
-          {envioGratis ? "Envío gratis" : `Envío ${usd(p.costoEnvio)}`} · Mismo
-          precio con cualquier forma de pago
+          {envioGratis ? "Envío gratis" : `Envío ${usd(p.costoEnvio)}`}
         </p>
       </div>
 

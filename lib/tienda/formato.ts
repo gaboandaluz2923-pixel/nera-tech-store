@@ -10,6 +10,30 @@ export function cuota(precio: number, meses: number) {
   return Math.ceil((precio / Math.max(1, meses)) * 100) / 100;
 }
 
+/**
+ * Descuento por pagar sin tarjeta: 6% sobre los productos (no sobre el envío) al pagar
+ * en efectivo contra entrega o por transferencia. El precio publicado es el de tarjeta y tasa 0%.
+ * El mismo cálculo se usa en el navegador (checkout) y en el servidor (crear el pedido).
+ */
+export const DESCUENTO_SIN_TARJETA = {
+  porcentaje: 6,
+  formas: ["contra_entrega", "transferencia"] as const,
+  texto: "6% de descuento al pagar con efectivo o transferencia",
+};
+
+export const tieneDescuentoSinTarjeta = (formaPago: string) =>
+  (DESCUENTO_SIN_TARJETA.formas as readonly string[]).includes(formaPago);
+
+/** Monto del descuento, redondeado al centavo; 0 si la forma de pago no lo tiene. */
+export function descuentoSinTarjeta(subtotal: number, formaPago: string) {
+  if (!tieneDescuentoSinTarjeta(formaPago)) return 0;
+  return Math.round(subtotal * DESCUENTO_SIN_TARJETA.porcentaje) / 100;
+}
+
+/** Precio de un producto con el descuento aplicado (para mostrarlo en la ficha). */
+export const precioConDescuento = (precio: number) =>
+  Math.round(precio * (100 - DESCUENTO_SIN_TARJETA.porcentaje)) / 100;
+
 export const TEXTO_DISPONIBILIDAD = {
   bodega: { corto: "En stock", largo: "En stock · entrega hoy en San Salvador" },
   proveedor: { corto: "Disponible", largo: "Disponible · entrega en 24 a 48 horas" },

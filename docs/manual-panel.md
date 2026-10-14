@@ -126,6 +126,12 @@ ven en la tienda en el momento.
   disponibilidad, **Comprar por WhatsApp** (el mensaje ya lleva modelo, memoria, color y precio) y
   **Quiero tasa 0%**. Si está agotado: "Avisame cuando haya" (guarda el correo en Suscriptores).
 - **Garantía** y **Envíos y pagos**: salen de Configuración.
+- **Descuento por efectivo o transferencia (6%)**: el precio publicado es el de tarjeta y tasa 0%.
+  La ficha muestra debajo del precio "6% de descuento al pagar con efectivo o transferencia" con el
+  precio rebajado; en el checkout, las opciones **Efectivo al recibir** y **Transferencia bancaria**
+  llevan la etiqueta "6% de descuento" y, al elegirlas, el resumen resta el 6% de los productos (el
+  envío no cambia) y el botón muestra el total a pagar. El porcentaje no se cambia desde el panel; si
+  querés otro, pedilo (está en un solo lugar del código).
 
 ## Pedidos
 Todos los pedidos de la tienda en línea. Arriba hay vistas con el número de pedidos en cada una:
@@ -149,7 +155,8 @@ Confirmado, En camino, Entregado), si está **Pagado** o **Sin pagar**, y si toc
    código de generación o número de control, subí el PDF y tocá **Guardar factura**. Desde ese momento
    el cliente la descarga en su pedido. **Avisarle por WhatsApp** le manda el enlace. Si un pedido no
    lleva factura, tocá **No lleva factura**.
-4. **Productos**, **Cliente y entrega** (dirección, referencia, nota del cliente).
+4. **Productos** (con la línea **Descuento** cuando el cliente pagó en efectivo o por transferencia),
+   **Cliente y entrega** (dirección, referencia, nota del cliente).
    **Enlazar a otro correo de Google**: si el cliente quiere ver el pedido en su cuenta pero compró con
    otro correo, escribí aquí su correo de Google.
 5. **Historial**: todo lo que pasó con el pedido, con fecha y quién lo hizo. Podés agregar notas internas

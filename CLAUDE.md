@@ -42,7 +42,11 @@ sin jerga innecesaria, y decí qué comando correr y qué va a pasar antes de co
    módulo (`lib/analytics.ts`) hacia la tabla propia, GA4 y Meta.
 7. Rendimiento: LCP < 2.5 s en móvil, imágenes con next/image, sin scripts de terceros que no
    estén en esta lista.
-8. Un solo precio para todas las formas de pago (Ley del Sistema de Tarjetas de Crédito, art. 35 d).
+8. El precio publicado es el de tarjeta y tasa 0%. Al pagar en efectivo contra entrega o por
+   transferencia hay 6% de descuento sobre los productos (no sobre el envío). Gabriel lo confirmó
+   con su contador y abogado el 14 de octubre de 2026. El porcentaje y las formas que lo tienen
+   viven en `DESCUENTO_SIN_TARJETA` (lib/tienda/formato.ts) y se calculan igual en el navegador y
+   en el servidor; el pedido guarda el monto en la columna `descuento`.
 9. Nunca extraer datos de Facebook ni de Marketplace por programa. Los precios de mercado
    entran por registro manual en el panel o por fuentes públicas que lo permitan.
 10. Nadie necesita cuenta para comprar. El inicio de sesión con Google se ofrece después de

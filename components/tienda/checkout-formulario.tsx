@@ -25,7 +25,13 @@ import {
 import type { Direccion } from "@/lib/tienda/cuentas";
 import { Button } from "@/components/ui/button";
 import { vaciarCarrito } from "@/lib/tienda/carrito";
-import { usd2, cuota } from "@/lib/tienda/formato";
+import {
+  DESCUENTO_SIN_TARJETA,
+  cuota,
+  descuentoSinTarjeta,
+  tieneDescuentoSinTarjeta,
+  usd2,
+} from "@/lib/tienda/formato";
 import { useResumenCarrito } from "./carrito-hoja";
 
 // Una sola página de pago, sin cuenta (Krug): datos, entrega, forma de pago y factura.
@@ -124,6 +130,9 @@ export function CheckoutFormulario(p: Props) {
       : forma === "tasa_cero" && !tasaCero
         ? "wompi"
         : forma;
+  // Efectivo y transferencia tienen 6% de descuento sobre los productos; el servidor lo recalcula igual.
+  const descuento = descuentoSinTarjeta(resumen?.subtotal ?? 0, formaValida);
+  const totalAPagar = Math.round((total - descuento) * 100) / 100;
 
   // En el servidor no hay carrito: hasta que el navegador lo lea, mostrar un esqueleto
   const montado = useSyncExternalStore(
@@ -176,7 +185,7 @@ export function CheckoutFormulario(p: Props) {
       razonSocial: g("razonSocial"),
       giro: g("giro"),
       notas: g("notas"),
-      totalVisto: resumen.total,
+      totalVisto: totalAPagar,
       lineas,
     };
     setMensaje(null);
@@ -200,6 +209,7 @@ export function CheckoutFormulario(p: Props) {
     });
   }
 
+  const etiquetaDescuento = `${DESCUENTO_SIN_TARJETA.porcentaje}% de descuento`;
   const opciones: {
     id: FormaPago;
     titulo: string;
@@ -207,6 +217,7 @@ export function CheckoutFormulario(p: Props) {
     icono: typeof Banknote;
     activa: boolean;
     nota?: string;
+    insignia?: string;
   }[] = [
     {
       id: "contra_entrega",
@@ -217,6 +228,7 @@ export function CheckoutFormulario(p: Props) {
       nota: contraEntrega
         ? undefined
         : `Solo en ${p.zonasContraEntrega.join(", ")}.`,
+      insignia: etiquetaDescuento,
     },
     {
       id: "wompi",
@@ -231,6 +243,7 @@ export function CheckoutFormulario(p: Props) {
       texto: "Te mostramos las cuentas al confirmar.",
       icono: Landmark,
       activa: true,
+      insignia: etiquetaDescuento,
     },
     {
       id: "tasa_cero",
@@ -246,8 +259,8 @@ export function CheckoutFormulario(p: Props) {
 
   const textoBoton =
     formaValida === "wompi"
-      ? `Pagar ${usd2(total)} con tarjeta`
-      : `Confirmar pedido · ${usd2(total)}`;
+      ? `Pagar ${usd2(totalAPagar)} con tarjeta`
+      : `Confirmar pedido · ${usd2(totalAPagar)}`;
 
   return (
     <form
@@ -494,7 +507,7 @@ export function CheckoutFormulario(p: Props) {
             3. ¿Cómo pagás?
           </h2>
           <p className="text-sm text-muted-foreground">
-            El mismo precio con cualquier forma de pago.
+            {DESCUENTO_SIN_TARJETA.texto}.
           </p>
           <div
             className="grid gap-2"
@@ -502,7 +515,7 @@ export function CheckoutFormulario(p: Props) {
             aria-labelledby="t-pago"
           >
             {opciones.map(
-              ({ id, titulo, texto, icono: Icono, activa, nota }) => (
+              ({ id, titulo, texto, icono: Icono, activa, nota, insignia }) => (
                 <label
                   key={id}
                   className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-4 transition-colors ${
@@ -526,8 +539,15 @@ export function CheckoutFormulario(p: Props) {
                     className="mt-0.5 size-5 shrink-0 text-marca"
                     aria-hidden
                   />
-                  <span>
-                    <span className="block font-semibold">{titulo}</span>
+                  <span className="min-w-0">
+                    <span className="flex flex-wrap items-center gap-x-2 gap-y-1 font-semibold">
+                      {titulo}
+                      {insignia ? (
+                        <span className="rounded-md bg-green-100 px-1.5 py-0.5 text-xs font-semibold text-green-800">
+                          {insignia}
+                        </span>
+                      ) : null}
+                    </span>
                     <span className="block text-sm text-muted-foreground">
                       {activa ? texto : nota}
                     </span>
@@ -658,11 +678,35 @@ export function CheckoutFormulario(p: Props) {
                   )}
                 </dd>
               </div>
+              {descuento > 0 ? (
+                <div className="flex justify-between text-green-700">
+                  <dt>
+                    Descuento {DESCUENTO_SIN_TARJETA.porcentaje}% ·{" "}
+                    {formaValida === "contra_entrega" ? "efectivo" : "transferencia"}
+                  </dt>
+                  <dd className="font-medium">−{usd2(descuento)}</dd>
+                </div>
+              ) : null}
               <div className="flex justify-between pt-1 text-lg font-bold">
                 <dt>Total</dt>
-                <dd>{usd2(resumen.total)}</dd>
+                <dd>{usd2(totalAPagar)}</dd>
               </div>
             </dl>
+          ) : null}
+          {resumen && !tieneDescuentoSinTarjeta(formaValida) && resumen.subtotal > 0 ? (
+            <p className="text-xs text-muted-foreground">
+              Con efectivo o transferencia pagás{" "}
+              <strong className="text-green-700">
+                {usd2(
+                  Math.round(
+                    (resumen.total -
+                      descuentoSinTarjeta(resumen.subtotal, "transferencia")) *
+                      100,
+                  ) / 100,
+                )}
+              </strong>
+              .
+            </p>
           ) : null}
 
           {mensaje ? (

@@ -8,7 +8,7 @@ import { CompraProducto } from "@/components/tienda/compra-producto";
 import { Galeria } from "@/components/tienda/galeria";
 import { TarjetaProducto } from "@/components/tienda/tarjeta-producto";
 import { catalogo, configTienda, productoPorSlug, type ProductoDetalle } from "@/lib/tienda/datos";
-import { CLAVES_DECISIVAS, NOMBRE_CARACTERISTICA, usd } from "@/lib/tienda/formato";
+import { CLAVES_DECISIVAS, DESCUENTO_SIN_TARJETA, NOMBRE_CARACTERISTICA, usd } from "@/lib/tienda/formato";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 const RELLENO = "_"; // Cache Components exige al menos un parámetro al compilar
@@ -122,7 +122,7 @@ async function Ficha({ params }: { params: PageProps<"/producto/[slug]">["params
     ...p.faq,
     {
       pregunta: "¿Puedo pagar al recibir?",
-      respuesta: `Sí. En ${c.municipiosContraEntrega.join(", ")} pagás en efectivo cuando lo recibís. También aceptamos transferencia y tarjeta.`,
+      respuesta: `Sí. En ${c.municipiosContraEntrega.join(", ")} pagás en efectivo cuando lo recibís, con ${DESCUENTO_SIN_TARJETA.porcentaje}% de descuento. El mismo descuento aplica por transferencia. También aceptamos tarjeta y tasa 0%.`,
     },
     {
       pregunta: "¿Es nuevo y original?",
@@ -177,14 +177,21 @@ async function Ficha({ params }: { params: PageProps<"/producto/[slug]">["params
             <p className="font-semibold">Formas de pago</p>
             <ul className="grid grid-cols-2 gap-x-3 gap-y-1.5">
               {[
-                "Efectivo al recibir",
-                "Transferencia",
-                "Tarjeta de crédito o débito",
-                `Tasa 0% hasta ${c.tasaCero.meses} meses`,
+                { texto: "Efectivo al recibir", descuento: true },
+                { texto: "Transferencia", descuento: true },
+                { texto: "Tarjeta de crédito o débito", descuento: false },
+                { texto: `Tasa 0% hasta ${c.tasaCero.meses} meses`, descuento: false },
               ].map((f) => (
-                <li key={f} className="flex items-start gap-1.5">
+                <li key={f.texto} className="flex items-start gap-1.5">
                   <Check className="mt-0.5 size-4 shrink-0 text-green-700" aria-hidden />
-                  {f}
+                  <span>
+                    {f.texto}
+                    {f.descuento ? (
+                      <span className="ml-1.5 rounded bg-green-100 px-1.5 py-0.5 text-xs font-semibold text-green-800">
+                        −{DESCUENTO_SIN_TARJETA.porcentaje}%
+                      </span>
+                    ) : null}
+                  </span>
                 </li>
               ))}
             </ul>

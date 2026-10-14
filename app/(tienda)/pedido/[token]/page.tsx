@@ -23,6 +23,7 @@ type Pedido = {
   forma_pago: "contra_entrega" | "transferencia" | "wompi" | "tasa_cero";
   subtotal: number;
   envio: number;
+  descuento: number;
   total: number;
   entrega: { nombre: string; telefono: string; correo: string; municipio: string; departamento: string | null; direccion: string; referencia: string | null };
   facturacion: { tipo: string; nombre?: string; nit?: string };
@@ -53,7 +54,7 @@ async function Detalle({ params, searchParams }: PageProps<"/pedido/[token]">) {
     sb
       .from("pedidos")
       .select(
-        "id, numero, token, estado, forma_pago, subtotal, envio, total, entrega, facturacion, pagado_en, confirmado_en, entregado_en, factura_estado, factura_numero, factura_archivo, created_at, clientes(auth_user_id), lineas_pedido(nombre, cantidad, precio_unitario)"
+        "id, numero, token, estado, forma_pago, subtotal, envio, descuento, total, entrega, facturacion, pagado_en, confirmado_en, entregado_en, factura_estado, factura_numero, factura_archivo, created_at, clientes(auth_user_id), lineas_pedido(nombre, cantidad, precio_unitario)"
       )
       .eq("token", token)
       .maybeSingle(),
@@ -248,6 +249,12 @@ async function Detalle({ params, searchParams }: PageProps<"/pedido/[token]">) {
             <dt>Envío</dt>
             <dd>{Number(p.envio) === 0 ? "Gratis" : usd2(Number(p.envio))}</dd>
           </div>
+          {Number(p.descuento) > 0 ? (
+            <div className="flex justify-between text-green-700">
+              <dt>Descuento {p.forma_pago === "contra_entrega" ? "por pago en efectivo" : "por transferencia"}</dt>
+              <dd className="font-medium">−{usd2(Number(p.descuento))}</dd>
+            </div>
+          ) : null}
           <div className="flex justify-between text-base font-bold">
             <dt>Total</dt>
             <dd>{usd2(total)}</dd>
