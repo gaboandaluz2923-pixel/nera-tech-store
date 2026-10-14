@@ -14,6 +14,17 @@ Si olvidaste la contraseña, pedile a Gabriel que la cambie desde Supabase (Auth
 Muestra el avance del proyecto por fases. Las secciones del menú en gris se activan cuando su fase termina.
 
 ## Configuración
+Datos del negocio que ve el cliente. Cada recuadro tiene su botón **Guardar** y el cambio se ve en
+la tienda al instante:
+- **WhatsApp**: el número al que llegan todos los botones (8 dígitos; el 503 se agrega solo).
+- **Envío**: costo, desde qué monto es gratis (vacío = nunca) y si es gratis al llevar un accesorio.
+- **Contra entrega**: municipios o zonas donde se paga en efectivo al recibir, uno por línea.
+- **Tasa 0%**: hasta cuántos meses (con eso se calcula la cuota que ve el cliente) y con qué tarjetas.
+- **Datos para el pie de página**: nombre, NIT, dirección y correo.
+- **Garantía**: meses, días de cambio inmediato y las listas de qué cubre, qué no y cómo reclamar
+  (una cosa por línea).
+
+Más abajo, **Conexiones** muestra con un punto verde qué claves ya están cargadas en Vercel.
 Muestra qué conexiones están listas (verde) y cuáles faltan (gris). No muestra claves. Los valores se cargan en Vercel.
 
 ## Proveedores
