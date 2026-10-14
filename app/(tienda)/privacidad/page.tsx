@@ -29,6 +29,7 @@ export default async function Privacidad() {
           Si entrás con Google: tu nombre y tu correo de Google. No recibimos tu contraseña ni otros datos de tu cuenta.
         </li>
         <li>Si pedís que te avisemos cuando haya un producto: tu correo.</li>
+        <li>Si lo guardás en Mi cuenta: tu cumpleaños (solo día y mes) y tus direcciones.</li>
       </ul>
       <p>
         <strong>No guardamos datos de tarjetas.</strong> Los pagos con tarjeta se hacen en Wompi (Banco Agrícola); nosotros
@@ -41,11 +42,18 @@ export default async function Privacidad() {
         <li>Emitir y enviarte la factura electrónica, como exige la ley.</li>
         <li>Mostrarte tus pedidos y facturas en “Mis pedidos”.</li>
         <li>Atender garantías y reclamos.</li>
+        <li>Llevar tus Puntos Nera y darte tu regalo de cumpleaños.</li>
+        <li>
+          Enviarte ofertas y novedades por correo o WhatsApp. <strong>Podés pedir no recibirlas</strong> en cualquier momento: al
+          comprar (&quot;No quiero recibir publicidad&quot;), en Mi cuenta o con el enlace que va al final de cada correo de ofertas. Los
+          avisos de tus pedidos y tus facturas te llegan siempre.
+        </li>
       </ul>
 
       <h2>Con quién los compartimos</h2>
       <ul>
         <li>Wompi, para procesar pagos con tarjeta.</li>
+        <li>Brevo, el servicio que envía nuestros correos (tu nombre y correo).</li>
         <li>La empresa o persona que entrega tu pedido (nombre, teléfono y dirección).</li>
         <li>Nuestro sistema de facturación electrónica y el Ministerio de Hacienda, para la factura.</li>
         <li>Los servicios donde funciona la tienda (alojamiento y base de datos), que guardan los datos por nosotros.</li>

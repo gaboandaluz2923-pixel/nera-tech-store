@@ -1,6 +1,7 @@
 import "server-only";
 import { configCorreo, enviarCorreo } from "@/lib/correo";
 import { createServiceClient } from "@/lib/supabase/server";
+import { reglasBeneficios } from "@/lib/tienda/beneficios";
 import { configTienda } from "@/lib/tienda/datos";
 import { COLUMNAS_DESCUENTOS, lineasDescuento } from "@/lib/tienda/descuentos";
 import { enlaceWhatsAppA } from "@/lib/whatsapp";
@@ -50,7 +51,7 @@ type Pedido = {
 
 async function cargar(pedidoId: string, sitio: string) {
   const sb = createServiceClient();
-  const [{ data }, c, { data: cuentasFila }] = await Promise.all([
+  const [{ data }, c, { data: cuentasFila }, { data: ganados }, reglas] = await Promise.all([
     sb
       .from("pedidos")
       .select(
@@ -60,6 +61,8 @@ async function cargar(pedidoId: string, sitio: string) {
       .single(),
     configTienda(),
     sb.from("configuracion").select("valor").eq("clave", "cuentas_bancarias").maybeSingle(),
+    sb.from("puntos_movimientos").select("puntos").eq("pedido_id", pedidoId).eq("tipo", "ganados").maybeSingle(),
+    reglasBeneficios(),
   ]);
   if (!data) return null;
   const p = data as unknown as Pedido;
@@ -70,6 +73,7 @@ async function cargar(pedidoId: string, sitio: string) {
     telefono: e.telefono,
     repartidor: e.repartidor?.nombre || e.repartidor?.telefono ? e.repartidor : null,
     mensaje: e.mensaje || null,
+    puntosGanados: ganados?.puntos ? { puntos: Number(ganados.puntos), valor: reglas.puntos.valor_punto } : null,
     total: Number(p.total),
     envio: Number(p.envio),
     descuentos: lineasDescuento(p),

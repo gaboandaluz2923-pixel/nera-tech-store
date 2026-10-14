@@ -55,7 +55,15 @@ type Pedido = PedidoBase & {
   factura_archivo: string | null;
   factura_emitida_en: string | null;
   cliente_id: string | null;
-  clientes: { correo: string | null; auth_user_id: string | null; telefono_alterno: string | null; cumple_dia: number | null; cumple_mes: number | null } | null;
+  clientes: {
+    correo: string | null;
+    auth_user_id: string | null;
+    telefono_alterno: string | null;
+    cumple_dia: number | null;
+    cumple_mes: number | null;
+    acepta_correo: boolean;
+    acepta_whatsapp: boolean;
+  } | null;
   lineas_pedido: { id: string; nombre: string; cantidad: number; precio_unitario: number; precio_regular: number | null }[];
   pagos: { id: string; metodo: string; monto: number; estado: string; referencia_externa: string | null; created_at: string }[];
   pedido_eventos: { id: string; estado_anterior: string | null; estado_nuevo: string; nota: string | null; usuario: string | null; created_at: string }[];
@@ -79,7 +87,7 @@ async function Detalle({ params }: { params: PageProps<"/admin/pedidos/[id]">["p
     .select(
       `id, numero, token, estado, forma_pago, subtotal, envio, total, notas, ${COLUMNAS_DESCUENTOS}, created_at, entrega, facturacion,
        pagado_en, confirmado_en, entregado_en, factura_estado, factura_numero, factura_archivo, factura_emitida_en,
-       cliente_id, clientes(correo, auth_user_id, telefono_alterno, cumple_dia, cumple_mes),
+       cliente_id, clientes(correo, auth_user_id, telefono_alterno, cumple_dia, cumple_mes, acepta_correo, acepta_whatsapp),
        lineas_pedido(id, nombre, cantidad, precio_unitario, precio_regular),
        pagos(id, metodo, monto, estado, referencia_externa, created_at),
        pedido_eventos(id, estado_anterior, estado_nuevo, nota, usuario, created_at)`
@@ -357,6 +365,11 @@ async function Detalle({ params }: { params: PageProps<"/admin/pedidos/[id]">["p
                 <Dato etiqueta="Cumpleaños">{`${p.clientes.cumple_dia}/${p.clientes.cumple_mes}`}</Dato>
               ) : null}
               <Dato etiqueta="Correo">{p.entrega.correo}</Dato>
+              {p.clientes && !(p.clientes.acepta_correo && p.clientes.acepta_whatsapp) ? (
+                <Dato etiqueta="Publicidad">
+                  No quiere por {[!p.clientes.acepta_whatsapp && "WhatsApp", !p.clientes.acepta_correo && "correo"].filter(Boolean).join(" ni ")}
+                </Dato>
+              ) : null}
               <Dato etiqueta="Dirección">
                 {p.entrega.direccion}, {[p.entrega.municipio, p.entrega.departamento].filter(Boolean).join(", ")}
               </Dato>

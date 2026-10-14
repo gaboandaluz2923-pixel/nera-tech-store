@@ -74,6 +74,26 @@ export async function guardarConfiguracion(_prev: EstadoAccion, form: FormData):
       valor = { remitente, nombre: texto(form.get("nombre")) || "Nera Tech", responder_a: responder, avisos_a: avisos };
       break;
     }
+    case "puntos": {
+      const dolares = numero(form.get("dolares_por_punto"));
+      const valorPunto = numero(form.get("valor_punto"));
+      const vence = Math.round(numero(form.get("vence_meses")));
+      const minimo = Math.round(numero(form.get("minimo_canje")) || 0);
+      if (!(dolares > 0)) return falla("Escribí cada cuántos dólares se gana 1 punto.");
+      if (!(valorPunto > 0 && valorPunto < dolares)) return falla("El valor del punto debe ser mayor que cero y menor que los dólares por punto.");
+      if (!(vence >= 1 && vence <= 60)) return falla("Los puntos deben vencer entre 1 y 60 meses.");
+      if (!(minimo >= 0)) return falla("Revisá el mínimo de puntos.");
+      valor = { activo: form.get("activo") === "on", dolares_por_punto: dolares, valor_punto: valorPunto, vence_meses: vence, minimo_canje: minimo };
+      break;
+    }
+    case "regalo_cumple": {
+      const monto = numero(form.get("monto"));
+      const minimo = numero(form.get("minimo")) || 0;
+      if (!(monto > 0)) return falla("Escribí el monto del regalo.");
+      if (!(minimo >= 0) || (minimo > 0 && minimo <= monto)) return falla("La compra mínima debe ser mayor que el regalo (o 0 para sin mínimo).");
+      valor = { activo: form.get("activo") === "on", monto, minimo };
+      break;
+    }
     case "cuentas_bancarias": {
       const cuentas = lineas(form.get("cuentas")).map((l) => {
         const [banco = "", tipo = "", numero = "", titular = ""] = l.split("|").map((x) => x.trim());

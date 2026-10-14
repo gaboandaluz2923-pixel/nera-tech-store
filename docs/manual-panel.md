@@ -25,6 +25,10 @@ la tienda al instante:
   avisamos de cada pedido nuevo. **Enviar correo de prueba** confirma que Brevo funciona.
 - **Cuentas para transferencia**: una por línea, así: Banco | Tipo | Número | Titular. Solo las ve quien
   eligió pagar por transferencia, en la página de su pedido.
+- **Puntos Nera**: encender o apagar el programa, cada cuántos dólares se gana 1 punto, cuánto vale cada
+  punto, a los cuántos meses vencen y el mínimo para usarlos. Debajo dice qué porcentaje de la compra
+  recupera el cliente.
+- **Regalo de cumpleaños**: encender o apagar, monto del regalo y compra mínima para usarlo.
 - **Datos para el pie de página**: nombre, NIT, dirección y correo.
 - **Garantía**: meses, días de cambio inmediato y las listas de qué cubre, qué no y cómo reclamar
   (una cosa por línea).
@@ -205,3 +209,72 @@ Los correos al cliente llevan el recuadro **Entrega** (nombre, dirección comple
 y abajo un botón verde grande **Escribinos por WhatsApp**. El de "En camino" incluye el repartidor si lo
 llenaste, y cualquier correo de cambio de estado incluye el **Mensaje para el cliente** si escribiste uno.
 Cada correo enviado (o que no se pudo enviar, con el motivo) queda en el **Historial** del pedido.
+
+## Promociones
+Menú **Promociones**. Tiene tres recuadros. Nada se borra: las ofertas, combos y cupones se apagan.
+
+**1. Ofertas con fecha** (precio rebajado por unos días)
+1. Escribí el nombre (lo ve el cliente, ej. "Quincena de octubre"), cuándo empieza (vacío = ya) y cuándo
+   termina, y tocá **Crear y poner precios**. Las horas son de El Salvador.
+2. Se abre el editor: una tabla por producto con cada opción (memoria y color), su precio normal, el
+   **costo puesto** y el **mínimo sin pérdida** (el precio más bajo que no pierde dinero aunque el cliente
+   pague en efectivo con 6% y sin cobrar envío).
+3. Escribí el precio de oferta solo en lo que entra; lo vacío no cambia. Para bajar un % a todas las opciones
+   de un producto: escribí el % junto al nombre y tocá **Bajar % a todas** (redondea hacia abajo a .99 o a un
+   entero terminado en 9 o 5, y avisa en rojo si alguna queda bajo el mínimo sin pérdida). **Quitar** las vacía.
+4. Marcá **Oferta activa** y tocá **Guardar oferta** (abajo, siempre visible).
+En la tienda: la ficha muestra "Oferta · ahorrás $X", el precio normal tachado y "Termina el sábado 18 de
+octubre"; las tarjetas del listado dicen "Oferta −$X". Al terminar, el precio vuelve solo. En la lista, cada
+oferta dice si está **activa**, **programada**, **terminada** o **apagada**.
+
+**2. Combos "Completá tu equipo"**
+Un combo es un celular (cualquier color o memoria) + 1 a 3 accesorios, con un ahorro en dólares. Elegí el
+nombre, el producto principal, los accesorios (con cantidad) y el ahorro, y tocá **Crear combo**. El ahorro
+tiene que ser menor que lo que cuestan los accesorios. En la ficha del celular aparece el recuadro "Completá
+tu equipo y ahorrá" con **Agregar combo** (agrega el celular elegido y los accesorios). En el carrito, si el
+cliente lleva el celular pero le falta un accesorio del combo, se le ofrece; el descuento aparece como
+"Combo Kit audio Hot 70 −$5.00". Cada combo de la lista se puede cambiar de ahorro o apagar.
+
+**3. Cupones**
+Código (3 a 20 letras, números o guiones; se guarda en mayúsculas), tipo (% de descuento, monto fijo o envío
+gratis), valor, **máximo a descontar** (para los de %), compra mínima, usos en total, usos por cliente (0 = sin
+límite), fechas y **solo accesorios**. La tabla muestra cuántas veces se usó (no cuentan los pedidos
+cancelados) y el botón **Apagar/Activar**.
+
+**Reglas que aplica la tienda sola**
+- El 6% de efectivo o transferencia siempre se suma; además el cliente usa **un** beneficio: un cupón **o**
+  sus Puntos Nera, no los dos.
+- **Nunca bajo costo**: si un cupón o los puntos dejarían el pedido por debajo del costo puesto más los costos
+  de envío y comisión, el descuento se recorta solo hasta el máximo posible y el cliente ve "Se aplicó el
+  máximo posible para este pedido". En celulares, con margen chico, el cupón suele quedar recortado.
+
+## Puntos Nera
+- Se ganan cuando un pedido queda **entregado y pagado**: 1 punto por cada $10 de productos (sin envío). El
+  Historial del pedido dice "El cliente ganó N Puntos Nera" y el correo "Entregado" se lo cuenta.
+- Se guardan por correo, aunque el cliente no tenga cuenta; cuando entra con Google con ese correo, los ve.
+- En **Mi cuenta** el cliente ve su saldo, cuánto valen, los que vencen pronto y sus movimientos.
+- Se usan en el checkout con la sesión de Google abierta ("Usar mis Puntos Nera"); se usan todos los que
+  alcancen sin pasar del tope de costo. Los más viejos se gastan primero; vencen a los 12 meses.
+- Si cancelás o marcás devuelto un pedido: se le **devuelven** los puntos que usó y se le **quitan** los que
+  ganó con ese pedido (queda anotado en el Historial).
+- Si reabrís un pedido cancelado que había usado puntos, esos puntos ya volvieron al cliente: cobrale el total
+  sin descuento de puntos o anotalo.
+
+## Correos (avisos automáticos)
+Menú **Correos**:
+- **Revisión diaria**: todos los días a las 7:00 a. m. la tienda (1) crea el regalo de cumpleaños a quienes
+  cumplen años este mes y (2) avisa a quienes pidieron "Avisame cuando haya" si el producto ya volvió.
+  **Revisar ahora** hace lo mismo al momento. Si aparece el aviso amarillo de **CRON_SECRET**, falta esa clave
+  en Vercel (sin ella la revisión automática no corre; el botón sí).
+- **"Avisame cuando haya"**: cuántas personas esperan, por producto, y los últimos avisos enviados. Además del
+  horario diario, los avisos salen solos cuando guardás algo en Catálogo o importás una lista de precios.
+- **Regalos de cumpleaños de este mes**: cliente, código, si le llegó el correo y si ya lo usó. El regalo es un
+  cupón personal de $5 para compras desde $20, válido del 1 al último día de su mes de cumpleaños, que solo
+  funciona con el correo del cliente. Le llega por correo si acepta publicidad y siempre lo ve en Mi cuenta.
+- **Publicidad**: cuántos clientes hay y cuántos no quieren publicidad por correo o por WhatsApp.
+
+**Publicidad (exclusión voluntaria)**: todos reciben ofertas salvo que digan que no. El cliente puede elegir
+"No quiero recibir publicidad" al comprar, en Mi cuenta o con el enlace **No quiero recibir más publicidad**
+del final de cada correo de ofertas (Gmail y Outlook además muestran su botón "Cancelar suscripción"). Los
+correos de pedidos y facturas le llegan siempre. En cada pedido del panel, si el cliente no quiere publicidad,
+aparece la línea **Publicidad**. Antes de mandarle ofertas por WhatsApp, revisá esa línea.

@@ -42,9 +42,17 @@ Registro corto de decisiones técnicas y de negocio, con fecha, para no volver a
 | 2026-10-14 | Correos de pedidos con Brevo adelantados de la fase 4: salen de pedidos@neratechsv.com, responden y avisan a Gmail de Gabriel; se envían después de responder (after) y quedan en el historial | Gabriel no recibió confirmación de su primera compra |
 | 2026-10-14 | Brevo: bloqueo de IP desactivado para las claves API | Vercel cambia de IP; la clave solo vive en Vercel como secreta |
 | 2026-10-14 | 6% de descuento sobre los productos (no el envío) al pagar en efectivo contra entrega o por transferencia; el precio publicado es el de tarjeta y tasa 0%. Reemplaza la regla "un solo precio para todas las formas de pago" | Decisión de Gabriel, confirmada con su contador y abogado. Se muestra en la ficha, el checkout, Envíos y pagos, el pedido, el panel y los correos; se guarda en `pedidos.descuento` |
+| 2026-10-14 | Fase 4: el 6% siempre aplica y además UN beneficio por pedido (cupón o Puntos Nera) | Decisión de Gabriel |
+| 2026-10-14 | Ningún cupón ni canje de puntos deja el pedido bajo costo: se recorta al máximo con contribución ≥ 0 (costo puesto del mejor proveedor + $1.75 + 2.5%) | Decisión de Gabriel; margen de 8–12% en celulares |
+| 2026-10-14 | Regalo de cumpleaños: cupón personal de $5, compra desde $20, válido todo el mes del cumpleaños; lo crea la revisión diaria (cron de Vercel 7:00 a. m.) | Decisión de Gabriel |
+| 2026-10-14 | Publicidad por exclusión voluntaria: todos reciben salvo que marquen "No quiero recibir publicidad" (checkout, Mi cuenta o enlace de baja en cada correo de ofertas, con List-Unsubscribe de un toque) | Decisión de Gabriel. Se le recomendó confirmarlo con su abogado por la Ley de Protección de Datos Personales (Decreto 144, 2024) |
+| 2026-10-14 | Ofertas con fecha por variante (promocion_precios); la caché de la tienda se refresca a la hora en que empieza o termina una oferta y el navegador muestra el precio normal si ya terminó | Que el precio cambie solo, sin tocar el panel |
+| 2026-10-14 | Combos = producto principal (cualquier variante) + accesorios con ahorro fijo en dólares | Más simple que un precio de combo y no se rompe si cambia el precio de un accesorio |
+| 2026-10-14 | Puntos: se ganan sobre lo pagado por productos (sin envío) al quedar entregado y pagado; se usan con sesión de Google; al cancelar se devuelven los usados y se quitan los ganados | Evita dar puntos por pedidos que no se cobran |
 ## Fase actual
 Fase 1 — Proveedores, listas y mejor precio: terminada.
 Fase 2 — Catálogo y tienda: terminada y en producción (14 oct 2026).
 Fase 3 — Carrito, checkout sin cuenta, Wompi, Ver mi pedido, Mis pedidos y Mi cuenta con Google, Pedidos y Por facturar:
 terminada y en producción (14 oct 2026). Primera compra real con tarjeta: pedido #1001, aprobada.
-Fase 4 — Promociones, cupones, puntos (opción B), regalo de cumpleaños y correos con Brevo: por proponer.
+Fase 4 — Ofertas con fecha, combos, cupones, Puntos Nera (opción B), regalo de cumpleaños, avisos "ya hay stock",
+baja de publicidad y correos con Brevo: terminada (14 oct 2026). Requiere migración 0006 y CRON_SECRET en Vercel.

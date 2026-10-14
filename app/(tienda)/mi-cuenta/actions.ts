@@ -51,7 +51,12 @@ export async function guardarPreferencias(_prev: EstadoAccion, form: FormData): 
   const perfil = await perfilDeUsuario(u);
   const { error } = await createServiceClient()
     .from("clientes")
-    .update({ acepta_whatsapp: form.get("acepta_whatsapp") === "on", acepta_correo: form.get("acepta_correo") === "on" })
+    .update({
+      // Casillas de exclusión: marcada = NO quiere recibir publicidad por ese medio
+      acepta_whatsapp: form.get("no_whatsapp") !== "on",
+      acepta_correo: form.get("no_correo") !== "on",
+      ofertas_elegido_en: new Date().toISOString(),
+    })
     .eq("id", perfil.id);
   if (error) return falla("No se pudo guardar. Probá de nuevo.");
   revalidatePath("/mi-cuenta");

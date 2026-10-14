@@ -4,6 +4,7 @@ import { revalidatePath, updateTag } from "next/cache";
 import type { EstadoAccion } from "@/components/admin/formulario-accion";
 import { equipo } from "@/lib/admin/sesion";
 import { formatoAlmacenamiento, slugDe } from "@/lib/listas/normalizar";
+import { avisarStockDespues } from "@/lib/tienda/regalos";
 import { ETIQUETA_CATALOGO } from "@/lib/tienda/datos";
 
 // Acciones de la sección Catálogo del panel. Cada una verifica la sesión del equipo,
@@ -19,6 +20,8 @@ function refrescar(id?: string) {
   revalidatePath("/admin/catalogo");
   if (id) revalidatePath(`/admin/catalogo/${id}`);
   updateTag(ETIQUETA_CATALOGO);
+  // Si algo volvió a tener stock, avisa a quienes pidieron "Avisame cuando haya"
+  void avisarStockDespues();
 }
 
 // ---------------------------------------------------------------------------

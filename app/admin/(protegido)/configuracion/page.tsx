@@ -23,7 +23,8 @@ const VARIABLES: { nombre: string; para: string; publica: boolean }[] = [
   { nombre: "SUPABASE_SERVICE_ROLE_KEY", para: "Base de datos (escrituras del servidor)", publica: false },
   { nombre: "WOMPI_CLIENT_ID", para: "Pagos con tarjeta (fase 3)", publica: false },
   { nombre: "WOMPI_CLIENT_SECRET", para: "Pagos con tarjeta (fase 3)", publica: false },
-  { nombre: "BREVO_API_KEY", para: "Correos (fase 4)", publica: false },
+  { nombre: "BREVO_API_KEY", para: "Correos", publica: false },
+  { nombre: "CRON_SECRET", para: "Revisión diaria: cumpleaños y avisos de stock", publica: false },
   { nombre: "NEXT_PUBLIC_GA4_ID", para: "Google Analytics (fase 5)", publica: true },
   { nombre: "NEXT_PUBLIC_META_PIXEL_ID", para: "Meta Pixel (fase 5)", publica: true },
   { nombre: "META_CONVERSIONS_TOKEN", para: "API de conversiones de Meta (fase 5)", publica: false },
@@ -188,6 +189,45 @@ async function DatosNegocio() {
           filas={3}
           placeholder="Banco Agrícola | Cuenta de ahorro | 3000000000 | Nera Tech S.A. de C.V."
         />
+      </Seccion>
+
+      <Seccion
+        clave="puntos"
+        titulo="Puntos Nera"
+        descripcion="Programa de lealtad: se ganan cuando el pedido queda entregado y pagado, y se usan al pagar con la sesión de Google abierta."
+        valor={c.puntos}
+      >
+        <label className="flex items-center gap-2 text-sm font-medium">
+          <input type="checkbox" name="activo" defaultChecked={Boolean(c.puntos?.activo)} className="size-4 accent-[var(--marca)]" />
+          Programa activo
+        </label>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Campo nombre="dolares_por_punto" etiqueta="1 punto por cada (USD)" valor={c.puntos?.dolares_por_punto ?? 10} ayuda="Sobre lo que pagó por los productos (sin envío)." />
+          <Campo nombre="valor_punto" etiqueta="Cada punto vale (USD)" valor={c.puntos?.valor_punto ?? 0.1} />
+          <Campo nombre="vence_meses" etiqueta="Los puntos vencen a los (meses)" valor={c.puntos?.vence_meses ?? 12} tipo="number" />
+          <Campo nombre="minimo_canje" etiqueta="Mínimo de puntos para usarlos" valor={c.puntos?.minimo_canje ?? 0} tipo="number" ayuda="0 = desde el primer punto." />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Con los valores de ahora el cliente recupera{" "}
+          {(((Number(c.puntos?.valor_punto ?? 0.1) || 0) / (Number(c.puntos?.dolares_por_punto ?? 10) || 10)) * 100).toFixed(1)}% de lo que
+          compra. Ningún canje deja un pedido bajo costo.
+        </p>
+      </Seccion>
+
+      <Seccion
+        clave="regalo_cumple"
+        titulo="Regalo de cumpleaños"
+        descripcion="Cupón personal que se crea solo en el mes de cumpleaños del cliente (si lo guardó en Mi cuenta). Le llega por correo si acepta publicidad y siempre lo ve en Mi cuenta."
+        valor={c.regalo_cumple}
+      >
+        <label className="flex items-center gap-2 text-sm font-medium">
+          <input type="checkbox" name="activo" defaultChecked={Boolean(c.regalo_cumple?.activo)} className="size-4 accent-[var(--marca)]" />
+          Regalo activo
+        </label>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Campo nombre="monto" etiqueta="Monto del regalo (USD)" valor={c.regalo_cumple?.monto ?? 5} />
+          <Campo nombre="minimo" etiqueta="Compra mínima para usarlo (USD)" valor={c.regalo_cumple?.minimo ?? 20} />
+        </div>
       </Seccion>
 
       <Seccion

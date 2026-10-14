@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath, updateTag } from "next/cache";
+import { avisarStockDespues } from "@/lib/tienda/regalos";
 import { ETIQUETA_CATALOGO } from "@/lib/tienda/datos";
 import { equipo } from "@/lib/admin/sesion";
 import {
@@ -20,6 +21,8 @@ function refrescar() {
   revalidatePath("/admin/precios");
   // La disponibilidad de la tienda depende del stock de los proveedores
   updateTag(ETIQUETA_CATALOGO);
+  // Si algo volvió a tener stock, avisa a quienes pidieron "Avisame cuando haya"
+  void avisarStockDespues();
 }
 
 export async function importarLista(entrada: unknown): Promise<ResultadoImportacion> {

@@ -29,6 +29,8 @@ export async function enviarCorreo(c: {
   html: string;
   texto: string;
   etiqueta: string;
+  /** Encabezados extra (ej. List-Unsubscribe en correos de publicidad) */
+  encabezados?: Record<string, string>;
 }): Promise<ResultadoCorreo> {
   const clave = process.env.BREVO_API_KEY?.trim();
   if (!clave) return { enviado: false, motivo: "Falta BREVO_API_KEY en Vercel" };
@@ -46,6 +48,7 @@ export async function enviarCorreo(c: {
         htmlContent: c.html,
         textContent: c.texto,
         tags: [c.etiqueta],
+        ...(c.encabezados ? { headers: c.encabezados } : {}),
       }),
       cache: "no-store",
     });

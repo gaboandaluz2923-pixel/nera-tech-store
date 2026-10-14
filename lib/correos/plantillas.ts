@@ -17,6 +17,8 @@ export type DatosPedidoCorreo = {
   repartidor: { nombre: string; telefono: string } | null;
   /** Mensaje del equipo para el cliente en el último cambio de estado */
   mensaje: string | null;
+  /** Puntos Nera ganados con este pedido (al entregarse y pagarse) */
+  puntosGanados: { puntos: number; valor: number } | null;
   enlacePedido: string;
   whatsapp: string; // enlace wa.me ya armado
   negocio: { nombre: string; nit: string; direccion: string };
@@ -68,27 +70,44 @@ ${d.descuentos
 </table>`;
 }
 
-function base(d: DatosPedidoCorreo, titulo: string, cuerpo: string, previa: string) {
-  const pie = [d.negocio.nombre, d.negocio.nit ? `NIT ${d.negocio.nit}` : "", d.negocio.direccion].filter(Boolean).map(esc).join(" · ");
+/** Lo común a todos los correos: sitio (para el logo), WhatsApp, datos del negocio y por qué le llega */
+export type Marco = {
+  sitio: string;
+  whatsapp: string;
+  negocio: { nombre: string; nit: string; direccion: string };
+  /** Texto del pie: por qué recibe el correo */
+  motivo?: string;
+  /** Enlace "No quiero recibir más ofertas" (solo en correos de publicidad) */
+  baja?: string;
+};
+
+function marco(m: Marco, titulo: string, cuerpo: string, previa: string) {
+  const pie = [m.negocio.nombre, m.negocio.nit ? `NIT ${m.negocio.nit}` : "", m.negocio.direccion].filter(Boolean).map(esc).join(" · ");
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(titulo)}</title></head>
 <body style="margin:0;padding:0;background:#f4f4f5;font-family:Arial,Helvetica,sans-serif">
 <span style="display:none;max-height:0;overflow:hidden">${esc(previa)}</span>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5"><tr><td align="center" style="padding:24px 12px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px">
 <tr><td align="center" style="padding:24px;background:#1C1C1C;border-radius:16px 16px 0 0">
-<img src="${esc(new URL(d.enlacePedido).origin)}/marca/logo-oscuro.png" width="140" height="82" alt="Nera Tech" style="display:block;margin:0 auto;border:0">
+<img src="${esc(m.sitio)}/marca/logo-oscuro.png" width="140" height="82" alt="Nera Tech" style="display:block;margin:0 auto;border:0">
 </td></tr>
 <tr><td style="padding:24px">
 <h1 style="margin:0 0 12px;font-size:22px;line-height:1.3;color:#1c1c1c">${esc(titulo)}</h1>
 ${cuerpo}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;border-top:1px solid #eee"><tr><td style="padding-top:20px;text-align:center">
 <p style="margin:0;font-size:15px;color:#333"><strong>¿Tenés alguna duda?</strong> Estamos para ayudarte.</p>
-${boton("Escribinos por WhatsApp", d.whatsapp, VERDE_WA, true)}
+${boton("Escribinos por WhatsApp", m.whatsapp, VERDE_WA, true)}
 <p style="margin:0;font-size:13px;color:#666">O respondé este correo.</p>
 </td></tr></table>
 </td></tr></table>
-<p style="max-width:560px;margin:16px auto 0;font-size:11px;color:#999;text-align:center">${pie}<br>Recibís este correo porque hiciste un pedido en Nera Tech.</p>
+<p style="max-width:560px;margin:16px auto 0;font-size:11px;color:#999;text-align:center">${pie}<br>${esc(m.motivo ?? "Recibís este correo porque hiciste un pedido en Nera Tech.")}${
+    m.baja ? `<br><a href="${esc(m.baja)}" style="color:#999;text-decoration:underline">No quiero recibir más publicidad</a>` : ""
+  }</p>
 </td></tr></table></body></html>`;
+}
+
+function base(d: DatosPedidoCorreo, titulo: string, cuerpo: string, previa: string) {
+  return marco({ sitio: new URL(d.enlacePedido).origin, whatsapp: d.whatsapp, negocio: d.negocio }, titulo, cuerpo, previa);
 }
 
 const p = (t: string) => `<p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:#333">${t}</p>`;
@@ -194,8 +213,14 @@ export function correoEstado(d: DatosPedidoCorreo, estado: string): Correo | nul
         )
       : "";
   const mensaje = d.mensaje ? destacado(`<strong>Mensaje de Nera Tech:</strong><br>${esc(d.mensaje).replace(/\n/g, "<br>")}`) : "";
+  const puntos =
+    estado === "entregado" && d.puntosGanados
+      ? destacado(
+          `<strong>Ganaste ${d.puntosGanados.puntos} Puntos Nera</strong><br>Valen ${usd(d.puntosGanados.puntos * d.puntosGanados.valor)} en tu próxima compra. Usalos al pagar con tu cuenta de Google.`
+        )
+      : "";
   const cuerpo =
-    p(m.texto) + repartidor + mensaje + efectivo + (estado === "cancelado" ? "" : bloqueEntrega(d)) + tablaProductos(d) + boton("Ver mi pedido", d.enlacePedido);
+    p(m.texto) + repartidor + mensaje + puntos + efectivo + (estado === "cancelado" ? "" : bloqueEntrega(d)) + tablaProductos(d) + boton("Ver mi pedido", d.enlacePedido);
   return {
     asunto: n(m.asunto),
     html: base(d, n(m.titulo), cuerpo, n(m.texto)),
@@ -228,5 +253,47 @@ export function correoAvisoEquipo(d: DatosPedidoCorreo & { telefono: string; enl
     asunto: titulo,
     html: base(d, titulo, cuerpo, titulo),
     texto: `${titulo}\n${d.nombre} · ${d.telefono}\n${d.direccion}\n\n${textoProductos(d)}\n\n${d.enlacePanel}`,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Correos de la fase 4: regalo de cumpleaños (publicidad, con baja) y "ya hay stock"
+// ---------------------------------------------------------------------------
+
+export function correoRegaloCumple(
+  m: Marco,
+  r: { nombre: string; codigo: string; monto: number; minimo: number; fin: string }
+): Correo {
+  const nombre = r.nombre.split(" ")[0] || "";
+  const hasta = new Date(r.fin).toLocaleDateString("es-SV", { day: "numeric", month: "long", timeZone: "America/El_Salvador" });
+  const titulo = `¡Feliz cumpleaños${nombre ? `, ${nombre}` : ""}! Te regalamos ${usd(r.monto)}`;
+  const cuerpo =
+    p(`Para celebrarte, tenés <strong>${usd(r.monto)} de descuento</strong> en tu compra de este mes${r.minimo > 0 ? ` (desde ${usd(r.minimo)})` : ""}.`) +
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0"><tr><td align="center" style="padding:18px;border:2px dashed #E96000;border-radius:12px;background:#fff4ec">
+<p style="margin:0;font-size:13px;color:#666">Tu código</p>
+<p style="margin:4px 0 0;font-size:26px;font-weight:bold;letter-spacing:2px;color:#1c1c1c;font-family:'Courier New',monospace">${esc(r.codigo)}</p>
+</td></tr></table>` +
+    p(`Escribilo en "¿Tenés un cupón?" al pagar, con este mismo correo. Vale hasta el ${esc(hasta)}.`) +
+    boton("Ver celulares y accesorios", `${m.sitio}/celulares`);
+  return {
+    asunto: `🎁 ${nombre ? `${nombre}, te` : "Te"} regalamos ${usd(r.monto)} por tu cumpleaños`,
+    html: marco(m, titulo, cuerpo, `Tu código ${r.codigo} vale hasta el ${hasta}`),
+    texto: `${titulo}\n\nTu código: ${r.codigo}\n${usd(r.monto)} de descuento${r.minimo > 0 ? ` en compras desde ${usd(r.minimo)}` : ""}. Vale hasta el ${hasta}.\n\n${m.sitio}${m.baja ? `\n\nNo quiero recibir más publicidad: ${m.baja}` : ""}`,
+  };
+}
+
+export function correoStockDisponible(m: Marco, x: { producto: string; enlace: string; precio: number | null; imagen: string | null }): Correo {
+  const titulo = `¡Ya hay ${x.producto}!`;
+  const cuerpo =
+    p(`Nos pediste que te avisáramos: <strong>${esc(x.producto)}</strong> ya está disponible${x.precio ? ` desde <strong>${usd(x.precio)}</strong>` : ""}.`) +
+    (x.imagen
+      ? `<p style="margin:16px 0;text-align:center"><img src="${esc(x.imagen)}" width="220" alt="${esc(x.producto)}" style="max-width:220px;height:auto;border:0"></p>`
+      : "") +
+    p("Las unidades se van rápido: si lo querés, apartalo hoy.") +
+    boton("Comprar ahora", x.enlace);
+  return {
+    asunto: `Ya hay ${x.producto} en Nera Tech`,
+    html: marco({ ...m, motivo: "Recibís este correo porque pediste que te avisáramos cuando hubiera." }, titulo, cuerpo, "Ya está disponible"),
+    texto: `${titulo}\n\nYa está disponible${x.precio ? ` desde ${usd(x.precio)}` : ""}.\n\n${x.enlace}`,
   };
 }

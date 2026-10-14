@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { MapPin, Package } from "lucide-react";
+import { Gift, MapPin, Package, Star } from "lucide-react";
 import { BotonGuardar, FormularioAccion } from "@/components/admin/formulario-accion";
 import { BotonGoogle } from "@/components/tienda/boton-google";
 import { FormularioDireccion } from "@/components/tienda/formulario-direccion";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
+import { reglasBeneficios, saldoPuntos } from "@/lib/tienda/beneficios";
 import { perfilDeUsuario } from "@/lib/tienda/cuentas";
+import { regalosVigentes } from "@/lib/tienda/regalos";
+import { usd2 } from "@/lib/tienda/formato";
 import { configTienda } from "@/lib/tienda/datos";
 import { DEPARTAMENTOS, OTRA_ZONA } from "@/lib/tienda/pedidos";
 import { salir } from "../mis-pedidos/actions";
@@ -42,8 +45,21 @@ async function Contenido() {
       </div>
     );
   }
-  const [perfil, c] = await Promise.all([perfilDeUsuario(user), configTienda()]);
+  const [perfil, c, reglas] = await Promise.all([perfilDeUsuario(user), configTienda(), reglasBeneficios()]);
   const zonas = c.municipiosContraEntrega;
+  const [puntos, regalos] = await Promise.all([
+    reglas.puntos.activo ? saldoPuntos(perfil.id) : null,
+    regalosVigentes(perfil.id),
+  ]);
+  const fechaCorta = (iso: string) =>
+    new Date(iso).toLocaleDateString("es-SV", { day: "numeric", month: "long", year: "numeric", timeZone: "America/El_Salvador" });
+  const TEXTO_MOV: Record<string, string> = {
+    ganados: "Ganaste",
+    canje: "Usaste",
+    reintegro: "Te devolvimos",
+    anulados: "Se quitaron",
+    ajuste: "Ajuste",
+  };
 
   return (
     <div className="space-y-6">
@@ -60,6 +76,60 @@ async function Contenido() {
           </form>
         </div>
       </div>
+
+      {regalos.length ? (
+        <section className="space-y-2 rounded-2xl border-2 border-marca bg-marca/5 p-4">
+          {regalos.map((r) => (
+            <div key={r.codigo} className="flex items-start gap-3">
+              <Gift className="mt-0.5 size-6 shrink-0 text-marca" aria-hidden />
+              <div className="text-sm">
+                <p className="text-base font-bold">¡Feliz cumpleaños! Tenés {usd2(r.monto)} de regalo</p>
+                <p>
+                  Usá el código <strong className="font-mono text-base">{r.codigo}</strong> al pagar
+                  {r.minimo > 0 ? `, en compras desde ${usd2(r.minimo)}` : ""}. Vale hasta el {fechaCorta(r.fin)}.
+                </p>
+              </div>
+            </div>
+          ))}
+        </section>
+      ) : null}
+
+      {puntos ? (
+        <Seccion titulo="Puntos Nera">
+          <div className="flex flex-wrap items-center gap-4">
+            <Star className="size-8 text-marca" aria-hidden />
+            <div>
+              <p className="text-3xl font-bold">
+                {puntos.saldo} <span className="text-base font-medium">puntos</span>
+              </p>
+              <p className="text-sm text-muted-foreground">Valen {usd2(puntos.saldo * reglas.puntos.valor_punto)} en tu próxima compra.</p>
+            </div>
+          </div>
+          {puntos.porVencer ? (
+            <p className="rounded-lg bg-amber-50 p-2 text-sm text-amber-900">
+              {puntos.porVencer.puntos} puntos vencen el {fechaCorta(puntos.porVencer.fecha)}. ¡Usalos antes!
+            </p>
+          ) : null}
+          <p className="text-sm text-muted-foreground">
+            Ganás 1 punto por cada {usd2(reglas.puntos.dolares_por_punto)} cuando tu pedido se entrega y está pagado. Cada punto vale{" "}
+            {usd2(reglas.puntos.valor_punto)} y dura {reglas.puntos.vence_meses} meses. Se usan al pagar, con tu sesión abierta (un cupón o
+            tus puntos por compra).
+          </p>
+          {puntos.movimientos.length ? (
+            <ul className="divide-y rounded-xl border text-sm">
+              {puntos.movimientos.slice(0, 8).map((m) => (
+                <li key={m.id} className="flex items-center justify-between gap-3 p-2.5">
+                  <span>
+                    {TEXTO_MOV[m.tipo] ?? m.tipo} {Math.abs(m.puntos)} puntos
+                    {m.numero ? <span className="text-muted-foreground"> · pedido #{m.numero}</span> : null}
+                  </span>
+                  <span className="text-xs text-muted-foreground">{fechaCorta(m.created_at)}</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </Seccion>
+      ) : null}
 
       <Seccion titulo="Tus datos">
         <FormularioAccion key={JSON.stringify([perfil.nombre, perfil.telefono, perfil.telefono_alterno, perfil.cumple_dia, perfil.cumple_mes])} accion={guardarPerfil} className="space-y-3">
@@ -97,7 +167,9 @@ async function Contenido() {
                 ))}
               </select>
             </div>
-            <p className="text-xs text-muted-foreground">Solo día y mes. En tu cumpleaños te tenemos un regalo.</p>
+            <p className="text-xs text-muted-foreground">
+              Solo día y mes. {reglas.regalo.activo ? `En tu mes de cumpleaños te regalamos ${usd2(reglas.regalo.monto)} para tu compra.` : "En tu cumpleaños te tenemos un regalo."}
+            </p>
           </fieldset>
           <BotonGuardar>Guardar</BotonGuardar>
         </FormularioAccion>
@@ -163,12 +235,12 @@ async function Contenido() {
       <Seccion titulo="Ofertas y avisos">
         <FormularioAccion key={`${perfil.acepta_whatsapp}-${perfil.acepta_correo}`} accion={guardarPreferencias} className="space-y-3">
           <label className="flex items-start gap-2 text-sm">
-            <input type="checkbox" name="acepta_whatsapp" defaultChecked={perfil.acepta_whatsapp} className="mt-0.5 size-4 accent-[var(--marca)]" />
-            Quiero recibir ofertas por WhatsApp
+            <input type="checkbox" name="no_whatsapp" defaultChecked={!perfil.acepta_whatsapp} className="mt-0.5 size-4 accent-[var(--marca)]" />
+            No quiero recibir publicidad ni ofertas por WhatsApp
           </label>
           <label className="flex items-start gap-2 text-sm">
-            <input type="checkbox" name="acepta_correo" defaultChecked={perfil.acepta_correo} className="mt-0.5 size-4 accent-[var(--marca)]" />
-            Quiero recibir ofertas por correo
+            <input type="checkbox" name="no_correo" defaultChecked={!perfil.acepta_correo} className="mt-0.5 size-4 accent-[var(--marca)]" />
+            No quiero recibir publicidad ni ofertas por correo electrónico
           </label>
           <p className="text-xs text-muted-foreground">Los avisos de tus pedidos y facturas te llegan siempre. Podés cambiar esto cuando quieras.</p>
           <BotonGuardar>Guardar</BotonGuardar>

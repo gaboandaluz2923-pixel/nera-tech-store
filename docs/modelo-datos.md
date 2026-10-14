@@ -129,15 +129,31 @@ Colecciones con slug y nombre (mas-pedidos, recien-llegado, quincena); la tabla 
 | config | jsonb | Según tipo: % o monto, productos, umbral de envío |
 | activa | bool | |
 
+Las ofertas con fecha usan `tipo = descuento_fecha` y sus precios van en `promocion_precios`.
+
+### promocion_precios (fase 4)
+promocion_id, variante_id, precio (precio de oferta). La tienda (anon) solo ve las filas de promociones activas
+y dentro de sus fechas. La vista `promociones_proximas` dice cuándo empieza la próxima (para refrescar la caché).
+
 ### bundles y bundle_items
-`bundles`: producto_principal_id, nombre, precio_bundle, promocion_id (null), activo.
-`bundle_items`: bundle_id, variante_id, cantidad.
+`bundles`: producto_principal_id, nombre, **descuento** (ahorro en dólares por cada combo completo), activo;
+precio_bundle y promocion_id ya no se usan. `bundle_items`: bundle_id, variante_id, cantidad.
 
 ### cupones
-codigo único, tipo (`porcentaje` | `monto` | `envio_gratis`), valor, min_pedido, usos_max, usos, inicio, fin, activo, promocion_id (null).
+codigo único (mayúsculas), tipo (`porcentaje` | `monto` | `envio_gratis`), valor, tope (máximo en $ para %),
+min_pedido, usos_max, por_cliente (null = sin límite), inicio, fin, activo, solo_accesorios, descripcion,
+cliente_id (cupón personal, ej. cumpleaños), origen (`panel` | `cumple`). Los usos se cuentan con
+`pedidos.cupon_id` (sin cancelados ni devueltos).
+
+### puntos_movimientos (fase 4)
+cliente_id, pedido_id, tipo (`ganados` | `canje` | `reintegro` | `anulados` | `ajuste`), puntos (+/−), vence_en,
+nota, usuario. Un movimiento de cada tipo por pedido. El saldo se calcula gastando primero los puntos más
+viejos (`lib/tienda/beneficios.ts`).
 
 ### clientes
-nombre, telefono, correo, direccion (jsonb: departamento, municipio, direccion, referencia), auth_user_id (null; se llena si inicia sesión con Google), origen.
+nombre, telefono, correo, direccion (jsonb: departamento, municipio, direccion, referencia), auth_user_id (null; se llena si inicia sesión con Google), origen,
+telefono_alterno, cumple_dia, cumple_mes, acepta_whatsapp y acepta_correo (publicidad; **true por defecto**,
+el cliente elige no recibir), ofertas_elegido_en (cuándo eligió), baja_token (enlace "No quiero recibir más publicidad").
 
 ### pedidos
 | Columna | Tipo | Nota |
@@ -146,14 +162,18 @@ nombre, telefono, correo, direccion (jsonb: departamento, municipio, direccion, 
 | cliente_id | → clientes | |
 | estado | `pendiente_confirmar` \| `confirmado` \| `pagado` \| `en_camino` \| `entregado` \| `cancelado` \| `devuelto` | |
 | forma_pago | `contra_entrega` \| `transferencia` \| `wompi` \| `tasa_cero` | |
-| subtotal, envio, descuento, total | numeric | |
+| subtotal | numeric | Suma de las líneas (con precio de oferta) |
+| descuento_combos | numeric | Ahorro de combos; `combos` (jsonb) tiene el detalle |
+| descuento | numeric | 6% por efectivo o transferencia |
+| descuento_cupon, puntos_usados, descuento_puntos | numeric / int | Un solo beneficio: cupón o puntos |
+| envio, total | numeric | total = subtotal − combos − descuento − cupón − puntos + envío |
 | cupon_id | → cupones (null) | |
 | entrega | jsonb | Copia de la dirección al momento del pedido |
 | origen | text | Código de página / campaña |
 | notas | text | |
 
 ### lineas_pedido
-pedido_id, variante_id, nombre (copia), cantidad, precio_unitario, bundle_id (null).
+pedido_id, variante_id, nombre (copia), cantidad, precio_unitario (el cobrado), precio_regular (si fue de oferta), bundle_id (null).
 
 ### pagos
 pedido_id, metodo, monto, estado (`pendiente` | `aprobado` | `rechazado`), referencia_externa (id de Wompi), comprobante_url (captura de transferencia), payload (jsonb, respuesta de Wompi).
@@ -162,7 +182,7 @@ pedido_id, metodo, monto, estado (`pendiente` | `aprobado` | `rechazado`), refer
 pedido_id, estado_anterior, estado_nuevo, nota, usuario.
 
 ### suscriptores
-correo, telefono, origen (`pedido` | `aviso_precio` | `aviso_stock` | `checklist` | `cupon` | `whatsapp`), producto_id (null), brevo_id, activo.
+correo, telefono, origen (`pedido` | `aviso_precio` | `aviso_stock` | `checklist` | `cupon` | `whatsapp`), producto_id (null), brevo_id, activo, avisado_en (cuándo se le avisó que hay stock).
 
 ### eventos
 | Columna | Tipo | Nota |
