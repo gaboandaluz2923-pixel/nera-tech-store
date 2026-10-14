@@ -3,7 +3,7 @@ import { after } from "next/server";
 import { z } from "zod";
 import { avisarPagoConfirmado, avisarPedidoNuevo } from "@/lib/correos/avisos";
 import { createServiceClient } from "@/lib/supabase/server";
-import { cotizarPedido, otorgarPuntos } from "@/lib/tienda/beneficios";
+import { cotizarPedido, otorgarPuntos, saldoPuntos, usosDeCupon } from "@/lib/tienda/beneficios";
 import type { ResumenCarrito } from "@/lib/tienda/calculo";
 import { configTienda } from "@/lib/tienda/datos";
 import { crearEnlacePago, ErrorWompi } from "@/lib/wompi";
@@ -243,6 +243,20 @@ export async function crearPedido(
     if (e3) {
       await sb.from("pedidos").delete().eq("id", pedido.id);
       throw e3;
+    }
+    // Dos compras al mismo tiempo con los mismos puntos: la segunda se anula
+    if ((await saldoPuntos(opciones.clientePuntos)).saldo < 0) {
+      await sb.from("puntos_movimientos").delete().eq("pedido_id", pedido.id).eq("tipo", "canje");
+      await sb.from("pedidos").delete().eq("id", pedido.id);
+      return { ok: false, mensaje: "Tus puntos ya se usaron en otro pedido. Revisá el total y confirmá de nuevo.", resumen };
+    }
+  }
+  // Lo mismo con los límites del cupón (usos en total y por cliente)
+  if (cot.cupon) {
+    const u = await usosDeCupon(cot.cupon.id, datos.correo);
+    if ((u.max !== null && u.total > u.max) || (u.porCliente !== null && u.delCliente > u.porCliente)) {
+      await sb.from("pedidos").delete().eq("id", pedido.id);
+      return { ok: false, mensaje: "Ese cupón se acaba de agotar. Quitalo y confirmá de nuevo.", campos: { cupon: "Ese cupón ya se agotó." } };
     }
   }
   await sb.from("pedido_eventos").insert({

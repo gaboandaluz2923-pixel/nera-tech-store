@@ -82,12 +82,11 @@ export async function regalosDeCumple(sitio: string, ahora = new Date()): Promis
     return r;
   }
   if (!clientes?.length) return r;
-  const { data: yaTienen } = await sb
-    .from("cupones")
-    .select("cliente_id")
-    .eq("origen", "cumple")
-    .eq("inicio", m.inicio)
-    .in("cliente_id", clientes.map((c) => c.id));
+  const { data: yaTienen, error: e0 } = await sb.from("cupones").select("cliente_id").eq("origen", "cumple").eq("inicio", m.inicio).limit(20000);
+  if (e0) {
+    r.errores.push(e0.message);
+    return r;
+  }
   const tienen = new Set((yaTienen ?? []).map((c) => c.cliente_id as string));
   const base = await marcoCorreo(sitio);
 
@@ -112,6 +111,7 @@ export async function regalosDeCumple(sitio: string, ahora = new Date()): Promis
         activo: true,
       });
       if (!e) codigo = intento;
+      else if (e.code === "23505" && e.message.includes("cupones_cumple_unico")) break; // ya lo tenía (otra revisión al mismo tiempo)
       else if (e.code !== "23505") {
         r.errores.push(`Cliente ${c.correo}: ${e.message}`);
         break;

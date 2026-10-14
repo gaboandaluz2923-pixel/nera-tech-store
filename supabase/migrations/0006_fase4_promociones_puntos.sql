@@ -56,6 +56,8 @@ alter table public.cupones add column if not exists por_cliente int default 1;
 alter table public.cupones add column if not exists cliente_id uuid references public.clientes(id) on delete cascade;
 alter table public.cupones add column if not exists origen text not null default 'panel';
 create index if not exists cupones_cliente_idx on public.cupones (cliente_id);
+-- Un solo regalo de cumpleaños por cliente y mes, aunque la revisión corra dos veces a la vez
+create unique index if not exists cupones_cumple_unico on public.cupones (cliente_id, inicio) where origen = 'cumple';
 comment on column public.cupones.tope is 'Máximo de descuento en dólares (para cupones de porcentaje)';
 comment on column public.cupones.por_cliente is 'Usos por correo de cliente (vacío = sin límite)';
 comment on column public.cupones.cliente_id is 'Cupón personal (por ejemplo, regalo de cumpleaños)';
@@ -113,14 +115,16 @@ alter table public.clientes alter column acepta_correo set default true;
 alter table public.clientes add column if not exists baja_token uuid not null default gen_random_uuid();
 alter table public.clientes add column if not exists ofertas_elegido_en timestamptz;
 create unique index if not exists clientes_baja_token_idx on public.clientes (baja_token);
--- Antes la casilla venía apagada por defecto; quien nunca eligió pasa a recibir ofertas
+-- Antes la casilla venía apagada por defecto. Pasan a recibir ofertas solo los clientes SIN cuenta
+-- (nunca pudieron elegir en Mi cuenta); los que tienen cuenta pudieron haberlas desmarcado a propósito.
 update public.clientes
   set acepta_whatsapp = true, acepta_correo = true
-  where ofertas_elegido_en is null and not (acepta_whatsapp and acepta_correo);
+  where ofertas_elegido_en is null and auth_user_id is null and not (acepta_whatsapp and acepta_correo);
 
 -- ---------------------------------------------------------------------
 -- 8. Reglas de puntos y regalo de cumpleaños (se editan en Configuración)
---    Solo la primera vez: si ya se editaron, no se tocan.
+--    La 0005 las dejó apagadas a la espera de esta fase: aquí se encienden (decisión de Gabriel).
+--    Solo la primera vez (si ya tienen las claves nuevas, no se tocan).
 -- ---------------------------------------------------------------------
 insert into public.configuracion (clave, valor, publica) values
   ('puntos', '{"activo": true, "dolares_por_punto": 10, "valor_punto": 0.10, "vence_meses": 12, "minimo_canje": 0}'::jsonb, true),

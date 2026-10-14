@@ -16,10 +16,10 @@ const numero = (v: FormDataEntryValue | null) => {
   return t === "" ? null : Number(t);
 };
 /** "2026-10-18T23:59" (hora de El Salvador, UTC−6 todo el año) → ISO */
-const fechaSV = (v: FormDataEntryValue | null) => {
+const fechaSV = (v: FormDataEntryValue | null, finDelDia = false) => {
   const t = texto(v);
   if (!t) return null;
-  const d = new Date(`${t.length === 10 ? `${t}T00:00` : t}:00-06:00`);
+  const d = new Date(`${t.length === 10 ? `${t}T${finDelDia ? "23:59" : "00:00"}` : t}:00-06:00`);
   return Number.isNaN(d.getTime()) ? undefined : d.toISOString();
 };
 const ok = (mensaje: string): EstadoAccion => ({ ok: true, mensaje, vez: Date.now() });
@@ -36,7 +36,7 @@ function refrescar(tienda = true) {
 function leerOferta(form: FormData) {
   const nombre = texto(form.get("nombre")).slice(0, 80);
   const inicio = fechaSV(form.get("inicio"));
-  const fin = fechaSV(form.get("fin"));
+  const fin = fechaSV(form.get("fin"), true);
   if (nombre.length < 3) return { error: "Poné un nombre a la oferta (ej. Quincena de octubre)." };
   if (inicio === undefined || fin === undefined) return { error: "Revisá las fechas." };
   if (!fin) return { error: "Elegí cuándo termina la oferta: así el precio vuelve solo a la normalidad." };
@@ -158,7 +158,7 @@ export async function crearCupon(_prev: EstadoAccion, form: FormData): Promise<E
   const usosMax = numero(form.get("usos_max"));
   const porCliente = numero(form.get("por_cliente"));
   const inicio = fechaSV(form.get("inicio"));
-  const fin = fechaSV(form.get("fin"));
+  const fin = fechaSV(form.get("fin"), true);
   if (!/^[A-Z0-9-]{3,20}$/.test(codigo)) return falla("El código lleva de 3 a 20 letras, números o guiones (ej. QUINCENA10).");
   if (!["porcentaje", "monto", "envio_gratis"].includes(tipo)) return falla("Elegí el tipo de cupón.");
   if (tipo === "porcentaje" && !(valor > 0 && valor <= 50)) return falla("El porcentaje va de 1 a 50.");

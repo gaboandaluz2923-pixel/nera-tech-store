@@ -107,7 +107,7 @@ export async function saldoPuntos(clienteId: string): Promise<SaldoPuntos> {
     .select("id, pedido_id, tipo, puntos, vence_en, nota, created_at, pedidos(numero)")
     .eq("cliente_id", clienteId)
     .order("created_at", { ascending: false })
-    .limit(500);
+    .limit(10000);
   const movs = ((data ?? []) as unknown as (MovimientoPuntos & { pedidos: { numero: number } | null })[]).map((m) => ({
     ...m,
     numero: m.pedidos?.numero ?? null,
@@ -171,6 +171,19 @@ async function buscarCupon(
     if ((count ?? 0) >= c.por_cliente) return { ok: false, mensaje: "Ya usaste este cupón." };
   }
   return { ok: true, cupon: c };
+}
+
+/** Usos vigentes de un cupón (sin cancelados ni devueltos), en total y por correo */
+export async function usosDeCupon(cuponId: string, correo: string) {
+  const sb = createServiceClient();
+  const base = () =>
+    sb.from("pedidos").select("id", { count: "exact", head: true }).eq("cupon_id", cuponId).not("estado", "in", "(cancelado,devuelto)");
+  const [{ data: c }, { count: total }, { count: delCliente }] = await Promise.all([
+    sb.from("cupones").select("usos_max, por_cliente").eq("id", cuponId).single(),
+    base(),
+    base().eq("entrega->>correo", correo.trim().toLowerCase()),
+  ]);
+  return { max: c?.usos_max ?? null, porCliente: c?.por_cliente ?? null, total: total ?? 0, delCliente: delCliente ?? 0 };
 }
 
 // ---------------------------------------------------------------------------
@@ -249,7 +262,8 @@ export async function cotizarPedido(e: {
           : resumen.envio;
     if (c.tipo === "porcentaje" && c.tope !== null) pedido = Math.min(pedido, Number(c.tope));
     if (c.tipo === "envio_gratis" && resumen.envio === 0) return { ...base, cuponError: "Tu pedido ya tiene envío gratis." };
-    const monto = r2(Math.min(pedido, maximo));
+    // Si hay que recortar, a dólares enteros: así no se puede deducir el costo exacto
+    const monto = pedido <= maximo ? r2(pedido) : Math.floor(maximo);
     if (monto <= 0) return { ...base, cuponError: "Este pedido ya tiene el mejor precio posible: el cupón no se puede usar en él." };
     return {
       ...base,
@@ -262,7 +276,8 @@ export async function cotizarPedido(e: {
   if (saldo! < reglas.puntos.minimo_canje) return base;
   const valor = reglas.puntos.valor_punto;
   const pedidoMonto = r2(saldo! * valor);
-  const usados = Math.floor((Math.min(pedidoMonto, maximo) + 1e-9) / valor);
+  const tope = pedidoMonto <= maximo ? pedidoMonto : Math.floor(maximo);
+  const usados = Math.floor((tope + 1e-9) / valor);
   if (usados <= 0) return base;
   const monto = r2(usados * valor);
   return {
@@ -280,11 +295,13 @@ export async function cotizarPedido(e: {
 export async function otorgarPuntos(pedidoId: string): Promise<number> {
   const sb = createServiceClient();
   const [{ data: p }, reglas] = await Promise.all([
-    sb.from("pedidos").select("id, cliente_id, estado, pagado_en, total, envio").eq("id", pedidoId).single(),
+    sb.from("pedidos").select("id, cliente_id, estado, pagado_en, total, envio, descuento_cupon, cupones(tipo)").eq("id", pedidoId).single(),
     reglasBeneficios(),
   ]);
   if (!p || !p.cliente_id || p.estado !== "entregado" || !p.pagado_en || !reglas.puntos.activo) return 0;
-  const puntos = Math.floor((Number(p.total) - Number(p.envio)) / reglas.puntos.dolares_por_punto);
+  // Lo pagado por productos: sin envío (si un cupón regaló el envío, ese descuento no cuenta)
+  const envioGratisCupon = (p.cupones as unknown as { tipo: string } | null)?.tipo === "envio_gratis" ? Number(p.descuento_cupon) : 0;
+  const puntos = Math.floor((Number(p.total) - Number(p.envio) + envioGratisCupon) / reglas.puntos.dolares_por_punto);
   if (puntos <= 0) return 0;
   const vence = new Date();
   vence.setMonth(vence.getMonth() + reglas.puntos.vence_meses);

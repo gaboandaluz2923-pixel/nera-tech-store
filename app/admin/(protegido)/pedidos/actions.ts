@@ -33,7 +33,7 @@ export async function cambiarEstadoPedido(_prev: EstadoAccion, form: FormData): 
   const { supabase, usuario } = await equipo();
   const { data: p } = await supabase
     .from("pedidos")
-    .select("id, estado, forma_pago, total, pagado_en, confirmado_en, entrega, lineas_pedido(variante_id, cantidad)")
+    .select("id, estado, forma_pago, total, pagado_en, confirmado_en, entrega, cupon_id, puntos_usados, lineas_pedido(variante_id, cantidad)")
     .eq("id", id)
     .single();
   if (!p) return falla("No se encontró el pedido.");
@@ -41,6 +41,10 @@ export async function cambiarEstadoPedido(_prev: EstadoAccion, form: FormData): 
     return falla("Ese cambio de estado no se puede hacer desde el estado actual.");
   }
   if (nuevo === "cancelado" && !nota) return falla("Escribí el motivo de la cancelación en la nota.");
+  // Al cancelar se le devolvieron los puntos y se liberó el cupón: reabrirlo los cobraría dos veces
+  if (nuevo === "pendiente_confirmar" && (p.cupon_id || Number(p.puntos_usados) > 0)) {
+    return falla("Este pedido usó un cupón o Puntos Nera, que se devolvieron al cancelarlo. Pedile al cliente que haga un pedido nuevo.");
+  }
 
   const cambios: Record<string, unknown> = { estado: nuevo };
   const ahora = new Date().toISOString();
