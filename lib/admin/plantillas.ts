@@ -1,0 +1,50 @@
+// Qué características se piden para cada categoría en el panel (en este orden).
+// La memoria (RAM y almacenamiento) no va aquí: es de cada variante.
+export const PLANTILLAS: Record<string, string[]> = {
+  celulares: [
+    "pantalla",
+    "procesador",
+    "camara",
+    "camara_frontal",
+    "bateria",
+    "carga",
+    "red",
+    "sistema_operativo",
+    "nfc",
+    "proteccion",
+    "peso",
+  ],
+  tablets: ["pantalla", "procesador", "camara", "bateria", "carga", "red", "sistema_operativo", "peso"],
+  audifonos: ["tipo", "autonomia", "cancelacion_ruido", "resistencia", "conexion", "conector", "peso"],
+  relojes: ["pantalla", "autonomia", "resistencia", "conexion", "compatibilidad", "peso"],
+  bocinas: ["potencia", "autonomia", "resistencia", "conexion", "peso"],
+  cargadores: ["potencia", "conector", "largo", "compatible_con"],
+  proteccion: ["compatible_con", "material"],
+  otros: [],
+};
+
+/** Ejemplos que se muestran en gris dentro de cada campo vacío. */
+export const EJEMPLOS: Record<string, string> = {
+  pantalla: '6.7" Super AMOLED Full HD+, 120 Hz',
+  procesador: "Snapdragon 6 Gen 3",
+  camara: "50 MP + 5 MP gran angular + 2 MP macro",
+  camara_frontal: "12 MP",
+  bateria: "5000 mAh",
+  carga: "Carga rápida 25 W",
+  red: "4G o 5G",
+  sistema_operativo: "Android 16 (hasta 6 actualizaciones)",
+  nfc: "Sí / No",
+  proteccion: "IP54 (polvo y salpicaduras)",
+  peso: "190 g",
+  tipo: "Inalámbricos in-ear (TWS)",
+  autonomia: "Hasta 8 h; 36 h con estuche",
+  cancelacion_ruido: "Sí, hasta 42 dB",
+  resistencia: "IP54",
+  conexion: "Bluetooth 5.4",
+  conector: "USB-C",
+  potencia: "25 W",
+  largo: "1 m",
+  compatible_con: "Galaxy A17",
+  material: "Silicona",
+  compatibilidad: "Android y iPhone",
+};

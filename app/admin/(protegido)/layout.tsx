@@ -25,7 +25,7 @@ const SECCIONES: { nombre: string; href: string; fase: number }[] = [
   { nombre: "Configuración", href: "/admin/configuracion", fase: 0 },
 ];
 
-const FASE_ACTUAL = 1;
+const FASE_ACTUAL = 2;
 
 async function Encabezado() {
   const supabase = await createClient();

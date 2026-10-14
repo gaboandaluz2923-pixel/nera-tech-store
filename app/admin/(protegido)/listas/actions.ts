@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
+import { ETIQUETA_CATALOGO } from "@/lib/tienda/datos";
 import { equipo } from "@/lib/admin/sesion";
 import {
   asociarLineaEn,
@@ -17,6 +18,8 @@ export type ResultadoImportacion =
 function refrescar() {
   revalidatePath("/admin/listas");
   revalidatePath("/admin/precios");
+  // La disponibilidad de la tienda depende del stock de los proveedores
+  updateTag(ETIQUETA_CATALOGO);
 }
 
 export async function importarLista(entrada: unknown): Promise<ResultadoImportacion> {

@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
+import { ETIQUETA_CATALOGO } from "@/lib/tienda/datos";
 import { equipo } from "@/lib/admin/sesion";
 
 /** Fija el precio de venta de una configuración (todas sus variantes de color) y guarda el historial. */
@@ -41,4 +42,5 @@ export async function fijarPrecio(formData: FormData) {
     }))
   );
   revalidatePath("/admin/precios");
+  updateTag(ETIQUETA_CATALOGO); // la tienda muestra el precio nuevo de inmediato
 }

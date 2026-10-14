@@ -20,5 +20,17 @@ Registro corto de decisiones técnicas y de negocio, con fecha, para no volver a
 | 2026-10-13 | Los precios de los proveedores incluyen IVA | Confirmado por Gabriel |
 | 2026-10-13 | Garantía: 12 meses (texto base a revisar) | Indicación de Gabriel |
 
+| 2026-10-13 | La tienda lee el catálogo en caché ("use cache", etiqueta `catalogo`) y el panel la refresca al guardar | Páginas instantáneas y buenas para Google; los cambios del panel se ven de inmediato |
+| 2026-10-13 | Si la base de datos falla, la tienda queda vacía unos minutos en vez de dar error | Un despliegue nunca se rompe por una migración pendiente o una caída de Supabase |
+| 2026-10-13 | Un producto se ve en la tienda solo si está publicado y tiene foto, categoría y precio de venta | Nunca mostrar fichas a medias ni precios en $0 |
+| 2026-10-13 | Disponibilidad pública: "En stock" (unidades propias), "Disponible" (algún proveedor tiene) o "Agotado"; sin mostrar proveedores ni costos | Escasez solo con datos reales (Hormozi) sin exponer información interna |
+| 2026-10-13 | Mientras no exista el carrito (fase 3), el botón principal es "Comprar por WhatsApp" con el pedido ya escrito | El canal que hoy cierra ventas, sin perder la venta mientras se construye el checkout |
+| 2026-10-13 | La barra fija de compra en el teléfono aparece solo cuando el botón principal no está a la vista | Krug: un solo botón principal por pantalla |
+| 2026-10-13 | Fotos: las de internet en public/productos (WebP 1000 px); las nuevas se suben desde el panel a Supabase Storage, achicadas en el navegador | Carga rápida con datos móviles; Gabriel puede reemplazarlas cuando tenga las propias |
+| 2026-10-13 | Textos de las fichas en supabase/contenido/*.json → SQL con scripts/fichas-a-sql.mjs | Contenido revisable en un solo archivo; se puede volver a cargar sin duplicar |
+| 2026-10-13 | JBL Tune 310C unificado en un producto con 4 colores; los productos vacíos quedan ocultos con "(unificado)" | Las listas lo describían como 3 productos; no se borra nada |
+
 ## Fase actual
-Fase 1 — Proveedores, listas y mejor precio: construida y probada con las listas reales; falta que Gabriel corra la migración 0002 e importe las listas en producción.
+Fase 1 — Proveedores, listas y mejor precio: terminada.
+Fase 2 — Catálogo y tienda: construida y probada en local con una copia de producción. Falta en producción:
+correr 0003, la corrección de Idecom, la unificación JBL y las fichas; fijar precios de venta de los 12 productos.
