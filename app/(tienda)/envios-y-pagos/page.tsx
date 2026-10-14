@@ -21,7 +21,7 @@ export default async function PaginaEnvios() {
     {
       icono: Wallet,
       titulo: "Efectivo al recibir",
-      texto: `En ${c.municipiosContraEntrega.join(", ")}. Revisás el equipo y pagás al repartidor.`,
+      texto: `En ${c.municipiosContraEntrega.join(", ")}. Pagás en efectivo al repartidor cuando lo recibís.`,
     },
     { icono: Landmark, titulo: "Transferencia bancaria", texto: "Te damos los datos de la cuenta al confirmar tu pedido." },
     { icono: CreditCard, titulo: "Tarjeta de crédito o débito", texto: "Pago seguro con Wompi (Banco Agrícola). Visa y Mastercard." },
