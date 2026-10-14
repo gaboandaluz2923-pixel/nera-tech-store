@@ -23,5 +23,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
     { url: `${SITE_URL}/garantia`, changeFrequency: "monthly", priority: 0.5 },
     { url: `${SITE_URL}/envios-y-pagos`, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${SITE_URL}/privacidad`, changeFrequency: "yearly", priority: 0.2 },
   ];
 }

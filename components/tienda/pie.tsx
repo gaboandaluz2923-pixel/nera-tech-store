@@ -39,6 +39,11 @@ export async function Pie() {
               </Link>
             </li>
             <li>
+              <Link href="/privacidad" className="hover:text-white">
+                Privacidad
+              </Link>
+            </li>
+            <li>
               <Link href="/garantia" className="hover:text-white">
                 Garantía
               </Link>
