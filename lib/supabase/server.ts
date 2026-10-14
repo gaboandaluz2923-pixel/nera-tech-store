@@ -8,8 +8,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 
 export async function createClient() {
+  // Todo lo que use la sesión depende de la petición: nunca se prerenderiza
+  // (supabase-js usa la hora actual para revisar la sesión).
+  await connection();
   const cookieStore = await cookies();
 
   return createServerClient(

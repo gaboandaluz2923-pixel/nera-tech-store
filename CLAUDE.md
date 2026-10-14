@@ -52,7 +52,12 @@ sin jerga innecesaria, y decí qué comando correr y qué va a pasar antes de co
 proveedores, listas_precios, lineas_lista, categorias, productos, variantes, imagenes,
 producto_proveedor, precios_venta, precios_observados, colecciones, coleccion_producto,
 promociones, bundles, bundle_items, cupones, clientes, pedidos, lineas_pedido, pagos,
-pedido_eventos, suscriptores, eventos, gasto_pauta, configuracion.
+pedido_eventos, suscriptores, eventos, gasto_pauta, configuracion, skus_ignorados.
+
+Emparejamiento de listas: `lib/listas/normalizar.ts` (descripción → marca|modelo|ram|almacenamiento|color),
+`lib/listas/columnas.ts` (lectura de CSV/pegado y detección de columnas), `lib/admin/importar.ts` (núcleo de
+importar/crear/asociar/ignorar, probado contra PostgREST local) y `lib/admin/precios-tabla.ts` (mejor proveedor).
+Listas reales de ejemplo en `docs/listas-ejemplo/`.
 
 Reglas de negocio:
 - Costo puesto = precio de lista + (costos fijos del lote del proveedor ÷ unidades);

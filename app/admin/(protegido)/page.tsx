@@ -7,8 +7,8 @@ import {
 } from "@/components/ui/card";
 
 const FASES = [
-  { n: 0, nombre: "Cuentas y proyecto", estado: "En curso" },
-  { n: 1, nombre: "Proveedores, listas y mejor precio", estado: "Pendiente" },
+  { n: 0, nombre: "Cuentas y proyecto", estado: "Lista" },
+  { n: 1, nombre: "Proveedores, listas y mejor precio", estado: "En prueba" },
   { n: 2, nombre: "Catálogo y fichas", estado: "Pendiente" },
   { n: 3, nombre: "Carrito, checkout y pagos", estado: "Pendiente" },
   { n: 4, nombre: "Promociones, bundles y correos", estado: "Pendiente" },

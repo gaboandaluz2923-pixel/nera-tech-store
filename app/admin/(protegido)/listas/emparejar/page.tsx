@@ -1,0 +1,168 @@
+import Link from "next/link";
+import { Suspense } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { createClient } from "@/lib/supabase/server";
+import { lineasPendientes, todo } from "@/lib/admin/catalogo";
+import { interpretar } from "@/lib/listas/normalizar";
+import { asociarLinea, crearEnCatalogo, ignorarLineas } from "../actions";
+
+// Categorías que por defecto NO se marcan para crear (se pueden marcar a mano)
+const NO_MARCAR = new Set(["otros"]);
+
+async function Contenido() {
+  const supabase = await createClient();
+  const [pendientes, variantes] = await Promise.all([
+    lineasPendientes(supabase),
+    todo((a, b) =>
+      supabase
+        .from("variantes")
+        .select("id, nombre, productos(nombre, marca)")
+        .order("id")
+        .range(a, b)
+    ),
+  ]);
+
+  if (pendientes.length === 0) {
+    return (
+      <div className="space-y-3">
+        <p>No hay nada pendiente: todas las líneas vigentes están en tu catálogo o ignoradas.</p>
+        <Button variant="outline" nativeButton={false} render={<Link href="/admin/precios" />}>
+          Ver precios
+        </Button>
+      </div>
+    );
+  }
+
+  type Var = { id: string; nombre: string; productos: { nombre: string; marca: string } | null };
+  const porMarca = new Map<string, { id: string; etiqueta: string }[]>();
+  for (const v of variantes as Var[]) {
+    const marca = v.productos?.marca ?? "";
+    const lista = porMarca.get(marca) ?? [];
+    lista.push({ id: v.id, etiqueta: `${v.productos?.nombre ?? ""} · ${v.nombre}` });
+    porMarca.set(marca, lista);
+  }
+  for (const l of porMarca.values()) l.sort((a, b) => a.etiqueta.localeCompare(b.etiqueta));
+
+  const filas = pendientes
+    .map((l) => ({ ...l, i: interpretar(l.descripcion) }))
+    .sort(
+      (a, b) =>
+        a.i.categoria.localeCompare(b.i.categoria) ||
+        a.i.nombreProducto.localeCompare(b.i.nombreProducto) ||
+        a.i.nombreVariante.localeCompare(b.i.nombreVariante)
+    );
+
+  return (
+    <>
+      <form id="principal" className="space-y-4">
+        <div className="sticky top-0 z-10 flex flex-wrap gap-2 border-b bg-background py-3">
+          <Button type="submit" formAction={crearEnCatalogo}>
+            Crear los marcados en el catálogo
+          </Button>
+          <Button type="submit" variant="outline" formAction={ignorarLineas}>
+            Ignorar los marcados
+          </Button>
+          <span className="self-center text-xs text-muted-foreground">
+            Se crean ocultos: no aparecen en la tienda hasta que los publiqués en la fase 2.
+          </span>
+        </div>
+        <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full text-sm">
+            <thead className="bg-muted text-left text-xs">
+              <tr>
+                <th className="w-8 p-2"></th>
+                <th className="p-2">Proveedor</th>
+                <th className="p-2">Descripción del proveedor</th>
+                <th className="p-2 text-right">Precio</th>
+                <th className="p-2">Se creará como</th>
+                <th className="p-2">…o asociar a uno existente</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filas.map((l) => {
+                const opciones = porMarca.get(l.i.marca) ?? [];
+                return (
+                  <tr key={l.id} className="border-t align-top">
+                    <td className="p-2">
+                      <input
+                        type="checkbox"
+                        name="ids"
+                        value={l.id}
+                        defaultChecked={!NO_MARCAR.has(l.i.categoria)}
+                        aria-label={`Marcar ${l.descripcion}`}
+                        className="size-4"
+                      />
+                    </td>
+                    <td className="p-2 whitespace-nowrap">{l.proveedor}</td>
+                    <td className="p-2">
+                      {l.descripcion}
+                      {l.stock !== null ? (
+                        <span className="ml-1 text-xs text-muted-foreground">({l.stock} disp.)</span>
+                      ) : null}
+                    </td>
+                    <td className="p-2 text-right tabular-nums">${Number(l.precio).toFixed(2)}</td>
+                    <td className="p-2">
+                      <span className="font-medium">{l.i.nombreProducto}</span>
+                      <span className="text-muted-foreground"> · {l.i.nombreVariante}</span>{" "}
+                      <Badge variant="secondary">{l.i.categoria}</Badge>
+                    </td>
+                    <td className="p-2">
+                      {opciones.length ? (
+                        <div className="flex gap-1">
+                          <select
+                            name="varianteId"
+                            form={`asociar-${l.id}`}
+                            className="h-8 max-w-56 rounded-md border bg-background px-1 text-xs"
+                            defaultValue=""
+                          >
+                            <option value="" disabled>
+                              Elegí…
+                            </option>
+                            {opciones.map((o) => (
+                              <option key={o.id} value={o.id}>
+                                {o.etiqueta}
+                              </option>
+                            ))}
+                          </select>
+                          <Button type="submit" size="sm" variant="outline" form={`asociar-${l.id}`}>
+                            Asociar
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </form>
+      {/* Formularios de "Asociar" fuera del principal (HTML no permite formularios anidados) */}
+      {filas.map((l) => (
+        <form key={l.id} id={`asociar-${l.id}`} action={asociarLinea} hidden>
+          <input type="hidden" name="lineaId" value={l.id} />
+        </form>
+      ))}
+    </>
+  );
+}
+
+export default function Emparejar() {
+  return (
+    <div className="space-y-4">
+      <div>
+        <h1 className="text-2xl font-semibold">Emparejar líneas nuevas</h1>
+        <p className="text-muted-foreground">
+          Revisá cómo entendí cada línea. Lo marcado se crea en tu catálogo y queda vinculado al proveedor;
+          las próximas listas lo actualizan solas. Si un equipo ya existe con otro nombre, asocialo.
+        </p>
+      </div>
+      <Suspense fallback={<p className="text-sm text-muted-foreground">Cargando…</p>}>
+        <Contenido />
+      </Suspense>
+    </div>
+  );
+}

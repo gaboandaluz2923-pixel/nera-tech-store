@@ -1,0 +1,209 @@
+import Link from "next/link";
+import { Suspense } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { createClient } from "@/lib/supabase/server";
+import { tablaPrecios, type FilaPrecio } from "@/lib/admin/precios-tabla";
+import { contribucion, pct, roasMinimo, usd } from "@/lib/precios";
+import { fijarPrecio } from "./actions";
+
+type Filtros = { q?: string; categoria?: string; vista?: string };
+
+function Cambio({ valor }: { valor: number | null }) {
+  if (!valor) return null;
+  const sube = valor > 0;
+  return (
+    <span
+      className={`ml-1 text-xs ${sube ? "text-red-600 dark:text-red-400" : "text-green-700 dark:text-green-400"}`}
+      title="Cambio contra la lista anterior de ese proveedor"
+    >
+      {sube ? "▲" : "▼"} {usd(Math.abs(valor))}
+    </span>
+  );
+}
+
+function FilaTabla({ f }: { f: FilaPrecio }) {
+  const contribObjetivo = f.mejor && f.precioObjetivo ? contribucion(f.precioObjetivo, f.mejor.costo) : null;
+  const margenBajo = f.margen !== null && f.margen * 100 < f.margenObjetivoPct - 0.05;
+  return (
+    <tr className="border-t align-top">
+      <td className="p-2">
+        <div className="font-medium">{f.producto}</div>
+        <div className="text-xs text-muted-foreground">
+          {[f.memoria, f.colores.join(", ")].filter(Boolean).join(" · ")}
+        </div>
+      </td>
+      <td className="p-2">
+        <ul className="space-y-0.5 text-xs">
+          {f.ofertas.map((o) => (
+            <li
+              key={o.proveedor}
+              className={
+                o === f.mejor
+                  ? "font-semibold"
+                  : o.disponible
+                    ? "text-muted-foreground"
+                    : "text-muted-foreground line-through"
+              }
+            >
+              {o.proveedor} {usd(o.precio)}
+              {o.stock !== null ? <span className="font-normal"> ({o.stock})</span> : null}
+              {o === f.mejor ? <Cambio valor={f.cambio} /> : null}
+              {o.sugerido ? (
+                <span className="font-normal text-muted-foreground"> · sug. {usd(o.sugerido)}</span>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      </td>
+      <td className="p-2 text-right tabular-nums">{usd(f.mejor?.costo)}</td>
+      <td className="p-2 text-right tabular-nums">
+        {f.precioObjetivo ? (
+          <>
+            <div>{usd(f.precioObjetivo)}</div>
+            <div className="text-xs text-muted-foreground">
+              {f.margenObjetivoPct}% · deja {usd(contribObjetivo)}
+            </div>
+          </>
+        ) : (
+          "—"
+        )}
+      </td>
+      <td className="p-2">
+        <form action={fijarPrecio} className="flex items-center gap-1">
+          <input type="hidden" name="productoId" value={f.productoId} />
+          <input type="hidden" name="ram" value={f.ramGb ?? ""} />
+          <input type="hidden" name="alm" value={f.almacenamientoGb ?? ""} />
+          <Input
+            name="precio"
+            type="number"
+            step="0.01"
+            min="0"
+            inputMode="decimal"
+            defaultValue={f.precioVenta ?? ""}
+            placeholder={f.precioObjetivo ? String(f.precioObjetivo) : ""}
+            className="h-8 w-24 text-right tabular-nums"
+            aria-label={`Precio de venta de ${f.producto} ${f.memoria}`}
+          />
+          <Button type="submit" size="sm" variant="outline">
+            Guardar
+          </Button>
+        </form>
+        {f.precioVaria ? <p className="mt-1 text-xs text-amber-700">Los colores tienen precios distintos</p> : null}
+      </td>
+      <td className={`p-2 text-right tabular-nums ${margenBajo ? "text-red-600 dark:text-red-400" : ""}`}>
+        {pct(f.margen)}
+      </td>
+      <td className="p-2 text-right tabular-nums">
+        <div>{usd(f.contribucion)}</div>
+        {f.contribucion && f.precioVenta ? (
+          <div className="text-xs text-muted-foreground">
+            ROAS mín. {roasMinimo(f.precioVenta, f.contribucion) ?? "—"}x
+          </div>
+        ) : null}
+      </td>
+    </tr>
+  );
+}
+
+async function Contenido({ searchParams }: { searchParams: Promise<Filtros> }) {
+  const filtros = await searchParams;
+  const supabase = await createClient();
+  const todas = await tablaPrecios(supabase);
+
+  if (todas.length === 0) {
+    return (
+      <div className="space-y-3">
+        <p>Todavía no hay productos vinculados a proveedores.</p>
+        <Button nativeButton={false} render={<Link href="/admin/listas/nueva" />}>Importar una lista</Button>
+      </div>
+    );
+  }
+
+  const categorias = [...new Map(todas.map((f) => [f.categoriaSlug, f.categoria])).entries()];
+  const q = (filtros.q ?? "").toLowerCase().trim();
+  const filas = todas.filter((f) => {
+    if (filtros.categoria && f.categoriaSlug !== filtros.categoria) return false;
+    if (q && !`${f.producto} ${f.memoria}`.toLowerCase().includes(q)) return false;
+    if (filtros.vista === "comparar" && f.ofertas.length < 2) return false;
+    if (filtros.vista === "cambios" && !f.cambio) return false;
+    if (filtros.vista === "sin-precio" && f.precioVenta) return false;
+    return true;
+  });
+
+  return (
+    <div className="space-y-4">
+      <form className="flex flex-wrap items-end gap-2" action="/admin/precios">
+        <Input name="q" defaultValue={filtros.q ?? ""} placeholder="Buscar modelo…" className="h-9 w-48" />
+        <select
+          name="categoria"
+          defaultValue={filtros.categoria ?? ""}
+          className="h-9 rounded-lg border bg-background px-2 text-sm"
+        >
+          <option value="">Todas las categorías</option>
+          {categorias.map(([slug, nombre]) => (
+            <option key={slug} value={slug}>
+              {nombre}
+            </option>
+          ))}
+        </select>
+        <select
+          name="vista"
+          defaultValue={filtros.vista ?? ""}
+          className="h-9 rounded-lg border bg-background px-2 text-sm"
+        >
+          <option value="">Todo</option>
+          <option value="comparar">En 2 o más proveedores</option>
+          <option value="cambios">Con cambio de precio</option>
+          <option value="sin-precio">Sin precio de venta</option>
+        </select>
+        <Button type="submit" variant="outline">
+          Filtrar
+        </Button>
+        <span className="ml-auto text-sm text-muted-foreground">{filas.length} configuraciones</span>
+      </form>
+
+      <div className="overflow-x-auto rounded-lg border">
+        <table className="w-full min-w-[900px] text-sm">
+          <thead className="bg-muted text-left text-xs">
+            <tr>
+              <th className="p-2">Producto</th>
+              <th className="p-2">Proveedores (existencia)</th>
+              <th className="p-2 text-right">Costo puesto</th>
+              <th className="p-2 text-right">Precio con margen objetivo</th>
+              <th className="p-2">Tu precio de venta</th>
+              <th className="p-2 text-right">Margen</th>
+              <th className="p-2 text-right">Contribución</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filas.map((f) => (
+              <FilaTabla key={f.clave} f={f} />
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        En negrita el mejor proveedor (menor costo puesto con existencia). Tachado = sin existencia. Contribución
+        = precio + $5 de envío − costo − $1.75 de paquetería y seguro − 2.5% de comisión. ROAS mínimo = lo que
+        necesitás vender por cada dólar de pauta para no perder.
+      </p>
+    </div>
+  );
+}
+
+export default function Precios(props: PageProps<"/admin/precios">) {
+  return (
+    <div className="space-y-4">
+      <div>
+        <h1 className="text-2xl font-semibold">Precios</h1>
+        <p className="text-muted-foreground">
+          A quién comprarle cada equipo, cuánto te cuesta y cuánto te deja a tu precio de venta.
+        </p>
+      </div>
+      <Suspense fallback={<p className="text-sm text-muted-foreground">Calculando…</p>}>
+        <Contenido searchParams={props.searchParams as Promise<Filtros>} />
+      </Suspense>
+    </div>
+  );
+}

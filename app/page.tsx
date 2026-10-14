@@ -24,6 +24,7 @@ export default function PaginaProvisional() {
       <Button
         size="lg"
         className="mt-8"
+        nativeButton={false}
         render={<a href={whatsapp} target="_blank" rel="noopener noreferrer" />}
       >
         <MessageCircle className="size-5" />
