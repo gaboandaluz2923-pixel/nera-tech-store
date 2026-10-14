@@ -48,7 +48,7 @@ function base(d: DatosPedidoCorreo, titulo: string, cuerpo: string, previa: stri
 <span style="display:none;max-height:0;overflow:hidden">${esc(previa)}</span>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5"><tr><td align="center" style="padding:24px 12px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px">
-<tr><td style="padding:24px 24px 0"><span style="font-size:22px;font-weight:bold;color:#E96000">nera</span><span style="font-size:22px;font-weight:bold;color:#1c1c1c"> tech</span></td></tr>
+<tr><td style="padding:24px 24px 0"><img src="${esc(new URL(d.enlacePedido).origin)}/marca/logo-claro.png" width="96" height="56" alt="Nera Tech" style="display:block;border:0"></td></tr>
 <tr><td style="padding:16px 24px 24px">
 <h1 style="margin:0 0 12px;font-size:22px;line-height:1.3;color:#1c1c1c">${esc(titulo)}</h1>
 ${cuerpo}

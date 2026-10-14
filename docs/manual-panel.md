@@ -20,6 +20,9 @@ la tienda al instante:
 - **Envío**: costo, desde qué monto es gratis (vacío = nunca) y si es gratis al llevar un accesorio.
 - **Contra entrega**: municipios o zonas donde se paga en efectivo al recibir, uno por línea.
 - **Tasa 0%**: hasta cuántos meses (con eso se calcula la cuota que ve el cliente) y con qué tarjetas.
+- **Correos**: desde qué dirección salen los correos de pedidos (tiene que ser de tu dominio autenticado en
+  Brevo, por ejemplo pedidos@neratechsv.com), a qué correo llegan las respuestas de los clientes y a cuál te
+  avisamos de cada pedido nuevo. **Enviar correo de prueba** confirma que Brevo funciona.
 - **Cuentas para transferencia**: una por línea, así: Banco | Tipo | Número | Titular. Solo las ve quien
   eligió pagar por transferencia, en la página de su pedido.
 - **Datos para el pie de página**: nombre, NIT, dirección y correo.
@@ -173,3 +176,14 @@ tiene más de un pedido.
 Solo entran al panel los correos de la lista de equipo (tabla `equipo` en Supabase). Los clientes que
 entran con Google no pueden ver el panel. Para agregar a alguien del equipo: Supabase → SQL Editor →
 `insert into equipo (correo) values ('correo@ejemplo.com');` y crearle su usuario en Authentication.
+
+## Correos automáticos (Brevo)
+La tienda manda estos correos sola, con tu logo y un botón "Ver mi pedido":
+| Correo | Cuándo |
+| --- | --- |
+| Recibimos tu pedido | Apenas el cliente hace el pedido (con cómo pagar según la forma elegida) |
+| Pedido nuevo (a vos) | Al mismo tiempo, al correo de avisos |
+| Pago recibido | Cuando Wompi aprueba la tarjeta o marcás un pago a mano (no en contra entrega) |
+| Confirmado / En camino / Entregado / Cancelado | Cuando cambiás el estado en el panel |
+| Tu factura está lista | Cuando guardás la factura por primera vez o subís un PDF nuevo |
+Cada correo enviado (o que no se pudo enviar, con el motivo) queda en el **Historial** del pedido.
