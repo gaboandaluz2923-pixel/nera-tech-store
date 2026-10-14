@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
     pagoReferencia: identificador,
     payload: { origen: "webhook", ...aviso },
     usuario: "wompi",
+    sitio: request.nextUrl.origin,
     nota: `Pago con tarjeta aprobado (Wompi, transacción ${aviso.IdTransaccion ?? "?"}${
       aviso.CodigoAutorizacion ? `, autorización ${aviso.CodigoAutorizacion}` : ""
     })`,

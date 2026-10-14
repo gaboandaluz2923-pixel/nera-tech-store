@@ -1,17 +1,10 @@
 "use server";
 
-import { headers } from "next/headers";
+import { sitioActual } from "@/lib/sitio";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { perfilDeUsuario, type Direccion } from "@/lib/tienda/cuentas";
 import { OTRA_ZONA, crearPedido, esquemaCheckout, iniciarPagoWompi, type ResultadoPedido } from "@/lib/tienda/pedidos";
 
-/** Dirección pública del sitio desde la petición (para las direcciones de regreso de Wompi). */
-async function origenSitio() {
-  const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host");
-  const proto = h.get("x-forwarded-proto") ?? (host?.startsWith("localhost") ? "http" : "https");
-  return host ? `${proto}://${host}` : (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000");
-}
 
 export async function confirmarPedido(entrada: unknown): Promise<ResultadoPedido> {
   // Campo trampa para robots
@@ -27,7 +20,7 @@ export async function confirmarPedido(entrada: unknown): Promise<ResultadoPedido
     return { ok: false, mensaje: "Revisá los datos marcados en rojo.", campos };
   }
   try {
-    const r = await crearPedido(datos.data, await origenSitio());
+    const r = await crearPedido(datos.data, await sitioActual());
     // Con sesión: guardar la dirección nueva en su cuenta (si la pidió)
     if (r.ok && (entrada as { guardarDireccion?: boolean })?.guardarDireccion) {
       await guardarDireccionDeCompra(datos.data).catch((e) => console.error("guardarDireccionDeCompra", e));
@@ -49,7 +42,7 @@ export async function reintentarPagoTarjeta(token: string): Promise<{ ok: boolea
     .maybeSingle();
   if (!data || data.forma_pago !== "wompi") return { ok: false, mensaje: "Pedido no encontrado." };
   if (data.pagado_en) return { ok: false, mensaje: "Este pedido ya está pagado." };
-  const url = await iniciarPagoWompi(data.id, await origenSitio());
+  const url = await iniciarPagoWompi(data.id, await sitioActual());
   return url ? { ok: true, url } : { ok: false, mensaje: "Wompi no respondió. Probá en un minuto o escribinos por WhatsApp." };
 }
 

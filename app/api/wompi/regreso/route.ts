@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
         pagoReferencia: p.identificadorEnlaceComercio,
         payload: { origen: "regreso", ...t },
         usuario: "wompi",
+        sitio: request.nextUrl.origin,
         nota: `Pago con tarjeta aprobado (Wompi, transacción ${t.idTransaccion}${t.codigoAutorizacion ? `, autorización ${t.codigoAutorizacion}` : ""})`,
       });
       destino.searchParams.set("pago", "aprobado");

@@ -1,6 +1,9 @@
 "use server";
 
 import { revalidatePath, updateTag } from "next/cache";
+import { after } from "next/server";
+import { avisarEstado, avisarFactura } from "@/lib/correos/avisos";
+import { sitioActual } from "@/lib/sitio";
 import type { EstadoAccion } from "@/components/admin/formulario-accion";
 import { SIGUIENTES, type EstadoPedido } from "@/lib/admin/pedidos";
 import { equipo } from "@/lib/admin/sesion";
@@ -65,6 +68,12 @@ export async function cambiarEstadoPedido(_prev: EstadoAccion, form: FormData): 
     updateTag(ETIQUETA_CATALOGO);
   }
 
+  // Correo al cliente con el nuevo estado
+  const sitio = await sitioActual();
+  if (["confirmado", "en_camino", "entregado", "cancelado"].includes(nuevo)) {
+    after(() => avisarEstado(id, nuevo, nota || null, sitio).catch((e) => console.error("avisarEstado", e)));
+  }
+
   // Contra entrega: entregado = cobrado
   if (nuevo === "entregado" && p.forma_pago === "contra_entrega" && !p.pagado_en) {
     await marcarPagado({
@@ -93,6 +102,7 @@ export async function registrarPago(_prev: EstadoAccion, form: FormData): Promis
     referencia: referencia || null,
     usuario,
     nota: `Pago registrado a mano${referencia ? ` (ref. ${referencia})` : ""}`,
+    sitio: await sitioActual(),
   });
   refrescar(id);
   return ok("Pago registrado");
@@ -103,7 +113,7 @@ export async function guardarFactura(_prev: EstadoAccion, form: FormData): Promi
   const numero = texto(form.get("factura_numero"));
   const archivo = form.get("archivo");
   const { supabase, usuario } = await equipo();
-  const { data: p } = await supabase.from("pedidos").select("id, numero, factura_archivo").eq("id", id).single();
+  const { data: p } = await supabase.from("pedidos").select("id, numero, factura_archivo, factura_estado").eq("id", id).single();
   if (!p) return falla("No se encontró el pedido.");
 
   let ruta = p.factura_archivo as string | null;
@@ -138,6 +148,11 @@ export async function guardarFactura(_prev: EstadoAccion, form: FormData): Promi
     nota: `Factura emitida${numero ? ` (${numero})` : ""}${ruta ? " y PDF subido" : ""}`,
     usuario,
   });
+  // Correo "Tu factura está lista": la primera vez, o si se subió un PDF nuevo
+  if (p.factura_estado !== "emitida" || ruta !== p.factura_archivo) {
+    const sitio = await sitioActual();
+    after(() => avisarFactura(id, sitio).catch((e) => console.error("avisarFactura", e)));
+  }
   refrescar(id);
   return ok("Factura guardada: el cliente ya la puede descargar en su pedido");
 }

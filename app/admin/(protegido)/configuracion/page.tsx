@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { createClient } from "@/lib/supabase/server";
-import { guardarConfiguracion, probarWompi } from "./actions";
+import { correoDePrueba, guardarConfiguracion, probarWompi } from "./actions";
 
 // Datos del negocio que usa la tienda (se editan aquí) y estado de las variables de entorno
 // (que se cargan en Vercel y nunca se muestran).
@@ -112,6 +112,27 @@ async function DatosNegocio() {
           ayuda={numero ? `Guardado como +${numero}.` : "Todavía no hay número: los botones abren WhatsApp sin destinatario."}
         />
       </Seccion>
+
+      <Seccion
+        clave="correo"
+        titulo="Correos"
+        descripcion="Desde dónde salen los correos de pedidos (Brevo) y a dónde te avisamos de cada pedido nuevo."
+        valor={c.correo}
+      >
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Campo nombre="remitente" etiqueta="Sale desde" valor={c.correo?.remitente ?? "pedidos@neratechsv.com"} tipo="email" ayuda="Tiene que ser de tu dominio autenticado en Brevo." />
+          <Campo nombre="nombre" etiqueta="Nombre que ve el cliente" valor={c.correo?.nombre ?? "Nera Tech"} />
+          <Campo nombre="responder_a" etiqueta="Las respuestas llegan a" valor={c.correo?.responder_a} tipo="email" placeholder="tu@gmail.com" />
+          <Campo nombre="avisos_a" etiqueta="Avisos de pedidos nuevos a" valor={c.correo?.avisos_a} tipo="email" placeholder="tu@gmail.com" />
+        </div>
+      </Seccion>
+      <div className="-mt-3 flex justify-end">
+        <FormularioAccion accion={correoDePrueba}>
+          <BotonGuardar variant="outline" size="sm">
+            Enviar correo de prueba
+          </BotonGuardar>
+        </FormularioAccion>
+      </div>
 
       <Seccion
         clave="envio"

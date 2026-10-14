@@ -5,6 +5,7 @@ import type { EstadoAccion } from "@/components/admin/formulario-accion";
 import { equipo } from "@/lib/admin/sesion";
 import { ETIQUETA_CATALOGO } from "@/lib/tienda/datos";
 import { ErrorWompi, datosNegocio, tokenWompi } from "@/lib/wompi";
+import { configCorreo, enviarCorreo } from "@/lib/correo";
 
 // Datos del negocio que usa la tienda (WhatsApp, envío, contra entrega, tasa 0%, pie de página, garantía).
 
@@ -62,6 +63,17 @@ export async function guardarConfiguracion(_prev: EstadoAccion, form: FormData):
       };
       break;
     }
+    case "correo": {
+      const esCorreo = (x: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x);
+      const remitente = texto(form.get("remitente")).toLowerCase();
+      const responder = texto(form.get("responder_a")).toLowerCase();
+      const avisos = texto(form.get("avisos_a")).toLowerCase();
+      if (!esCorreo(remitente)) return falla("Escribí el correo desde el que salen los correos (ej. pedidos@neratechsv.com).");
+      if (responder && !esCorreo(responder)) return falla("Revisá el correo para respuestas.");
+      if (avisos && !esCorreo(avisos)) return falla("Revisá el correo para avisos de pedidos.");
+      valor = { remitente, nombre: texto(form.get("nombre")) || "Nera Tech", responder_a: responder, avisos_a: avisos };
+      break;
+    }
     case "cuentas_bancarias": {
       const cuentas = lineas(form.get("cuentas")).map((l) => {
         const [banco = "", tipo = "", numero = "", titular = ""] = l.split("|").map((x) => x.trim());
@@ -92,7 +104,8 @@ export async function guardarConfiguracion(_prev: EstadoAccion, form: FormData):
   }
 
   const { supabase } = await equipo();
-  const { error } = await supabase.from("configuracion").update({ valor }).eq("clave", clave);
+  // upsert: crea la clave si todavía no existe (las nuevas quedan privadas)
+  const { error } = await supabase.from("configuracion").upsert({ clave, valor }, { onConflict: "clave" });
   if (error) return falla(`No se pudo guardar: ${error.message}`);
   revalidatePath("/admin/configuracion");
   updateTag(ETIQUETA_CATALOGO);
@@ -115,4 +128,20 @@ export async function probarWompi(): Promise<EstadoAccion> {
   } catch (e) {
     return falla(e instanceof ErrorWompi ? e.message : "No se pudo contactar a Wompi. Probá de nuevo en un minuto.");
   }
+}
+
+/** Manda un correo de prueba al correo de avisos (o al de quien está en el panel). */
+export async function correoDePrueba(): Promise<EstadoAccion> {
+  const { usuario } = await equipo();
+  const cfg = await configCorreo();
+  const para = cfg.avisos_a || (usuario.includes("@") ? usuario : "");
+  if (!para) return falla("Guardá primero el correo para avisos de pedidos.");
+  const r = await enviarCorreo({
+    para,
+    asunto: "Prueba de correo de Nera Tech",
+    html: `<p style="font-family:Arial,sans-serif;font-size:15px">Si leés esto, los correos de la tienda funcionan. Salen desde <strong>${cfg.remitente}</strong>.</p>`,
+    texto: `Si leés esto, los correos de la tienda funcionan. Salen desde ${cfg.remitente}.`,
+    etiqueta: "prueba",
+  });
+  return r.enviado ? { ok: true, mensaje: `Correo de prueba enviado a ${para}. Revisá tu bandeja (y spam).`, vez: Date.now() } : falla(`No se envió: ${r.motivo}`);
 }

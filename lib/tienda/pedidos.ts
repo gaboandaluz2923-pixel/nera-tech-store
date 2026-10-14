@@ -1,5 +1,7 @@
 import "server-only";
+import { after } from "next/server";
 import { z } from "zod";
+import { avisarPagoConfirmado, avisarPedidoNuevo } from "@/lib/correos/avisos";
 import { createServiceClient } from "@/lib/supabase/server";
 import { calcularCarrito, type ResumenCarrito } from "@/lib/tienda/calculo";
 import { configTienda } from "@/lib/tienda/datos";
@@ -194,6 +196,9 @@ export async function crearPedido(datos: DatosCheckout, origen: string): Promise
     usuario: "cliente",
   });
 
+  // Correos (cliente y aviso al equipo) después de responder, para no demorar la compra
+  after(() => avisarPedidoNuevo(pedido.id, origen).catch((e) => console.error("avisarPedidoNuevo", e)));
+
   if (datos.formaPago === "wompi") {
     const url = await iniciarPagoWompi(pedido.id, origen);
     return url ? { ok: true, url, externa: true } : { ok: true, url: `/pedido/${pedido.token}?pago=error`, externa: false };
@@ -265,6 +270,8 @@ export async function marcarPagado(p: {
   payload?: unknown;
   usuario: string;
   nota: string;
+  /** Dirección del sitio para el correo "Pago recibido" (si se omite, no se envía correo) */
+  sitio?: string;
 }): Promise<boolean> {
   const sb = createServiceClient();
   const { data: pedido } = await sb.from("pedidos").select("id, estado, pagado_en").eq("id", p.pedidoId).single();
@@ -306,6 +313,10 @@ export async function marcarPagado(p: {
     nota: p.nota,
     usuario: p.usuario,
   });
+  if (p.sitio) {
+    const sitio = p.sitio;
+    after(() => avisarPagoConfirmado(p.pedidoId, sitio).catch((e) => console.error("avisarPagoConfirmado", e)));
+  }
   return true;
 }
 
