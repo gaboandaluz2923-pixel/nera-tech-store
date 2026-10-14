@@ -10,16 +10,13 @@ Registro corto de decisiones técnicas y de negocio, con fecha, para no volver a
 | 2026-10-13 | Migraciones por SQL Editor de Supabase | No hace falta instalar la CLI de Supabase en la computadora de Gabriel |
 | 2026-10-13 | Nadie necesita cuenta para comprar; Google opcional después de la compra | Krug: pedir cuenta antes de comprar es la fricción que más carritos mata |
 | 2026-10-13 | Tasa 0% por WhatsApp (pendiente: si es con Banco Agrícola, evaluar cuotas por Wompi) | Restricción operativa actual de Nera Tech |
-
 | 2026-10-13 | Miami fuera por ahora; proveedores iniciales: Total Link, Maverik, Idecom, Intcomex | Indicación de Gabriel |
 | 2026-10-13 | Emparejar por clave normalizada (marca, modelo, RAM, almacenamiento, color) y recordar el código del proveedor | Cada proveedor describe distinto el mismo equipo; la RAM virtual "(6+6)" de Maverik se toma como 6 |
 | 2026-10-13 | La comparación de proveedores es por configuración (modelo + memoria), no por color | El color casi nunca cambia el costo y simplifica la tabla |
 | 2026-10-13 | Los PDF no se leen automáticamente; se pide Excel o se pega la tabla | Las tablas en PDF se extraen mal; pegar desde Excel es confiable |
-
 | 2026-10-13 | La tabla azul es de Idecom (no Intcomex). Un proveedor puede mandar su lista en varias partes: todas las de la fecha más reciente son vigentes | Corrección de Gabriel; Idecom manda 3 archivos |
 | 2026-10-13 | Los precios de los proveedores incluyen IVA | Confirmado por Gabriel |
 | 2026-10-13 | Garantía: 12 meses (texto base a revisar) | Indicación de Gabriel |
-
 | 2026-10-13 | La tienda lee el catálogo en caché ("use cache", etiqueta `catalogo`) y el panel la refresca al guardar | Páginas instantáneas y buenas para Google; los cambios del panel se ven de inmediato |
 | 2026-10-13 | Si la base de datos falla, la tienda queda vacía unos minutos en vez de dar error | Un despliegue nunca se rompe por una migración pendiente o una caída de Supabase |
 | 2026-10-13 | Un producto se ve en la tienda solo si está publicado y tiene foto, categoría y precio de venta | Nunca mostrar fichas a medias ni precios en $0 |
