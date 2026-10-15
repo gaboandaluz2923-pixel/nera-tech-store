@@ -76,6 +76,9 @@ async function Listado({ params }: { params: PageProps<"/[categoria]">["params"]
           </div>
         )}
       </div>
+      <div className="mt-12">
+        <BarraConfianza />
+      </div>
     </>
   );
 }
@@ -100,9 +103,6 @@ export default function PaginaCategoria({ params }: PageProps<"/[categoria]">) {
       <Suspense fallback={<Esqueleto />}>
         <Listado params={params} />
       </Suspense>
-      <div className="mt-12">
-        <BarraConfianza />
-      </div>
     </div>
   );
 }

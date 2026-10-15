@@ -54,7 +54,8 @@ export function Galeria({ imagenes, nombre }: { imagenes: ImagenTienda[]; nombre
               fill
               sizes="(min-width: 1024px) 560px, (min-width: 768px) 50vw, 100vw"
               className="object-contain p-4"
-              priority={i === 0}
+              loading={i === 0 ? "eager" : "lazy"}
+              fetchPriority={i === 0 ? "high" : "auto"}
             />
           </div>
         ))}

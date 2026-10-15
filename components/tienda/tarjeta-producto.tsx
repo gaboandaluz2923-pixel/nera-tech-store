@@ -35,7 +35,8 @@ export function TarjetaProducto({
               fill
               sizes="(min-width: 1024px) 22vw, (min-width: 640px) 30vw, 46vw"
               className={`object-contain p-2 transition-transform group-hover:scale-[1.03] ${agotado ? "opacity-50" : ""}`}
-              priority={prioridad}
+              loading={prioridad ? "eager" : "lazy"}
+              fetchPriority={prioridad ? "high" : "auto"}
             />
           ) : null}
           {p.precioDesdeRegular ? (

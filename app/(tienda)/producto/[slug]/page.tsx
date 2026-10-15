@@ -318,6 +318,10 @@ async function Ficha({ params }: { params: PageProps<"/producto/[slug]">["params
           </div>
         </section>
       ) : null}
+
+      <div className="mt-12">
+        <BarraConfianza />
+      </div>
     </>
   );
 }
@@ -342,9 +346,6 @@ export default function PaginaProducto({ params }: PageProps<"/producto/[slug]">
       <Suspense fallback={<Esqueleto />}>
         <Ficha params={params} />
       </Suspense>
-      <div className="mt-12">
-        <BarraConfianza />
-      </div>
     </div>
   );
 }

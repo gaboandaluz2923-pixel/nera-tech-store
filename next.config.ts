@@ -42,6 +42,8 @@ const nextConfig: NextConfig = {
     formats: ["image/avif", "image/webp"],
   },
   experimental: {
+    // CSS en el <head> (Tailwind es chico): quita la petición que bloquea el primer dibujo en 4G
+    inlineCss: true,
     // Las fotos del panel llegan ya achicadas (~100-300 KB); 4 MB deja margen sin pasar el límite de Vercel
     serverActions: { bodySizeLimit: "4mb" },
   },
