@@ -5,32 +5,11 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { EstadoAccion } from "./formulario-accion";
+import { ladoMayor, prepararFoto } from "./preparar-foto";
 
-// Elegí una o varias fotos (también desde el teléfono). Antes de subirlas, el navegador las
-// achica a 1600 px como máximo, las pone sobre fondo blanco en un cuadrado y las convierte a WebP.
-// Así cada foto pesa ~100 KB y la tienda carga rápido con datos móviles.
-
-const LADO = 1600;
-
-async function preparar(archivo: File): Promise<Blob> {
-  const bitmap = await createImageBitmap(archivo);
-  const escala = Math.min(1, LADO / Math.max(bitmap.width, bitmap.height));
-  const ancho = Math.round(bitmap.width * escala);
-  const alto = Math.round(bitmap.height * escala);
-  const lado = Math.max(ancho, alto);
-  const lienzo = document.createElement("canvas");
-  lienzo.width = lado;
-  lienzo.height = lado;
-  const ctx = lienzo.getContext("2d")!;
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, lado, lado);
-  ctx.drawImage(bitmap, (lado - ancho) / 2, (lado - alto) / 2, ancho, alto);
-  bitmap.close();
-  const webp = await new Promise<Blob | null>((ok) => lienzo.toBlob(ok, "image/webp", 0.85));
-  if (webp && webp.type === "image/webp") return webp;
-  // Safari viejo no genera WebP: se usa JPG
-  return (await new Promise<Blob | null>((ok) => lienzo.toBlob(ok, "image/jpeg", 0.85)))!;
-}
+// Elegí una o varias fotos (también desde el teléfono). Antes de subirlas, el navegador las deja como
+// las de la tienda: fondo blanco, producto recortado y centrado, cuadradas de 1200 px y en WebP (~100 KB).
+// Con "Quitar el fondo" (fotos tomadas con el teléfono) además borra lo que hay detrás del producto.
 
 export function SubirFotos({
   productoId,
@@ -41,23 +20,33 @@ export function SubirFotos({
 }) {
   const entrada = useRef<HTMLInputElement>(null);
   const [progreso, setProgreso] = useState<string | null>(null);
+  const [quitarFondo, setQuitarFondo] = useState(false);
   const router = useRouter();
 
   async function alElegir(archivos: FileList | null) {
     if (!archivos?.length) return;
     let subidas = 0;
     for (const [i, archivo] of [...archivos].entries()) {
-      setProgreso(`Subiendo ${i + 1} de ${archivos.length}…`);
+      setProgreso(
+        quitarFondo && i === 0 ? `Quitando el fondo (la primera vez tarda un poco)…` : `Subiendo ${i + 1} de ${archivos.length}…`
+      );
       try {
-        const blob = await preparar(archivo);
+        if ((await ladoMayor(archivo)) < 500) toast.warning(`"${archivo.name}" es chica (menos de 500 px): puede verse borrosa.`);
+        const blob = await prepararFoto(archivo, quitarFondo);
+        if (quitarFondo) setProgreso(`Subiendo ${i + 1} de ${archivos.length}…`);
         const form = new FormData();
         form.set("id", productoId);
         form.set("archivo", new File([blob], `foto.${blob.type === "image/webp" ? "webp" : "jpg"}`, { type: blob.type }));
         const r = await subir(form);
         if (r?.ok) subidas++;
         else toast.error(r?.mensaje ?? "No se pudo subir");
-      } catch {
-        toast.error(`No se pudo leer "${archivo.name}". Probá con otra foto (JPG, PNG o WebP).`);
+      } catch (e) {
+        console.error(e);
+        toast.error(
+          quitarFondo
+            ? `No se pudo quitar el fondo de "${archivo.name}". Probá de nuevo o subila sin "Quitar el fondo".`
+            : `No se pudo leer "${archivo.name}". Probá con otra foto (JPG, PNG o WebP).`
+        );
       }
     }
     setProgreso(null);
@@ -82,7 +71,19 @@ export function SubirFotos({
       <Button type="button" onClick={() => entrada.current?.click()} disabled={progreso !== null}>
         {progreso ?? "Subir fotos"}
       </Button>
-      <span className="text-xs text-muted-foreground">Fondo blanco y producto centrado. Podés elegir varias a la vez.</span>
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={quitarFondo}
+          onChange={(e) => setQuitarFondo(e.target.checked)}
+          disabled={progreso !== null}
+          className="size-4 accent-[var(--marca)]"
+        />
+        Quitar el fondo (fotos tomadas con el teléfono)
+      </label>
+      <span className="basis-full text-xs text-muted-foreground">
+        Se centran y quedan sobre fondo blanco solas. Podés elegir varias a la vez. Revisá cada foto después de subirla.
+      </span>
     </div>
   );
 }
