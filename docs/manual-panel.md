@@ -8,15 +8,51 @@ Este manual crece con cada fase: cada pantalla nueva se documenta aquí con qué
 2. Escribí tu correo y contraseña y tocá **Entrar**.
 3. Para salir, tocá **Salir** arriba a la derecha.
 
-Si olvidaste la contraseña, pedile a Gabriel que la cambie desde Supabase (Authentication → Users).
+Si olvidaste la contraseña, pedile a un administrador: en **Equipo** toca **Olvidó su contraseña** junto a tu
+nombre y te pasa una contraseña temporal. Para cambiarla por una tuya: **Mi contraseña** (arriba a la derecha),
+escribila dos veces y **Cambiar contraseña**.
+
+## Cómo se edita (en todo el panel)
+La información se ve como texto. Para cambiar algo:
+1. Tocá **Editar** (el lápiz) en el recuadro o la fila.
+2. Cambiá lo que necesités.
+3. Tocá **Guardar**. Sale el aviso "Guardado" y el recuadro vuelve a verse como texto. **Cancelar** cierra sin
+   cambiar nada.
+
+Lo que se crea nuevo (ofertas, combos, cupones, gasto de pauta) tiene su botón **+ Nuevo…**. Los botones de un
+solo paso (confirmar un pedido, marcar pagado, mover o quitar fotos) actúan al tocarlos, como antes.
+
+## Roles: administrador y operador
+Cada persona del equipo tiene un rol (lo ves arriba a la derecha, junto a tu nombre):
+| | Administrador | Operador |
+| --- | --- | --- |
+| Inicio: pedidos y ventas de hoy, la semana y el mes | Sí | Sí |
+| Pedidos (confirmar, enviar, cobrar, facturar) y **Nuevo pedido** | Sí | Sí |
+| Clientes | Sí | Sí |
+| Catálogo: fotos, textos, características, color, stock en bodega, publicar | Sí | Sí |
+| Cambiar precios (también precio especial en un pedido manual) | Sí | No |
+| Proveedores, listas, Precios, costos, ganancia, Promociones, Correos, Analítica, Configuración, Equipo | Sí | No |
+
+El operador no ve esas secciones en el menú, y aunque escriba la dirección, el panel lo regresa al inicio con el
+aviso "Esa sección es solo para administradores". El bloqueo también está en la base de datos: con una cuenta de
+operador no se pueden leer costos ni cambiar precios por ningún lado.
 
 ## Inicio
-Muestra el avance del proyecto por fases. Las secciones del menú en gris se activan cuando su fase termina.
+- **Pedidos y ventas**: lo vendido hoy, esta semana (desde el lunes) y este mes, con cuántos pedidos, comparado
+  con ayer, con la semana pasada y el mes pasado a la misma hora. Suma el total de los pedidos (con envío) sin
+  cancelados ni devueltos, de la tienda y de los manuales. No muestra costos ni ganancia (esos están en Analítica).
+- **Por confirmar** y **Por entregar**: los pedidos que hay que atender; tocá uno para abrirlo.
+- **+ Nuevo pedido**: para una venta que entró por WhatsApp, redes, llamada o en persona.
+- Los administradores ven abajo **Avance del proyecto** (las fases).
 
 ## Configuración
-Datos del negocio que ve el cliente. Cada recuadro tiene su botón **Guardar** y el cambio se ve en
-la tienda al instante:
+Datos del negocio que ve el cliente. Cada recuadro muestra lo que está guardado; tocá **Editar**, cambiá y
+**Guardar**. El cambio se ve en la tienda al instante:
 - **WhatsApp**: el número al que llegan todos los botones (8 dígitos; el 503 se agrega solo).
+- **Descuento sin tarjeta**: el % que se descuenta sobre los productos (no sobre el envío) al pagar en efectivo
+  contra entrega o por transferencia. Hoy 6%. Si lo cambiás (por ejemplo a 8 o 9), la tienda lo muestra solo en
+  las fichas ("8% de descuento al pagar con efectivo o transferencia"), el checkout, Envíos y pagos, y lo usan
+  la sugerencia de precios y el "mínimo sin pérdida" de las ofertas. Los pedidos ya hechos no cambian. Máximo 30%.
 - **Envío**: costo, desde qué monto es gratis (vacío = nunca) y si es gratis al llevar un accesorio.
   Hoy: $5 fijo, sin envío gratis.
 - **Contra entrega**: dónde y hasta qué monto se paga en efectivo al recibir.
@@ -90,8 +126,8 @@ Una fila por configuración (modelo + memoria; los colores van juntos).
   "sug." = precio sugerido por el proveedor (Idecom lo manda).
 - **Precio con margen objetivo**: lo que tendrías que cobrar para el margen de la categoría
   (celulares 10%, accesorios 15–25%), redondeado a precios terminados en 5 o 9.
-- **Tu precio de venta**: escribilo y tocá **Guardar**. Se aplica a todos los colores de esa
-  configuración y queda en el historial.
+- **Tu precio de venta**: se ve el precio (o "Sin precio" en naranja). Tocá el lápiz, escribilo y **Guardar**.
+  Se aplica a todos los colores de esa configuración y queda en el historial. **Usar** aplica el sugerido.
 - **Margen** en rojo = debajo del objetivo de la categoría.
 - **Contribución** = lo que te deja una venta enviada por paquetera antes de pauta. **ROAS mínimo** =
   cuánto tenés que vender por cada dólar de pauta para no perder.
@@ -111,13 +147,20 @@ etiquetas grises con lo que falta ("Sin fotos", "Sin precio", "Sin descripción"
 Primero salen los publicados. Usá los filtros para ver, por ejemplo, solo los celulares sin fotos.
 La etiqueta de la derecha dice si está **Publicado**, **Agotado** u **Oculto**.
 
-**La ficha de edición** (tocá un producto). De arriba hacia abajo:
+**La ficha de edición** (tocá un producto). Cada recuadro se ve como texto; tocá **Editar** (o **Cambiar** en
+Publicación), cambiá y **Guardar**. De arriba hacia abajo:
 
-1. **Publicación**: elegí *Publicado*, *Publicado como agotado* u *Oculto* y tocá **Cambiar**.
+1. **Publicación**: dice si está Publicado, Agotado u Oculto. **Cambiar** → elegí y **Guardar**.
    Para publicar pide tres cosas: al menos una foto, categoría y precio de venta. Si falta algo,
    aparece un aviso rojo arriba diciendo qué. El enlace **Ver en la tienda** abre la ficha pública.
-2. **Fotos**: tocá **Subir fotos** y elegí una o varias (desde el teléfono también sirve). El sistema
-   las achica y las pone sobre fondo blanco antes de subirlas. Debajo de cada foto: flechas para
+2. **Fotos**: tocá **Subir fotos** y elegí una o varias (desde el teléfono también sirve). Antes de subirlas,
+   el sistema recorta los bordes vacíos, centra el producto con un poco de aire, lo pone sobre fondo blanco y
+   la deja cuadrada (igual que las fotos que cargó Claude). Si la foto la tomaste con el teléfono (producto
+   sobre una mesa o un fondo de color), marcá **Quitar el fondo** antes de elegir: borra lo que hay detrás
+   del producto. Es gratis y corre en tu computadora; la primera vez tarda unos segundos (descarga el
+   programa, unos 16 MB) y luego 2 a 3 segundos por foto. Revisá cada foto: si quedó un borde raro o se comió
+   una parte del producto, quitala con el bote de basura y subila sin **Quitar el fondo**. Si la foto es muy
+   chica (menos de 500 px) avisa que puede verse borrosa. Debajo de cada foto: flechas para
    cambiar el orden, la estrella para hacerla **Principal** (la que sale en listas y en Google) y el
    bote de basura para quitarla. Las fotos siempre se suben desde la computadora o el teléfono (no se pegan
    enlaces de otros sitios: la tienda solo muestra fotos guardadas en el sistema).
@@ -130,12 +173,14 @@ La etiqueta de la derecha dice si está **Publicado**, **Agotado** u **Oculto**.
    Si falta alguna, usá "Otra característica".
 5. **Variantes**: cada combinación de memoria y color. Podés corregir el color, poner cuántas
    unidades **propias** tenés en bodega (si es más de 0, la tienda dice "En stock · entrega hoy") y
-   desmarcar **Mostrar** para esconder una variante. El precio se cambia en **Precios**.
+   desmarcar **Mostrar** para esconder una variante (cada fila tiene su **Editar**). El precio lo cambia un
+   administrador en **Precios**.
 6. **Preguntas frecuentes**: lo que más te preguntan por WhatsApp de ese producto. Siempre hay dos
    espacios vacíos para agregar. Para quitar una, borrá la pregunta y la respuesta. "¿Puedo pagar al
    recibir?" y "¿Es nuevo y original?" se agregan solas en todas las fichas.
 7. **Colecciones**: *Los más pedidos* y *Recién llegado* salen en la página de inicio con su etiqueta
    naranja.
+8. **Historial de cambios**: quién cambió qué y cuándo en ese producto.
 
 Cada sección tiene su propio botón **Guardar**; arriba aparece "Guardado" o el error. Los cambios se
 ven en la tienda en el momento.
@@ -197,23 +242,83 @@ Confirmado, En camino, Entregado), si está **Pagado** o **Sin pagar**, y si toc
 - Tarjeta, transferencia y tasa 0%: cuando está **pagado y confirmado**.
 - Contra entrega: desde el **día siguiente** a la entrega.
 
+En cada pedido, **Cliente y entrega** se ve como texto; **Editar** permite corregir nombre, teléfonos, municipio,
+dirección y referencia (queda en el historial). **Ver cliente** abre su ficha en Clientes. La factura se carga
+con **Editar** en el recuadro de factura (código y PDF).
+
 **Lo que ve el cliente**: al comprar llega a la página privada de su pedido (enlace "Ver mi pedido"), con
 el estado, cómo pagar (cuentas para transferencia, botón para reintentar la tarjeta, WhatsApp para tasa
 0%), y la factura cuando la subís. Puede entrar con Google para ver todos sus pedidos en **Mis pedidos**;
 aparecen solos los que hizo con el mismo correo, y puede agregar otros con número de pedido y teléfono.
 
 ## Mi cuenta (lo que ve el cliente con Google)
-El ícono de persona arriba a la derecha de la tienda lleva a **Mi cuenta**. Ahí el cliente guarda su nombre,
+El ícono de persona arriba a la derecha de la tienda lleva a **Mi cuenta**. Lo primero que ve son **sus pedidos**
+(tocá uno para ver su estado y factura); abajo, en chico, sus **Puntos Nera** (se abren para ver el detalle), y
+el botón **Datos de mi cuenta**, que abre sus datos (con Editar → Guardar), direcciones y preferencias de
+ofertas. Ahí el cliente guarda su nombre,
 teléfono, teléfono alterno, cumpleaños (solo día y mes), hasta 5 direcciones con punto de referencia, y si
 quiere recibir ofertas por WhatsApp o correo. Si compra con la sesión abierta, el formulario de compra se
 llena solo y puede elegir la dirección con un toque; si escribe una dirección nueva, se guarda en su cuenta.
 En cada pedido del panel ves el **teléfono alterno**, el **cumpleaños** y la etiqueta **Frecuente** si ya
 tiene más de un pedido.
 
-## Equipo (quién entra al panel)
-Solo entran al panel los correos de la lista de equipo (tabla `equipo` en Supabase). Los clientes que
-entran con Google no pueden ver el panel. Para agregar a alguien del equipo: Supabase → SQL Editor →
-`insert into equipo (correo) values ('correo@ejemplo.com');` y crearle su usuario en Authentication.
+## Equipo (quién entra al panel; solo administradores)
+Menú **Equipo**. Una fila por persona con su nombre, correo y rol (Administrador u Operador).
+- **+ Agregar persona**: nombre, correo y rol → **Agregar**. Aparece un recuadro amarillo con su **contraseña
+  temporal**: copiala y pasásela (en persona o por WhatsApp); no se vuelve a mostrar. La persona entra en
+  www.neratechsv.com/admin/login y la cambia en **Mi contraseña**. Si ese correo ya tenía usuario (por ejemplo
+  porque compró con Google), entra con la contraseña que ya usa.
+- **Editar** en una fila: cambiar el nombre (así aparece en el historial) o el rol. Ahí mismo está **Quitar
+  acceso al panel**: deja de poder entrar al instante; lo que hizo queda en el historial con su nombre.
+- **Olvidó su contraseña**: genera una contraseña temporal nueva para esa persona (recuadro amarillo).
+- No podés quitarte el acceso ni el rol de administrador a vos mismo, y siempre queda al menos un administrador.
+Los clientes que entran con Google nunca pueden ver el panel.
+
+## Pedido manual (Nuevo pedido)
+Para que TODAS las ventas queden en el sistema, también las que entran por WhatsApp, Instagram, Facebook o
+Marketplace, TikTok, llamada o en persona. Botón **+ Nuevo pedido** en Inicio, Pedidos o la ficha del cliente.
+1. **¿Por dónde entró?**: tocá el canal. "En persona" pone la entrega sin envío.
+2. **Cliente**: escribí el teléfono y tocá **Buscar**. Si ya compró antes, se llenan su nombre, correo y
+   dirección ("Ya es cliente · 3 pedidos"). Si no, escribí el nombre. El correo es opcional: sirve para mandarle
+   la confirmación y para que vea el pedido si entra con Google.
+3. **Productos**: buscá por nombre, memoria o color (ej. "a27 256 negro") y tocá el resultado. Salen todos los
+   que tienen precio, aunque estén ocultos en la tienda; dice cuántos hay en bodega. Cambiá la cantidad con
+   − y +. El precio es el de la tienda (el de oferta si hay una vigente). Un administrador puede cambiar el
+   precio de una línea (precio especial); queda anotado en el historial del pedido.
+4. **Entrega**: a domicilio (cobra el envío de Configuración) o en persona (sin envío). Para domicilio:
+   municipio, dirección y referencia.
+5. **Pago y estado**: la forma de pago (efectivo y transferencia llevan el descuento sin tarjeta), **Ya pagó**
+   si ya cobraste, y el estado: **Por confirmar**, **Confirmado** (descuenta el stock en bodega) o **Ya
+   entregado** (venta en persona cerrada: queda entregado y pagado). Para tarjeta, el cliente paga desde el
+   enlace de su pedido ("Ver como el cliente" en el pedido → copialo y mandáselo por WhatsApp).
+6. Revisá el **Resumen** (lo calcula el sistema con los precios guardados) y tocá **Crear pedido**. Te lleva al
+   pedido, que sigue igual que los de la tienda: confirmar, en camino, entregado, factura.
+En la lista de Pedidos y en el pedido se ve el canal y quién lo creó.
+
+## Clientes
+Menú **Clientes**: todos los que compraron, por la tienda o a mano. Buscá por nombre, teléfono o correo;
+ordená por compra más reciente, por los que más compran o por los recién agregados; filtrá por etiqueta.
+Cada fila dice cuánto ha comprado en total, cuántos pedidos y por dónde compra.
+En la ficha del cliente:
+- Arriba: total comprado, pedidos, compra promedio, última compra, Puntos Nera; botones **WhatsApp** y
+  **+ Nuevo pedido** (ya con su teléfono).
+- **Etiquetas** (Editar): frecuente, mayorista, revendedor, reclamo, garantía, vip, no contestar, u otras
+  separadas por coma. Sirven para filtrar la lista.
+- **Datos** (Editar): nombre, teléfonos, correo, dirección, cumpleaños y si acepta publicidad.
+- **Pedidos**: todos sus pedidos; tocá uno para abrirlo.
+- **Notas internas**: lo que el equipo debe saber de ese cliente (solo lo ve el equipo), con quién la escribió.
+- **Historial de cambios**: quién cambió sus datos y cuándo.
+Si alguien compró por WhatsApp sin correo y después compra en la tienda con el mismo teléfono, queda como el
+mismo cliente.
+
+## Historial con nombre
+Cada cambio queda con el nombre de quien lo hizo (el de Equipo):
+- **Pedidos**: el historial del pedido dice quién lo confirmó, lo marcó en camino, registró el pago o corrigió
+  la entrega ("Angel · 15 oct 3:40 p. m.").
+- **Catálogo**: al final de cada producto, **Historial de cambios**: quién cambió el nombre, los textos, el
+  stock, la publicación, o subió y quitó fotos.
+- **Clientes**: lo mismo en la ficha del cliente.
+"Tienda (automático)" = lo hizo el sistema (por ejemplo, el stock al confirmar un pedido de la tienda).
 
 ## Correos automáticos (Brevo)
 La tienda manda estos correos sola, con tu logo y un botón "Ver mi pedido":

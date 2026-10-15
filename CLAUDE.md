@@ -43,20 +43,26 @@ sin jerga innecesaria, y decí qué comando correr y qué va a pasar antes de co
 7. Rendimiento: LCP < 2.5 s en móvil, imágenes con next/image, sin scripts de terceros que no
    estén en esta lista.
 8. El precio publicado es el de tarjeta y tasa 0%. Al pagar en efectivo contra entrega o por
-   transferencia hay 6% de descuento sobre los productos (no sobre el envío). Gabriel lo confirmó
-   con su contador y abogado el 14 de octubre de 2026. El porcentaje y las formas que lo tienen
-   viven en `DESCUENTO_SIN_TARJETA` (lib/tienda/formato.ts) y se calculan igual en el navegador y
-   en el servidor; el pedido guarda el monto en la columna `descuento`.
+   transferencia hay un descuento sobre los productos (no sobre el envío); empezó en 6% (Gabriel lo
+   confirmó con su contador y abogado el 14 de octubre de 2026). El % se edita en Panel → Configuración
+   (clave pública `descuento_sin_tarjeta`) y llega con `configTienda().descuentoSinTarjeta` /
+   `reglasBeneficios()`; las formas que lo tienen y el máximo están en `DESCUENTO_SIN_TARJETA`
+   (lib/tienda/formato.ts). Se calcula igual en el navegador y en el servidor; el pedido guarda el
+   monto en la columna `descuento`.
 9. Nunca extraer datos de Facebook ni de Marketplace por programa. Los precios de mercado
    entran por registro manual en el panel o por fuentes públicas que lo permitan.
 10. Nadie necesita cuenta para comprar. El inicio de sesión con Google se ofrece después de
     la compra ("guardá tus datos") y en "Mis pedidos"; nunca antes del checkout.
+11. Panel y Mi cuenta: la información se ve como texto; **Editar** abre el formulario y **Guardar** /
+    **Cancelar** vuelven a la vista (`components/admin/editable.tsx`: `Editable` y `FilaEditable`;
+    `components/admin/vista.tsx` para mostrar datos). Lo nuevo se crea con "+ Nuevo…".
 
 ## Modelo de datos (resumen; el detalle está en /docs/modelo-datos.md)
 proveedores, listas_precios, lineas_lista, categorias, productos, variantes, imagenes,
 producto_proveedor, precios_venta, precios_observados, colecciones, coleccion_producto,
 promociones, bundles, bundle_items, cupones, clientes, pedidos, lineas_pedido, pagos,
-pedido_eventos, suscriptores, eventos, gasto_pauta, configuracion, skus_ignorados.
+pedido_eventos, suscriptores, eventos, gasto_pauta, configuracion, skus_ignorados, equipo (con rol),
+historial (quién cambió qué), cliente_notas; vista clientes_resumen.
 
 Emparejamiento de listas: `lib/listas/normalizar.ts` (descripción → marca|modelo|ram|almacenamiento|color),
 `lib/listas/columnas.ts` (lectura de CSV/pegado y detección de columnas), `lib/admin/importar.ts` (núcleo de
@@ -73,6 +79,12 @@ Reglas de negocio:
 - Stock mostrado en la ficha = stock real; si es 0, la ficha ofrece "Avisame cuando haya".
 
 ## Seguridad de datos
+- Roles del equipo (`equipo.rol`): `super_admin` ve y cambia todo; `operador` ve Inicio (pedidos y ventas,
+  sin costos ni ganancia), Pedidos, Clientes y Catálogo (sin cambiar precios). Las rutas de administrador
+  están en `SOLO_SUPER_ADMIN` (lib/supabase/equipo.ts); sus acciones usan `superAdmin()` y las del
+  operador `equipo()` (lib/admin/sesion.ts). RLS: `es_super_admin()` en todo, más políticas `operador_*`
+  en las tablas que el operador usa; trigger `proteger_precio`; `lineas_pedido.costo_unitario` no se
+  lee con la sesión (Analítica usa el cliente de servicio tras `superAdmin()`).
 - Lectura pública (anon) solo de tablas de catálogo con RLS. Toda escritura pública (pedidos,
   eventos, suscriptores) pasa por Server Actions o Route Handlers que usan
   `createServiceClient()` del servidor; el navegador nunca escribe directo.
@@ -81,7 +93,8 @@ Reglas de negocio:
 ## Estructura de carpetas
 /app              rutas públicas (/, /celulares, /accesorios, /producto/[slug], /carrito, /checkout, /guias)
 /app/admin        panel: /login (público) y (protegido)/… (proveedores, listas, precios, catalogo,
-                  pedidos, promociones, correos, analitica, configuracion)
+                  pedidos (+ nuevo: pedido manual), clientes, promociones, correos, analitica,
+                  configuracion, equipo, contrasena)
 /app/api          webhooks (wompi, brevo), endpoints internos
 /components/ui    shadcn (no editar a mano; regenerar con la CLI)
 /components/tienda, /components/admin   componentes propios

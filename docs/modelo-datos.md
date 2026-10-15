@@ -202,7 +202,28 @@ semana (date, lunes), canal (meta, google, otro), monto, conversaciones (int, op
 ### configuracion
 clave (pk) y valor (jsonb). Claves iniciales: whatsapp, envio (costo, umbral gratis), municipios_contra_entrega, cuentas_bancarias, tasa_cero (meses), negocio (NIT, dirección, correo), garantia_texto.
 
+### equipo (fase 7: con rol)
+correo (pk, minúsculas), nombre (así aparece en los historiales), rol (`super_admin` | `operador`), created_at.
+Funciones: `es_equipo()`, `mi_rol()`, `es_super_admin()`.
+
+### historial (fase 7)
+tabla, registro_id, producto_id, cliente_id, accion (`creado` | `cambiado` | `borrado`), campos (lo que cambió),
+antes y despues (solo esos campos), usuario (correo; "tienda" = el servidor), created_at. Lo llenan triggers en
+productos, variantes, imagenes y clientes.
+
+### cliente_notas (fase 7)
+cliente_id, nota, usuario, created_at. Notas internas del equipo sobre un cliente.
+
+Además en fase 7: `clientes.etiquetas` (text[]), `pedidos.canal` (`web` | `whatsapp` | `instagram` | `facebook` |
+`tiktok` | `llamada` | `en_persona` | `otro`), `pedidos.creado_por` (correo de quien creó un pedido manual) y la
+vista `clientes_resumen` (pedidos, total comprado, última compra y canales por cliente; respeta RLS).
+
 ## Seguridad (RLS)
 - **anon** (visitantes): SELECT en categorias, productos (estado ≠ oculto), variantes (activo), imagenes, colecciones, coleccion_producto, promociones (activa y vigente), bundles, bundle_items, y la vista `configuracion_publica`.
-- **authenticated** (equipo, entra por /admin): todo en todas las tablas.
+- **authenticated** (equipo, entra por /admin): el **super admin** todo en todas las tablas. El **operador**
+  (fase 7) lee categorías, colecciones, líneas de pedido (sin `costo_unitario`), pagos, historial, equipo, puntos
+  y cupones; lee, crea y cambia productos, variantes (sin precio: trigger `proteger_precio`), imágenes,
+  coleccion_producto, clientes, direcciones, pedidos, pedido_eventos y cliente_notas; borra solo imágenes,
+  coleccion_producto y sus notas. Nadie lee `lineas_pedido.costo_unitario` con la sesión (Analítica lo lee desde el
+  servidor). Los clientes con Google no ven nada del panel.
 - **service_role** (solo el servidor de Next.js): escribe pedidos, pagos, clientes, eventos y suscriptores desde Server Actions. El navegador nunca escribe directo.
