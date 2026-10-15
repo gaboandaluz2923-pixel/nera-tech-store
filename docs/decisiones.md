@@ -56,6 +56,8 @@ Registro corto de decisiones técnicas y de negocio, con fecha, para no volver a
 | 2026-10-15 | Precio sugerido: costo + margen objetivo, ajustado por mercado (anotado a mano) y rotación; nunca bajo el mínimo sin pérdida; se aplica solo con "Usar" | CLAUDE.md: siempre con explicación y aprobación humana |
 | 2026-10-15 | Se guarda el costo puesto de cada línea al vender (`lineas_pedido.costo_unitario`) | La contribución de semanas pasadas no cambia cuando cambian los costos |
 | 2026-10-15 | Meta: conjunto de datos nuevo "Nera Tech tienda" (no el "OFFLINE DATA" que ya existía); configuración manual, sin Birch | Evita mezclar datos y pagar un intermediario |
+| 2026-10-15 | Vercel en plan Hobby por ahora; pasar a Pro ($20/mes) en 1–2 meses o el día que empiece la pauta pagada, lo que pase primero | Decisión de Gabriel. Hobby es solo para uso no comercial y pausa el sitio si se pasan los límites |
+| 2026-10-15 | Dominio principal www.neratechsv.com (neratechsv.com redirige); DNS sigue en Hostgator; solo se cambian el A de @ y el CNAME de www | Opción recomendada por Vercel; el correo y Brevo no se tocan. El hosting viejo de Hostgator se puede cancelar después, cuidando el dominio |
 ## Fase actual
 Fase 1 — Proveedores, listas y mejor precio: terminada.
 Fase 2 — Catálogo y tienda: terminada y en producción (14 oct 2026).
