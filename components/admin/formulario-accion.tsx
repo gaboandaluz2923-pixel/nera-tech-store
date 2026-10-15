@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, startTransition, useActionState, useContext } from "react";
+import { createContext, startTransition, useActionState, useContext, useRef } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
@@ -17,25 +17,31 @@ export function FormularioAccion({
   children,
   className,
   alGuardar,
+  limpiar,
 }: {
   accion: Accion;
   children: React.ReactNode;
   className?: string;
   /** Se llama cuando la acción salió bien (por ejemplo, para volver de "Editar" a la vista) */
   alGuardar?: (r: EstadoAccion) => void;
+  /** Vaciar los campos cuando salió bien (por ejemplo, al agregar una nota) */
+  limpiar?: boolean;
 }) {
+  const formulario = useRef<HTMLFormElement>(null);
   const [, despachar, pendiente] = useActionState(async (prev: EstadoAccion, form: FormData) => {
     const r = await accion(prev, form);
     if (r) {
       if (r.ok) toast.success(r.mensaje);
       else toast.error(r.mensaje);
       if (r.ok) alGuardar?.(r);
+      if (r.ok && limpiar) formulario.current?.reset();
     }
     return r;
   }, null);
 
   return (
     <form
+      ref={formulario}
       className={className}
       onSubmit={(e) => {
         // Con onSubmit (en vez de action=) React no vacía el formulario al terminar

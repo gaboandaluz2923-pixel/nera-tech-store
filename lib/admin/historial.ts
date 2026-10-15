@@ -29,6 +29,8 @@ export function quien(usuario: string | null | undefined, nombres: Map<string, s
   if (usuario === "cliente") return "Cliente";
   if (usuario === "tienda") return "Tienda (automático)";
   if (usuario === "base de datos") return "Carga por SQL";
+  if (usuario === "correo") return "Correo automático";
+  if (usuario === "sistema") return "Sistema";
   return nombres.get(usuario.toLowerCase()) ?? usuario;
 }
 

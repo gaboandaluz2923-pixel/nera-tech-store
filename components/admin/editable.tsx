@@ -60,13 +60,13 @@ export function Editable({
   const [editando, setEditando] = useState(false);
   return (
     <Card>
-      <CardHeader className="flex flex-wrap items-start justify-between gap-2">
-        <div className="space-y-1">
+      <CardHeader className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1 space-y-1">
           <CardTitle>{titulo}</CardTitle>
           {descripcion ? <CardDescription>{descripcion}</CardDescription> : null}
         </div>
         {!editando ? (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex shrink-0 flex-wrap justify-end gap-2">
             {extra}
             {puedeEditar ? <BotonEditar onClick={() => setEditando(true)}>{textoEditar}</BotonEditar> : null}
           </div>

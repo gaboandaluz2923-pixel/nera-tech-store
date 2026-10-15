@@ -281,7 +281,7 @@ async function Ficha({ params }: { params: PageProps<"/admin/clientes/[id]">["pa
           <CardTitle>Notas internas</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <FormularioAccion accion={agregarNotaCliente} className="space-y-2">
+          <FormularioAccion accion={agregarNotaCliente} className="space-y-2" limpiar>
             <input type="hidden" name="id" value={c.id} />
             <Textarea name="nota" rows={2} placeholder="Solo la ve el equipo. Ej. prefiere que le escriban después de las 5 pm" aria-label="Nueva nota" />
             <BotonGuardar variant="outline" size="sm">

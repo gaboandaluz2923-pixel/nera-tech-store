@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { ChevronDown, ChevronRight, Gift, MapPin, Star } from "lucide-react";
+import { ChevronDown, ChevronRight, Gift, MapPin, Pencil, Star } from "lucide-react";
 import { Editable } from "@/components/admin/editable";
 import { BotonGuardar, FormularioAccion } from "@/components/admin/formulario-accion";
 import { AgregarPedido } from "@/components/tienda/agregar-pedido";
@@ -262,7 +262,9 @@ async function Contenido() {
                     </div>
                     <div className="mt-2 flex flex-wrap gap-2 pl-8">
                       <details className="w-full">
-                        <summary className="cursor-pointer text-sm font-medium text-primary">Editar</summary>
+                        <summary className="inline-flex h-8 cursor-pointer list-none items-center gap-1.5 rounded-lg border px-2.5 text-sm font-medium hover:bg-muted">
+                          <Pencil className="size-3.5" aria-hidden /> Editar
+                        </summary>
                         <div className="mt-3">
                           <FormularioDireccion d={d} zonas={zonas} departamentos={DEPARTAMENTOS} otraZona={OTRA_ZONA} />
                         </div>

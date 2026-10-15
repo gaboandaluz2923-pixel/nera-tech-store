@@ -466,7 +466,7 @@ async function Detalle({ params }: { params: PageProps<"/admin/pedidos/[id]">["p
           <CardTitle>Historial</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <FormularioAccion accion={agregarNota} className="flex flex-wrap items-end gap-2">
+          <FormularioAccion accion={agregarNota} className="flex flex-wrap items-end gap-2" limpiar>
             <input type="hidden" name="id" value={p.id} />
             <div className="min-w-56 flex-1 space-y-1">
               <Label htmlFor="nota-libre">Agregar nota interna</Label>
