@@ -13,7 +13,6 @@ import { EJEMPLOS, PLANTILLAS } from "@/lib/admin/plantillas";
 import { createClient } from "@/lib/supabase/server";
 import { NOMBRE_CARACTERISTICA } from "@/lib/tienda/formato";
 import {
-  agregarFotoUrl,
   cambiarEstado,
   cambiarFoto,
   guardarCaracteristicas,
@@ -222,14 +221,7 @@ async function Editor({ params }: { params: PageProps<"/admin/catalogo/[id]">["p
             <p className="text-sm text-muted-foreground">Todavía no tiene fotos.</p>
           )}
           <SubirFotos productoId={p.id} subir={subirFoto} />
-          <FormularioAccion accion={agregarFotoUrl} className="flex flex-wrap items-end gap-2">
-            <input type="hidden" name="id" value={p.id} />
-            <div className="min-w-64 flex-1 space-y-1">
-              <Label htmlFor="url-foto">O pegá la dirección de una foto</Label>
-              <Input id="url-foto" name="url" placeholder="https://…" />
-            </div>
-            <BotonGuardar variant="outline">Agregar</BotonGuardar>
-          </FormularioAccion>
+          {/* Sin "pegar dirección": la tienda solo muestra fotos guardadas en el sistema (una foto enlazada de otro sitio sale rota) */}
         </CardContent>
       </Card>
 

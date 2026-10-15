@@ -119,7 +119,8 @@ La etiqueta de la derecha dice si está **Publicado**, **Agotado** u **Oculto**.
 2. **Fotos**: tocá **Subir fotos** y elegí una o varias (desde el teléfono también sirve). El sistema
    las achica y las pone sobre fondo blanco antes de subirlas. Debajo de cada foto: flechas para
    cambiar el orden, la estrella para hacerla **Principal** (la que sale en listas y en Google) y el
-   bote de basura para quitarla. También podés pegar la dirección de una foto de internet.
+   bote de basura para quitarla. Las fotos siempre se suben desde la computadora o el teléfono (no se pegan
+   enlaces de otros sitios: la tienda solo muestra fotos guardadas en el sistema).
 3. **Datos y textos**: nombre, marca, categoría, orden (número menor = sale primero), resumen (una
    línea bajo el nombre), descripción (separá párrafos con una línea en blanco; hablá de lo que le
    resuelve al cliente) y qué trae la caja (una cosa por línea). En "Google y dirección de la página"
