@@ -10,8 +10,9 @@ export const metadata: Metadata = {
 
 export default async function PaginaCheckout() {
   const c = await configTienda();
+  // Alto mínimo: el carrito se lee en el navegador; así el pie no salta mientras aparece (CLS)
   return (
-    <div className="mx-auto max-w-5xl px-4 pt-6 pb-16">
+    <div className="mx-auto min-h-[100svh] max-w-5xl px-4 pt-6 pb-16">
       <h1 className="mb-6 text-2xl font-bold">Finalizar compra</h1>
       <CheckoutFormulario
         zonasContraEntrega={c.municipiosContraEntrega}
