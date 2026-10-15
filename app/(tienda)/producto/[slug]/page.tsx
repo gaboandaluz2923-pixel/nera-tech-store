@@ -9,8 +9,8 @@ import { Galeria } from "@/components/tienda/galeria";
 import { TarjetaProducto } from "@/components/tienda/tarjeta-producto";
 import { catalogo, configTienda, productoPorSlug, type ProductoDetalle } from "@/lib/tienda/datos";
 import { CLAVES_DECISIVAS, DESCUENTO_SIN_TARJETA, NOMBRE_CARACTERISTICA, usd } from "@/lib/tienda/formato";
+import { SITE_URL } from "@/lib/url-sitio";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 const RELLENO = "_"; // Cache Components exige al menos un parámetro al compilar
 
 export async function generateStaticParams() {

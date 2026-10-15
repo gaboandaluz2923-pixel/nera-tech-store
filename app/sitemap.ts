@@ -1,9 +1,9 @@
 import type { MetadataRoute } from "next";
 import { catalogo } from "@/lib/tienda/datos";
 import { CATEGORIAS } from "@/lib/tienda/formato";
+import { SITE_URL } from "@/lib/url-sitio";
 
 // Mapa del sitio para Google: inicio, categorías con productos, fichas y páginas de confianza.
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const productos = await catalogo();

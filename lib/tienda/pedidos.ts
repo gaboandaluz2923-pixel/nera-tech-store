@@ -3,6 +3,7 @@ import { after } from "next/server";
 import { z } from "zod";
 import { avisarPagoConfirmado, avisarPedidoNuevo } from "@/lib/correos/avisos";
 import { enviarCompraMeta } from "@/lib/meta";
+import { SITE_URL } from "@/lib/url-sitio";
 import { createServiceClient } from "@/lib/supabase/server";
 import { cotizarPedido, otorgarPuntos, saldoPuntos, usosDeCupon } from "@/lib/tienda/beneficios";
 import { costosDeVariantes } from "@/lib/tienda/costos";
@@ -410,7 +411,7 @@ export async function marcarPagado(p: {
     after(() => avisarPagoConfirmado(p.pedidoId, sitio).catch((e) => console.error("avisarPagoConfirmado", e)));
   }
   // Meta (API de conversiones): compra pagada
-  const sitioMeta = p.sitio || process.env.NEXT_PUBLIC_SITE_URL || "https://nera-tech-store.vercel.app";
+  const sitioMeta = p.sitio || SITE_URL;
   after(() => enviarCompraMeta(p.pedidoId, sitioMeta).catch((e) => console.error("enviarCompraMeta", e)));
   // Puntos Nera: se ganan cuando el pedido está entregado y pagado
   if (pedido.estado === "entregado") await otorgarPuntos(p.pedidoId).catch((e) => console.error("otorgarPuntos", e));
