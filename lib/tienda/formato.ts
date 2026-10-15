@@ -21,6 +21,30 @@ export const DESCUENTO_SIN_TARJETA = {
   texto: "6% de descuento al pagar con efectivo o transferencia",
 };
 
+/**
+ * Dónde y hasta qué monto se puede pagar en efectivo al recibir (Configuración → Contra entrega).
+ * `municipios` son los que aparecen primero en la lista de direcciones; con `todoElPais`
+ * también vale "Otro municipio". Sobre `maximo` se coordina por WhatsApp.
+ */
+export type ReglaContraEntrega = { municipios: string[]; todoElPais: boolean; maximo: number | null };
+
+/** null = se puede; si no, el motivo para mostrar al cliente. Igual en el navegador y en el servidor. */
+export function motivoSinContraEntrega(regla: ReglaContraEntrega, zona: string, total: number): string | null {
+  if (!regla.todoElPais && !regla.municipios.includes(zona)) {
+    return `Solo en ${regla.municipios.join(", ")}.`;
+  }
+  if (regla.maximo !== null && total > regla.maximo + 0.009) {
+    return `Para pedidos de más de ${usd(regla.maximo)} lo coordinamos por WhatsApp.`;
+  }
+  return null;
+}
+
+/** "en todo El Salvador (pedidos hasta $500)" o "en San Salvador, Soyapango". */
+export function dondeContraEntrega(regla: ReglaContraEntrega) {
+  const tope = regla.maximo !== null ? ` en pedidos de hasta ${usd(regla.maximo)}` : "";
+  return regla.todoElPais ? `en todo El Salvador${tope}` : `en ${regla.municipios.join(", ")}${tope}`;
+}
+
 export const tieneDescuentoSinTarjeta = (formaPago: string) =>
   (DESCUENTO_SIN_TARJETA.formas as readonly string[]).includes(formaPago);
 

@@ -246,7 +246,7 @@ export function CarritoHoja({ accesorios }: { accesorios: ProductoResumen[] }) {
               >
                 Ir a pagar
               </Button>
-              <p className="text-center text-xs text-muted-foreground">Sin crear cuenta · Pagás al recibir en San Salvador</p>
+              <p className="text-center text-xs text-muted-foreground">Sin crear cuenta · Podés pagar al recibir</p>
             </div>
           </>
         )}

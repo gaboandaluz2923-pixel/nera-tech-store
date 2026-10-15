@@ -5,7 +5,7 @@ import { BarraConfianza } from "@/components/tienda/confianza";
 import { TarjetaProducto } from "@/components/tienda/tarjeta-producto";
 import { IconoWhatsApp } from "@/components/tienda/whatsapp-flotante";
 import { catalogo, configTienda } from "@/lib/tienda/datos";
-import { CATEGORIAS } from "@/lib/tienda/formato";
+import { CATEGORIAS, dondeContraEntrega } from "@/lib/tienda/formato";
 import { enlaceWhatsAppA } from "@/lib/whatsapp";
 
 export default async function Inicio() {
@@ -40,8 +40,8 @@ export default async function Inicio() {
           Celulares nuevos al mejor precio, entregados en tu puerta.
         </h1>
         <p className="mt-4 max-w-xl text-white/75 sm:text-lg">
-          Equipos sellados con garantía de {c.garantia?.plazo_meses ?? 12} meses. En San Salvador pagás al recibir;
-          también con tarjeta, transferencia o tasa 0%.
+          Equipos sellados con garantía de {c.garantia?.plazo_meses ?? 12} meses. Pagás al recibir{" "}
+          {dondeContraEntrega(c.contraEntrega)}; también con tarjeta, transferencia o tasa 0%.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Button size="lg" className="h-12 px-6 text-base" nativeButton={false} render={<Link href="/celulares" />}>
@@ -125,7 +125,7 @@ export default async function Inicio() {
           {[
             ["Elegí tu equipo", "Compará modelos y precios con calma. Si tenés dudas, escribinos."],
             ["Confirmamos tu pedido", "Te escribimos por WhatsApp para confirmar dirección y forma de pago."],
-            ["Lo recibís y pagás", "En San Salvador pagás al recibir. Al resto del país te lo enviamos en 24 a 48 horas."],
+            ["Lo recibís y pagás", `Te lo entregamos en 24 a 48 horas y pagás al recibir ${dondeContraEntrega(c.contraEntrega)}.`],
           ].map(([titulo, texto], i) => (
             <li key={titulo} className="flex gap-3">
               <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-marca text-sm font-bold text-white">

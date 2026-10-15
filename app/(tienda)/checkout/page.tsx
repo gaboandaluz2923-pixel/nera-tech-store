@@ -15,6 +15,7 @@ export default async function PaginaCheckout() {
       <h1 className="mb-6 text-2xl font-bold">Finalizar compra</h1>
       <CheckoutFormulario
         zonasContraEntrega={c.municipiosContraEntrega}
+        reglaContraEntrega={c.contraEntrega}
         departamentos={DEPARTAMENTOS}
         otraZona={OTRA_ZONA}
         mesesTasaCero={c.tasaCero.meses}

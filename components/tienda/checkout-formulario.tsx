@@ -36,6 +36,8 @@ import { cookiesMeta, medir } from "@/lib/analytics";
 import {
   DESCUENTO_SIN_TARJETA,
   cuota,
+  motivoSinContraEntrega,
+  type ReglaContraEntrega,
   tieneDescuentoSinTarjeta,
   usd2,
 } from "@/lib/tienda/formato";
@@ -46,6 +48,7 @@ type FormaPago = "contra_entrega" | "wompi" | "transferencia" | "tasa_cero";
 
 type Props = {
   zonasContraEntrega: string[];
+  reglaContraEntrega: ReglaContraEntrega;
   departamentos: readonly string[];
   otraZona: string;
   mesesTasaCero: number;
@@ -139,8 +142,10 @@ export function CheckoutFormulario(p: Props) {
   const [cargando, iniciarCotizacion] = useTransition();
   const resumen = cot?.resumen ?? null;
 
-  const contraEntrega = zona !== p.otraZona;
   const total = resumen?.total ?? 0;
+  // Sin cotización todavía no se descarta el efectivo por monto (evita saltar de forma de pago)
+  const sinContraEntrega = motivoSinContraEntrega(p.reglaContraEntrega, zona, resumen ? total : 0);
+  const contraEntrega = !sinContraEntrega;
   const tasaCero = total >= p.minimoTasaCero;
   const formaValida: FormaPago =
     forma === "contra_entrega" && !contraEntrega
@@ -297,9 +302,7 @@ export function CheckoutFormulario(p: Props) {
       texto: "Pagás cuando te lo entregamos.",
       icono: Banknote,
       activa: contraEntrega,
-      nota: contraEntrega
-        ? undefined
-        : `Solo en ${p.zonasContraEntrega.join(", ")}.`,
+      nota: sinContraEntrega ?? undefined,
       insignia: etiquetaDescuento,
     },
     {
@@ -492,7 +495,7 @@ export function CheckoutFormulario(p: Props) {
                 <option value={p.otraZona}>{p.otraZona} del país</option>
               </select>
             </Campo>
-            {!contraEntrega ? (
+            {zona === p.otraZona ? (
               <div className="grid gap-4 sm:grid-cols-2">
                 <Campo
                   id="co-departamento"

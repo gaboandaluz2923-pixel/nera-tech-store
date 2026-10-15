@@ -45,7 +45,9 @@ export async function guardarConfiguracion(_prev: EstadoAccion, form: FormData):
     case "municipios_contra_entrega": {
       const lista = lineas(form.get("municipios"));
       if (!lista.length) return falla("Escribí al menos un municipio o zona.");
-      valor = lista;
+      const maximo = texto(form.get("maximo")) ? numero(form.get("maximo")) : null;
+      if (maximo !== null && !(maximo > 0)) return falla("Revisá el monto máximo de contra entrega.");
+      valor = { municipios: lista, todo_el_pais: form.get("todo_el_pais") === "on", maximo };
       break;
     }
     case "tasa_cero": {

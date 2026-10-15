@@ -3,7 +3,7 @@ import { PackageCheck, ShieldCheck, Truck, Wallet } from "lucide-react";
 // Confianza como infraestructura: las 4 razones para comprar sin miedo, siempre a la vista.
 export function BarraConfianza({ mesesGarantia = 12, compacta = false }: { mesesGarantia?: number; compacta?: boolean }) {
   const items = [
-    { icono: Wallet, titulo: "Pagás al recibir", texto: "Contra entrega en San Salvador" },
+    { icono: Wallet, titulo: "Pagás al recibir", texto: "Efectivo contra entrega" },
     { icono: ShieldCheck, titulo: `Garantía de ${mesesGarantia} meses`, texto: "Por escrito, con Nera Tech" },
     { icono: PackageCheck, titulo: "Nuevos y sellados", texto: "IMEI verificado" },
     { icono: Truck, titulo: "Envío a todo el país", texto: "24 a 48 horas" },

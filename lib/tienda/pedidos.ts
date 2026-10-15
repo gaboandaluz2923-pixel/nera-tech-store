@@ -9,6 +9,7 @@ import { cotizarPedido, otorgarPuntos, saldoPuntos, usosDeCupon } from "@/lib/ti
 import { costosDeVariantes } from "@/lib/tienda/costos";
 import type { ResumenCarrito } from "@/lib/tienda/calculo";
 import { configTienda } from "@/lib/tienda/datos";
+import { motivoSinContraEntrega } from "@/lib/tienda/formato";
 import { crearEnlacePago, ErrorWompi } from "@/lib/wompi";
 
 // Pedidos de la tienda: se crean y se actualizan SOLO desde el servidor (clave de servicio).
@@ -128,9 +129,9 @@ export async function crearPedido(
   if (Math.abs(total - datos.totalVisto) > 0.009) {
     return { ok: false, mensaje: "El total cambió mientras comprabas. Revisalo y confirmá de nuevo.", resumen };
   }
-  const contraEntrega = config.municipiosContraEntrega.includes(datos.zona);
-  if (datos.formaPago === "contra_entrega" && !contraEntrega) {
-    return { ok: false, mensaje: "El pago contra entrega no está disponible en esa zona. Elegí otra forma de pago." };
+  const sinContraEntrega = motivoSinContraEntrega(config.contraEntrega, datos.zona, total);
+  if (datos.formaPago === "contra_entrega" && sinContraEntrega) {
+    return { ok: false, mensaje: `El pago contra entrega no está disponible para este pedido. ${sinContraEntrega} Elegí otra forma de pago.` };
   }
   if (datos.formaPago === "tasa_cero" && resumen.total < MINIMO_TASA_CERO) {
     return { ok: false, mensaje: `La tasa 0% es para compras desde $${MINIMO_TASA_CERO}.` };

@@ -8,7 +8,7 @@ import { CompraProducto } from "@/components/tienda/compra-producto";
 import { Galeria } from "@/components/tienda/galeria";
 import { TarjetaProducto } from "@/components/tienda/tarjeta-producto";
 import { catalogo, configTienda, productoPorSlug, type ProductoDetalle } from "@/lib/tienda/datos";
-import { CLAVES_DECISIVAS, DESCUENTO_SIN_TARJETA, NOMBRE_CARACTERISTICA, usd } from "@/lib/tienda/formato";
+import { CLAVES_DECISIVAS, DESCUENTO_SIN_TARJETA, NOMBRE_CARACTERISTICA, dondeContraEntrega, usd } from "@/lib/tienda/formato";
 import { SITE_URL } from "@/lib/url-sitio";
 
 const RELLENO = "_"; // Cache Components exige al menos un parámetro al compilar
@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: PageProps<"/producto/[slug]">
   const titulo = p.metaTitulo || `${p.nombre} precio en El Salvador`;
   const descripcion =
     p.metaDescripcion ||
-    `${p.nombre} nuevo y sellado desde ${usd(p.precioDesde)}. ${p.resumen ? `${p.resumen}. ` : ""}Garantía de 12 meses y pago contra entrega en San Salvador.`;
+    `${p.nombre} nuevo y sellado desde ${usd(p.precioDesde)}. ${p.resumen ? `${p.resumen}. ` : ""}Garantía de 12 meses y pago contra entrega.`;
   return {
     title: titulo,
     description: descripcion,
@@ -122,7 +122,7 @@ async function Ficha({ params }: { params: PageProps<"/producto/[slug]">["params
     ...p.faq,
     {
       pregunta: "¿Puedo pagar al recibir?",
-      respuesta: `Sí. En ${c.municipiosContraEntrega.join(", ")} pagás en efectivo cuando lo recibís, con ${DESCUENTO_SIN_TARJETA.porcentaje}% de descuento. El mismo descuento aplica por transferencia. También aceptamos tarjeta y tasa 0%.`,
+      respuesta: `Sí. Pagás en efectivo cuando lo recibís ${dondeContraEntrega(c.contraEntrega)}, con ${DESCUENTO_SIN_TARJETA.porcentaje}% de descuento. El mismo descuento aplica por transferencia. También aceptamos tarjeta y tasa 0%.`,
     },
     {
       pregunta: "¿Es nuevo y original?",
@@ -197,7 +197,7 @@ async function Ficha({ params }: { params: PageProps<"/producto/[slug]">["params
               ))}
             </ul>
             <p className="text-xs text-muted-foreground">
-              Contra entrega en {c.municipiosContraEntrega.join(", ")}. Al resto del país enviamos en 24 a 48 horas.{" "}
+              Contra entrega {dondeContraEntrega(c.contraEntrega)}. Entregamos en 24 a 48 horas.{" "}
               <Link href="/envios-y-pagos" className="underline">
                 Ver detalles
               </Link>

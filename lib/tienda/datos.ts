@@ -3,6 +3,7 @@
 import { cacheLife, cacheTag } from "next/cache";
 import { clientePublico } from "@/lib/supabase/publico";
 import { formatoAlmacenamiento } from "@/lib/listas/normalizar";
+import type { ReglaContraEntrega } from "@/lib/tienda/formato";
 
 export const ETIQUETA_CATALOGO = "catalogo";
 
@@ -87,6 +88,7 @@ export type ConfigTienda = {
   whatsapp: string;
   envio: { costo: number; gratis_desde: number | null; gratis_con_accesorio: boolean };
   municipiosContraEntrega: string[];
+  contraEntrega: ReglaContraEntrega;
   tasaCero: { meses: number; banco: string };
   negocio: { nombre: string; nit: string; direccion: string; correo: string };
   garantia: Garantia | null;
@@ -392,6 +394,15 @@ export async function productosPorSlugs(slugs: string[]): Promise<ProductoDetall
   return slugs.map((s) => todos.find((p) => p.slug === s)).filter((p): p is ProductoDetalle => Boolean(p));
 }
 
+/** Acepta el formato viejo (lista de municipios) y el nuevo ({ municipios, todo_el_pais, maximo }). */
+function leerContraEntrega(v: unknown): ReglaContraEntrega {
+  if (Array.isArray(v)) return { municipios: v.map(String), todoElPais: false, maximo: null };
+  const o = (v ?? {}) as { municipios?: unknown; todo_el_pais?: unknown; maximo?: unknown };
+  const municipios = Array.isArray(o.municipios) && o.municipios.length ? o.municipios.map(String) : ["San Salvador"];
+  const maximo = Number(o.maximo);
+  return { municipios, todoElPais: o.todo_el_pais === true, maximo: o.maximo != null && maximo > 0 ? maximo : null };
+}
+
 export async function configTienda(): Promise<ConfigTienda> {
   "use cache";
   cacheTag(ETIQUETA_CATALOGO);
@@ -407,10 +418,12 @@ export async function configTienda(): Promise<ConfigTienda> {
   else cacheLife("hours");
   const c = new Map((data ?? []).map((r) => [r.clave as string, r.valor]));
   const garantia = c.get("garantia_texto") as Garantia | { texto: string } | undefined;
+  const contraEntrega = leerContraEntrega(c.get("municipios_contra_entrega"));
   return {
     whatsapp: (c.get("whatsapp")?.numero as string) || process.env.NEXT_PUBLIC_WHATSAPP_NUMERO || "",
     envio: c.get("envio") ?? { costo: 5, gratis_desde: null, gratis_con_accesorio: false },
-    municipiosContraEntrega: c.get("municipios_contra_entrega") ?? ["San Salvador"],
+    municipiosContraEntrega: contraEntrega.municipios,
+    contraEntrega,
     tasaCero: c.get("tasa_cero") ?? { meses: 12, banco: "" },
     negocio: c.get("negocio") ?? { nombre: "Nera Tech", nit: "", direccion: "", correo: "" },
     garantia: garantia && "plazo_meses" in garantia ? garantia : null,

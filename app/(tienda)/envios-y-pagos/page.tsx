@@ -3,13 +3,13 @@ import { Banknote, CreditCard, Landmark, Percent, Truck, Wallet } from "lucide-r
 import { Button } from "@/components/ui/button";
 import { IconoWhatsApp } from "@/components/tienda/icono-whatsapp";
 import { configTienda } from "@/lib/tienda/datos";
-import { DESCUENTO_SIN_TARJETA, usd } from "@/lib/tienda/formato";
+import { DESCUENTO_SIN_TARJETA, dondeContraEntrega, usd } from "@/lib/tienda/formato";
 import { enlaceWhatsAppA } from "@/lib/whatsapp";
 
 export const metadata: Metadata = {
   title: "Envíos y formas de pago",
   description:
-    "6% de descuento al pagar con efectivo o transferencia. Pagá al recibir en San Salvador, con transferencia, tarjeta o tasa 0%. Envíos a todo El Salvador en 24 a 48 horas.",
+    "6% de descuento al pagar con efectivo o transferencia. Pagá al recibir, con transferencia, tarjeta o tasa 0%. Envíos a todo El Salvador en 24 a 48 horas.",
   alternates: { canonical: "/envios-y-pagos" },
 };
 
@@ -22,7 +22,7 @@ export default async function PaginaEnvios() {
     {
       icono: Wallet,
       titulo: "Efectivo al recibir",
-      texto: `En ${c.municipiosContraEntrega.join(", ")}. Pagás en efectivo al repartidor cuando lo recibís.`,
+      texto: `Pagás en efectivo al repartidor cuando lo recibís, ${dondeContraEntrega(c.contraEntrega)}.${c.contraEntrega.maximo !== null ? ` Para montos mayores, escribinos por WhatsApp y lo coordinamos.` : ""}`,
       insignia,
     },
     {

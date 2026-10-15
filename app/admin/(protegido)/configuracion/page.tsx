@@ -95,6 +95,10 @@ async function DatosNegocio() {
   const t = c.tasa_cero ?? {};
   const n = c.negocio ?? {};
   const g = c.garantia_texto ?? {};
+  // Contra entrega: formato viejo (lista) o nuevo ({ municipios, todo_el_pais, maximo })
+  const ce = Array.isArray(c.municipios_contra_entrega)
+    ? { municipios: c.municipios_contra_entrega, todo_el_pais: false, maximo: null }
+    : (c.municipios_contra_entrega ?? { municipios: [], todo_el_pais: false, maximo: null });
   const numero = String(w.numero ?? "");
 
   return (
@@ -154,13 +158,24 @@ async function DatosNegocio() {
       <Seccion
         clave="municipios_contra_entrega"
         titulo="Contra entrega"
-        descripcion="Dónde se puede pagar en efectivo al recibir. Se muestra en fichas, inicio y Envíos y pagos."
-        valor={c.municipios_contra_entrega}
+        descripcion="Dónde y hasta qué monto se puede pagar en efectivo al recibir. Se muestra en fichas, inicio, checkout y Envíos y pagos."
+        valor={ce}
       >
+        <label className="flex items-center gap-2 text-sm font-medium">
+          <input type="checkbox" name="todo_el_pais" defaultChecked={Boolean(ce.todo_el_pais)} className="size-4 accent-[var(--marca)]" />
+          En todo el país
+        </label>
+        <Campo
+          nombre="maximo"
+          etiqueta="Monto máximo del pedido (USD)"
+          valor={ce.maximo}
+          ayuda="Pedidos mayores no pueden elegir efectivo: el cliente ve que se coordina por WhatsApp. Dejalo vacío si no hay tope."
+        />
         <Campo
           nombre="municipios"
-          etiqueta="Municipios o zonas (uno por línea)"
-          valor={(c.municipios_contra_entrega ?? []).join("\n")}
+          etiqueta="Municipios que aparecen primero en la lista (uno por línea)"
+          valor={(ce.municipios ?? []).join("\n")}
+          ayuda="Si no marcás “En todo el país”, solo estos tienen contra entrega."
           largo
           filas={4}
         />

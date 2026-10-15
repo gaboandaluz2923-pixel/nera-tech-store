@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { configTienda } from "@/lib/tienda/datos";
-import { CATEGORIAS } from "@/lib/tienda/formato";
+import { CATEGORIAS, dondeContraEntrega } from "@/lib/tienda/formato";
 import { enlaceWhatsAppA } from "@/lib/whatsapp";
 
 export async function Pie() {
@@ -13,10 +13,13 @@ export async function Pie() {
           <Image src="/marca/logo-oscuro.png" alt="Nera Tech" width={80} height={47} className="h-12 w-auto" />
           <p className="max-w-sm text-sm text-white/70">
             Celulares y accesorios nuevos y sellados, con garantía escrita y entrega en todo El Salvador.
-            Pagás al recibir en San Salvador.
+            Pagás al recibir {dondeContraEntrega(c.contraEntrega)}.
           </p>
-          {c.negocio.direccion ? <p className="text-sm text-white/70">{c.negocio.direccion}</p> : null}
-          {c.negocio.nit ? <p className="text-sm text-white/70">NIT {c.negocio.nit}</p> : null}
+          {c.negocio.direccion || c.negocio.nit ? (
+            <p className="text-sm text-white/70">
+              {[c.negocio.direccion, c.negocio.nit ? `NIT ${c.negocio.nit}` : ""].filter(Boolean).join(" · ")}
+            </p>
+          ) : null}
         </div>
         <div>
           <p className="mb-2 text-sm font-semibold">Productos</p>

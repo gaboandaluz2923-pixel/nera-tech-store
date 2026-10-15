@@ -10,7 +10,7 @@ import { CATEGORIAS } from "@/lib/tienda/formato";
 const INTRO: Record<string, { titulo: string; texto: string }> = {
   celulares: {
     titulo: "Celulares nuevos en El Salvador",
-    texto: "Samsung, Xiaomi, Infinix y más, sellados y con garantía de 12 meses. Pagás al recibir en San Salvador.",
+    texto: "Samsung, Xiaomi, Infinix y más, sellados y con garantía de 12 meses. Podés pagar al recibir.",
   },
   audifonos: {
     titulo: "Audífonos inalámbricos",
