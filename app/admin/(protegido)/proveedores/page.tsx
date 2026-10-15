@@ -13,6 +13,7 @@ type Proveedor = {
   contacto: string | null;
   telefono: string | null;
   correo: string | null;
+  nit?: string | null;
   plazo_credito_dias: number;
   transporte_lote: number;
   flete_lote: number;
@@ -82,6 +83,7 @@ function Vista({ p }: { p: Proveedor }) {
       <Dato etiqueta="Contacto">{p.contacto}</Dato>
       <Dato etiqueta="Teléfono">{p.telefono}</Dato>
       <Dato etiqueta="Correo">{p.correo}</Dato>
+      <Dato etiqueta="NIT">{p.nit}</Dato>
       <Dato etiqueta="Costos por lote" ancho>
         {`${p.unidades_lote} unidades por lote · transporte ${usd(p.transporte_lote)} · flete ${usd(p.flete_lote)} · seguro ${usd(p.seguro_lote)}`}
         {p.tipo === "importacion" ? ` · DAI ${p.dai_pct}% · IVA ${p.iva_pct}%` : ""}
@@ -119,6 +121,13 @@ function Formulario({ p }: { p: Proveedor }) {
         <Campo prefijo={p.id || "nuevo"} nombre="contacto" etiqueta="Contacto" valor={p.contacto} />
         <Campo prefijo={p.id || "nuevo"} nombre="telefono" etiqueta="Teléfono" valor={p.telefono} />
         <Campo prefijo={p.id || "nuevo"} nombre="correo" etiqueta="Correo" valor={p.correo} tipo="email" />
+        <Campo
+          prefijo={p.id || "nuevo"}
+          nombre="nit"
+          etiqueta="NIT"
+          valor={p.nit ?? null}
+          ayuda="Con el NIT, su factura electrónica se reconoce sola en Inventario → Nueva compra"
+        />
       </div>
       <details className="rounded-lg border p-3" open={p.tipo === "importacion"}>
         <summary className="cursor-pointer text-sm font-medium">Costos por lote (para el costo puesto)</summary>

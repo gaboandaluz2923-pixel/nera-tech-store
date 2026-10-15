@@ -20,6 +20,8 @@ export async function guardarProveedor(_prev: EstadoAccion, formData: FormData):
     contacto: String(formData.get("contacto") ?? "").trim() || null,
     telefono: String(formData.get("telefono") ?? "").trim() || null,
     correo: String(formData.get("correo") ?? "").trim() || null,
+    // Solo números (así viene en la factura electrónica)
+    nit: String(formData.get("nit") ?? "").replace(/\D/g, "") || null,
     plazo_credito_dias: Math.round(num(formData.get("plazo_credito_dias"))),
     transporte_lote: num(formData.get("transporte_lote")),
     flete_lote: num(formData.get("flete_lote")),
