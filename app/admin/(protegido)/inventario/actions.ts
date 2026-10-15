@@ -346,6 +346,23 @@ export async function ajustarStock(_prev: EstadoAccion, form: FormData): Promise
   return ok(`Stock en bodega: ${total}`);
 }
 
+/** Corregir o completar el costo de un lote (por ejemplo, el stock que ya estaba sin costo) */
+export async function guardarCostoLote(_prev: EstadoAccion, form: FormData): Promise<EstadoAccion> {
+  const loteId = texto(form.get("lote_id"));
+  const varianteId = texto(form.get("variante_id"));
+  const costo = numero(form.get("costo"));
+  if (!(costo > 0)) return falla("Escribí el costo de cada unidad.");
+  const { supabase } = await superAdmin();
+  const { error } = await supabase
+    .from("lotes")
+    .update({ costo_unitario: Math.round(costo * 10000) / 10000 })
+    .eq("id", loteId)
+    .eq("variante_id", varianteId);
+  if (error) return falla(`No se pudo guardar: ${error.message}`);
+  refrescarVariante(varianteId);
+  return ok("Costo guardado");
+}
+
 export async function registrarIdentificadores(_prev: EstadoAccion, form: FormData): Promise<EstadoAccion> {
   const varianteId = texto(form.get("variante_id"));
   const items = leerIdentificadores(texto(form.get("identificadores")));

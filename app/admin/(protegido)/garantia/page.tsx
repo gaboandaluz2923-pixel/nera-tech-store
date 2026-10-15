@@ -91,7 +91,8 @@ async function Resultados({ searchParams }: { searchParams: Promise<{ q?: string
                   </p>
                   <p className="font-medium">{r.producto}</p>
                   <p className="text-muted-foreground">
-                    Es nuestro · {CONDICION[r.condicion]} · {ESTADO_UNIDAD[r.estado]}
+                    Es nuestro · {r.estado === "historial" ? "" : `${CONDICION[r.condicion]} · `}
+                    {ESTADO_UNIDAD[r.estado]}
                   </p>
                 </div>
               </div>
@@ -137,12 +138,16 @@ async function Resultados({ searchParams }: { searchParams: Promise<{ q?: string
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-muted-foreground">Entró a bodega</dt>
+                  <dt className="text-xs text-muted-foreground">{r.estado === "historial" ? "Comprado a" : "Entró a bodega"}</dt>
                   <dd>
-                    {r.compra_fecha ? fechaCorta(`${r.compra_fecha.slice(0, 10)}T12:00:00`) : fechaCorta(r.registrada_en)}
+                    {r.estado === "historial"
+                      ? "Registro anterior (Excel)"
+                      : r.compra_fecha
+                        ? fechaCorta(`${r.compra_fecha.slice(0, 10)}T12:00:00`)
+                        : fechaCorta(r.registrada_en)}
                     {r.proveedor ? ` · ${r.proveedor}` : ""}
                     {r.compra_numero ? ` · factura ${r.compra_numero}` : ""}
-                    {!r.proveedor ? ` · registró ${quien(r.registrada_por, nombres)}` : ""}
+                    {!r.proveedor && r.estado !== "historial" ? ` · registró ${quien(r.registrada_por, nombres)}` : ""}
                   </dd>
                 </div>
               </dl>

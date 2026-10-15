@@ -11,7 +11,7 @@ import { nombresEquipo, quien } from "@/lib/admin/historial";
 import { superAdmin } from "@/lib/admin/sesion";
 import { CONDICION, ESTADO_UNIDAD, TIPO_MOVIMIENTO, type Condicion, type EstadoUnidad } from "@/lib/inventario/identificadores";
 import { fechaCorta, fechaHora, usd2 } from "@/lib/tienda/formato";
-import { ajustarStock, cambiarEstadoUnidad, moverUnidad, registrarIdentificadores } from "../../actions";
+import { ajustarStock, cambiarEstadoUnidad, guardarCostoLote, moverUnidad, registrarIdentificadores } from "../../actions";
 
 // Una variante en bodega: sus lotes (costo y fecha), sus unidades con IMEI / serie y su kardex.
 
@@ -201,14 +201,41 @@ async function Detalle({ params }: { params: PageProps<"/admin/inventario/varian
           {lotes.length ? (
             <ul className="divide-y rounded-lg border text-sm">
               {lotes.map((l) => (
-                <li key={l.id} className={`flex flex-wrap items-center gap-x-4 gap-y-1 p-3 ${l.cantidad === 0 ? "text-muted-foreground" : ""}`}>
-                  <span className="flex-1">
-                    {fechaCorta(`${l.fecha}T12:00:00`)} · {TIPO_MOVIMIENTO[l.origen] ?? l.origen}
-                  </span>
-                  <span className="tabular-nums">
-                    {l.cantidad} de {l.cantidad_inicial}
-                  </span>
-                  <span className="w-28 text-right tabular-nums">{l.costo_unitario !== null ? `${usd2(Number(l.costo_unitario))} c/u` : "sin costo"}</span>
+                <li key={l.id} className={l.cantidad === 0 ? "text-muted-foreground" : ""}>
+                  <FilaEditable
+                    accion={guardarCostoLote}
+                    className="p-3"
+                    textoEditar={l.costo_unitario === null ? "Poner costo" : "Corregir costo"}
+                    puedeEditar={l.cantidad > 0}
+                    vista={
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                        <span className="flex-1">
+                          {fechaCorta(`${l.fecha}T12:00:00`)} · {TIPO_MOVIMIENTO[l.origen] ?? l.origen}
+                        </span>
+                        <span className="tabular-nums">
+                          {l.cantidad} de {l.cantidad_inicial}
+                        </span>
+                        <span className={`w-28 text-right tabular-nums ${l.costo_unitario === null ? "font-medium text-amber-700" : ""}`}>
+                          {l.costo_unitario !== null ? `${usd2(Number(l.costo_unitario))} c/u` : "sin costo"}
+                        </span>
+                      </div>
+                    }
+                  >
+                    <input type="hidden" name="lote_id" value={l.id} />
+                    <input type="hidden" name="variante_id" value={v.id} />
+                    <Label htmlFor={`costo-${l.id}`}>
+                      Costo de cada unidad de este lote ({fechaCorta(`${l.fecha}T12:00:00`)}, {l.cantidad} en bodega)
+                    </Label>
+                    <Input
+                      id={`costo-${l.id}`}
+                      name="costo"
+                      inputMode="decimal"
+                      required
+                      defaultValue={l.costo_unitario !== null ? String(Number(l.costo_unitario)) : ""}
+                      className="w-40"
+                    />
+                    <p className="text-xs text-muted-foreground">Lo que costó puesto en bodega (con flete y lo que no se recupera de IVA).</p>
+                  </FilaEditable>
                 </li>
               ))}
             </ul>

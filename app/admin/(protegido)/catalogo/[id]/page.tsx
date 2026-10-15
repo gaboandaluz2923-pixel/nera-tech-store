@@ -620,14 +620,14 @@ async function Editor({ params }: { params: PageProps<"/admin/catalogo/[id]">["p
               ))}
             </dl>
           ) : (
-            <p className="text-sm text-muted-foreground">Sin preguntas propias. “¿Puedo pagar al recibir?” y “¿Es nuevo y original?” se agregan solas.</p>
+            <p className="text-sm text-muted-foreground">Sin preguntas propias. “¿Puedo pagar al recibir?” y {p.condicion === "nuevo" ? "“¿Es nuevo y original?”" : "“¿Qué significa Open Box?”"} se agregan solas.</p>
           )
         }
       >
         <input type="hidden" name="id" value={p.id} />
         <p className="text-sm text-muted-foreground">
           Respondé aquí lo que más te preguntan por WhatsApp de este producto. Para quitar una pregunta, borrá sus dos campos.
-          “¿Puedo pagar al recibir?” y “¿Es nuevo y original?” ya se agregan solas.
+          “¿Puedo pagar al recibir?” y {p.condicion === "nuevo" ? "“¿Es nuevo y original?”" : "“¿Qué significa Open Box?”"} ya se agregan solas.
         </p>
         {faq.map((f, i) => (
           <div key={i} className="grid gap-2 rounded-md border p-3">
