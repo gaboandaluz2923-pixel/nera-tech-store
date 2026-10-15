@@ -19,11 +19,11 @@ const sinCambios = () => () => {};
 export function Medicion() {
   const ruta = usePathname();
 
-  // Vista de página en cada navegación (la primera la cuentan los scripts al cargar)
+  // Vista de página en cada navegación. GA4 las cuenta solo (Medición mejorada: cambios del historial),
+  // así que aquí van solo a la tabla propia y a Meta (la primera la cuenta el Pixel al cargar).
   useEffect(() => {
     origen();
     medir("vista_pagina");
-    window.gtag?.("event", "page_view", { page_path: ruta });
     window.fbq?.("track", "PageView");
   }, [ruta]);
 
