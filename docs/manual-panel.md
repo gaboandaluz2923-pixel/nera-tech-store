@@ -18,20 +18,38 @@ Datos del negocio que ve el cliente. Cada recuadro tiene su botón **Guardar** y
 la tienda al instante:
 - **WhatsApp**: el número al que llegan todos los botones (8 dígitos; el 503 se agrega solo).
 - **Envío**: costo, desde qué monto es gratis (vacío = nunca) y si es gratis al llevar un accesorio.
-- **Contra entrega**: municipios o zonas donde se paga en efectivo al recibir, uno por línea.
+  Hoy: $5 fijo, sin envío gratis.
+- **Contra entrega**: dónde y hasta qué monto se paga en efectivo al recibir.
+  - **En todo el país** (marcado hoy): cualquier municipio puede pagar en efectivo, también "Otro municipio".
+    Si lo desmarcás, solo los municipios de la lista.
+  - **Monto máximo del pedido** (hoy $500): si el total pasa de ese monto, en el checkout la opción "Efectivo al
+    recibir" aparece en gris con el aviso "Para pedidos de más de $500 lo coordinamos por WhatsApp". El cliente
+    puede pagar con tarjeta, transferencia o escribirte. Vacío = sin tope.
+  - **Municipios que aparecen primero**: los que salen arriba en la lista de direcciones del checkout (uno
+    por línea).
+  - Los textos de inicio, fichas, pie de página y Envíos y pagos se arman solos con esto ("Pagás al recibir en
+    todo El Salvador en pedidos de hasta $500").
 - **Tasa 0%**: hasta cuántos meses (con eso se calcula la cuota que ve el cliente) y con qué tarjetas.
 - **Correos**: desde qué dirección salen los correos de pedidos (tiene que ser de tu dominio autenticado en
   Brevo, por ejemplo pedidos@neratechsv.com), a qué correo llegan las respuestas de los clientes y a cuál te
   avisamos de cada pedido nuevo. **Enviar correo de prueba** confirma que Brevo funciona.
 - **Cuentas para transferencia**: una por línea, así: Banco | Tipo | Número | Titular. Solo las ve quien
-  eligió pagar por transferencia, en la página de su pedido.
+  eligió pagar por transferencia, en la página de su pedido. Ejemplo:
+  `Banco Agrícola | Cuenta corriente | 0000000000 | Nera Tech SV, S.A.S. de C.V.`
+  Mientras esté vacío, el pedido le dice al cliente que le mandamos los datos por WhatsApp.
 - **Puntos Nera**: encender o apagar el programa, cada cuántos dólares se gana 1 punto, cuánto vale cada
   punto, a los cuántos meses vencen y el mínimo para usarlos. Debajo dice qué porcentaje de la compra
   recupera el cliente.
 - **Regalo de cumpleaños**: encender o apagar, monto del regalo y compra mínima para usarlo.
-- **Datos para el pie de página**: nombre, NIT, dirección y correo.
+- **Datos para el pie de página**: nombre, NIT, dirección y correo. Hoy: "San Salvador, El Salvador ·
+  NIT 0623-090426-116-2" (sin dirección exacta, a propósito).
 - **Garantía**: meses, días de cambio inmediato y las listas de qué cubre, qué no y cómo reclamar
-  (una cosa por línea).
+  (una cosa por línea). Hoy sigue la carta de garantía de Nera Tech: 12 meses, sin cambio inmediato (0 días),
+  no cubre daños físicos, líquidos, maltrato, equipos manipulados por terceros ni reventa; para reclamar se
+  presenta factura original, DUI y el equipo.
+
+Si después de **Guardar** la página muestra "This page couldn't load", tocá **Reload**: lo guardado sí quedó
+(pasó solo mientras Claude manejaba el navegador; si te pasa a vos, avisale a Claude).
 
 Más abajo, **Conexiones** muestra con un punto verde qué claves ya están cargadas en Vercel, y
 **Probar conexión con Wompi** confirma que las claves de Wompi funcionan.
@@ -314,3 +332,20 @@ Menú **Correos**:
 del final de cada correo de ofertas (Gmail y Outlook además muestran su botón "Cancelar suscripción"). Los
 correos de pedidos y facturas le llegan siempre. En cada pedido del panel, si el cliente no quiere publicidad,
 aparece la línea **Publicidad**. Antes de mandarle ofertas por WhatsApp, revisá esa línea.
+
+## Lanzamiento (fase 6): dónde quedó cada cosa
+- **Dominio**: www.neratechsv.com (neratechsv.com y la dirección vieja de Vercel redirigen ahí). El DNS sigue en
+  Hostgator → Domains → neratechsv.com → DNS. **No borres** los registros TXT `google-site-verification=…` ni
+  `facebook-domain-verification=…`: con ellos Google y Meta saben que el dominio es tuyo.
+- **Google Search Console** (search.google.com/search-console): propiedad de dominio `neratechsv.com`,
+  verificada. Ahí se ve cómo te encuentra Google; el sitemap enviado es https://www.neratechsv.com/sitemap.xml.
+  Google tarda unos días en leerlo y mostrar datos.
+- **Meta Business** → Configuración → Seguridad de la marca → **Dominios**: `neratechsv.com` verificado.
+- **Google Cloud** (inicio de sesión con Google para clientes) → Google Auth Platform → Información de la
+  marca: página principal https://www.neratechsv.com, privacidad https://www.neratechsv.com/privacidad y
+  dominio autorizado neratechsv.com.
+- **Google Analytics 4**: propiedad "Nera Tech Tienda", flujo web "Tienda" con URL https://www.neratechsv.com
+  (ID G-ETDPRN6LNF).
+- **Velocidad**: medida en PageSpeed Insights (pagespeed.web.dev, Celulares). Meta: que "Largest Contentful
+  Paint" quede bajo 2.5 s en inicio, una categoría, una ficha y el checkout. Volvé a medir después de cambios
+  grandes (fotos nuevas pesadas, scripts nuevos).

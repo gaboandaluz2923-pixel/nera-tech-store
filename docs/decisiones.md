@@ -58,6 +58,15 @@ Registro corto de decisiones técnicas y de negocio, con fecha, para no volver a
 | 2026-10-15 | Meta: conjunto de datos nuevo "Nera Tech tienda" (no el "OFFLINE DATA" que ya existía); configuración manual, sin Birch | Evita mezclar datos y pagar un intermediario |
 | 2026-10-15 | Vercel en plan Hobby por ahora; pasar a Pro ($20/mes) en 1–2 meses o el día que empiece la pauta pagada, lo que pase primero | Decisión de Gabriel. Hobby es solo para uso no comercial y pausa el sitio si se pasan los límites |
 | 2026-10-15 | Dominio principal www.neratechsv.com (neratechsv.com redirige); DNS sigue en Hostgator; solo se cambian el A de @ y el CNAME de www | Opción recomendada por Vercel; el correo y Brevo no se tocan. El hosting viejo de Hostgator se puede cancelar después, cuidando el dominio |
+| 2026-10-15 | Fase 6: Search Console (propiedad de dominio) y Meta (dominio) verificados con registros TXT nuevos en Hostgator; no se tocó ningún registro existente | Verificar el dominio completo (con y sin www) sin depender del HTML del sitio |
+| 2026-10-15 | Contra entrega en todo el país hasta $500 por pedido; sobre ese monto se coordina por WhatsApp. Se guarda en `municipios_contra_entrega` como { municipios, todo_el_pais, maximo } (acepta el formato viejo de lista) y el servidor valida igual que el checkout | Indicación de Gabriel. Misma clave pública: no hizo falta migración |
+| 2026-10-15 | Envío $5 fijo, sin envío gratis | Indicación de Gabriel |
+| 2026-10-15 | Tasa 0% hasta 12 meses con tarjetas de Banco Agrícola, BAC o Cuscatlán, solo por WhatsApp | Indicación de Gabriel |
+| 2026-10-15 | Transferencias a Banco Agrícola y Banco de América Central; el número de cuenta lo escribe Gabriel en el panel | Los números de cuenta no pasan por el chat |
+| 2026-10-15 | Garantía según la carta de Nera Tech: 12 meses, sin cambio inmediato (antes el texto base decía 7 días), no transferible ni válida para reventa; se reclama con factura, DUI y equipo | La carta es la política oficial |
+| 2026-10-15 | Pie de página: "San Salvador, El Salvador · NIT 0623-090426-116-2", sin dirección exacta | Indicación de Gabriel |
+| 2026-10-15 | Velocidad: CSS en línea (`experimental.inlineCss`), foto LCP con `fetchPriority="high"` + `loading="eager"` (en Next 16 `priority` está obsoleto) y la barra de confianza dentro del contenido que carga después; checkout con alto mínimo | LCP móvil: inicio 2.4→0.9 s, ficha 2.3→2.1 s, celulares 2.4 s, checkout 2.4 s; CLS de fichas y celulares 0.10→0 / 0.03 |
+
 ## Fase actual
 Fase 1 — Proveedores, listas y mejor precio: terminada.
 Fase 2 — Catálogo y tienda: terminada y en producción (14 oct 2026).
@@ -67,3 +76,6 @@ Fase 4 — Ofertas con fecha, combos, cupones, Puntos Nera (opción B), regalo d
 baja de publicidad y correos con Brevo: terminada y en producción (14 oct 2026).
 Fase 5 — Medición (eventos propios, GA4, Meta Pixel y API de conversiones), panel de Analítica, precios de mercado y
 sugerencia con explicación: terminada (15 oct 2026). Requiere migración 0007 y las variables de GA4 y Meta en Vercel.
+Fase 6 — Dominio propio, Search Console, Meta, Google Cloud y GA4 en www.neratechsv.com, datos del negocio, velocidad
+en móvil y compras de prueba: terminada (15 oct 2026). Pendiente de Gabriel: cuentas bancarias en Configuración y
+anular en Wompi los pagos de prueba.

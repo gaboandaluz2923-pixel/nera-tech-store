@@ -101,12 +101,17 @@ Reglas de negocio:
 - Si algo no se puede hacer como se pidió, decirlo y proponer la alternativa más cercana.
 - Fase actual: ver `FASE_ACTUAL` en app/admin/(protegido)/layout.tsx y /docs/decisiones.md.
 
-## Datos del negocio (completar)
-- WhatsApp: [número con código de país]
-- Dominio: [tudominio.com]
-- Envío: $5 fijo; gratis desde $[monto] o con accesorio en el pedido [confirmar]
-- Contra entrega: San Salvador y área metropolitana [confirmar municipios]
-- Tasa 0%: hasta [N] meses, solo por WhatsApp
-- Cuentas bancarias para transferencia: [banco, tipo, número, nombre]
-- Garantía: [plazo y cobertura]
-- NIT y dirección para el pie: [datos]
+## Datos del negocio (los valores vivos están en Panel → Configuración)
+- Razón social: Nera Tech SV, S.A.S. de C.V. (nombre comercial: Nera Tech)
+- WhatsApp: +503 6991 6160
+- Dominio: www.neratechsv.com (neratechsv.com y nera-tech-store.vercel.app redirigen); DNS en Hostgator
+- Envío: $5 fijo, sin envío gratis
+- Contra entrega: en todo el país, pedidos de hasta $500; más de $500 se coordina por WhatsApp
+- Tasa 0%: hasta 12 meses con tarjetas de Banco Agrícola, BAC o Cuscatlán, solo por WhatsApp
+- Cuentas para transferencia: Banco Agrícola y Banco de América Central (tipo, número y titular los carga
+  Gabriel en el panel; nunca escribirlos en el código ni en el chat)
+- Garantía: 12 meses desde la compra; cubre defectos de fabricación y fallas de funcionamiento normal; no cubre
+  daños físicos, líquidos, maltrato, equipos manipulados por terceros; no transferible ni válida para reventa;
+  se reclama con factura original, DUI y el equipo
+- Pie de página: "San Salvador, El Salvador · NIT 0623-090426-116-2" (sin dirección exacta)
+- Medición: Meta Pixel 2742920522860703, GA4 G-ETDPRN6LNF

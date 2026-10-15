@@ -8,12 +8,12 @@ import {
 
 const FASES = [
   { n: 0, nombre: "Cuentas y proyecto", estado: "Lista" },
-  { n: 1, nombre: "Proveedores, listas y mejor precio", estado: "En prueba" },
-  { n: 2, nombre: "Catálogo y fichas", estado: "Pendiente" },
-  { n: 3, nombre: "Carrito, checkout y pagos", estado: "Pendiente" },
-  { n: 4, nombre: "Promociones, bundles y correos", estado: "Pendiente" },
-  { n: 5, nombre: "Analítica y sugerencia de precios", estado: "Pendiente" },
-  { n: 6, nombre: "SEO, contenido y lanzamiento", estado: "Pendiente" },
+  { n: 1, nombre: "Proveedores, listas y mejor precio", estado: "Lista" },
+  { n: 2, nombre: "Catálogo y fichas", estado: "Lista" },
+  { n: 3, nombre: "Carrito, checkout y pagos", estado: "Lista" },
+  { n: 4, nombre: "Promociones, bundles y correos", estado: "Lista" },
+  { n: 5, nombre: "Analítica y sugerencia de precios", estado: "Lista" },
+  { n: 6, nombre: "Dominio, Google, Meta, velocidad y lanzamiento", estado: "Lista" },
 ];
 
 export default function InicioAdmin() {
