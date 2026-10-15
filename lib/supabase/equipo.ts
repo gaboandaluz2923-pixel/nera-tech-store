@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type Rol = "super_admin" | "operador";
 
-/** Secciones que solo ve un super admin (el operador ve Inicio, Catálogo, Pedidos y Clientes). */
+/** Secciones que solo ve un super admin (el operador ve Inicio, Catálogo, Pedidos, Clientes y Garantía). */
 export const SOLO_SUPER_ADMIN = [
   "/admin/proveedores",
   "/admin/listas",
@@ -12,6 +12,9 @@ export const SOLO_SUPER_ADMIN = [
   "/admin/analitica",
   "/admin/configuracion",
   "/admin/equipo",
+  "/admin/inventario",
+  "/admin/clientes/importar",
+  "/admin/clientes/exportar",
 ];
 
 export const esSoloSuperAdmin = (ruta: string) =>

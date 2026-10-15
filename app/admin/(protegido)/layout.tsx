@@ -19,7 +19,9 @@ const SECCIONES: { nombre: string; href: string; fase: number }[] = [
   { nombre: "Inicio", href: "/admin", fase: 0 },
   { nombre: "Pedidos", href: "/admin/pedidos", fase: 3 },
   { nombre: "Clientes", href: "/admin/clientes", fase: 7 },
+  { nombre: "Garantía (IMEI)", href: "/admin/garantia", fase: 8 },
   { nombre: "Catálogo", href: "/admin/catalogo", fase: 2 },
+  { nombre: "Inventario", href: "/admin/inventario", fase: 8 },
   { nombre: "Proveedores", href: "/admin/proveedores", fase: 1 },
   { nombre: "Listas de precios", href: "/admin/listas", fase: 1 },
   { nombre: "Precios", href: "/admin/precios", fase: 1 },
@@ -30,7 +32,7 @@ const SECCIONES: { nombre: string; href: string; fase: number }[] = [
   { nombre: "Configuración", href: "/admin/configuracion", fase: 0 },
 ];
 
-const FASE_ACTUAL = 7;
+const FASE_ACTUAL = 8;
 
 const NOMBRE_ROL = { super_admin: "Administrador", operador: "Operador" } as const;
 

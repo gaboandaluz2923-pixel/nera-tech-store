@@ -12,6 +12,11 @@ const INTRO: Record<string, { titulo: string; texto: string }> = {
     titulo: "Celulares nuevos en El Salvador",
     texto: "Samsung, Xiaomi, Infinix y más, sellados y con garantía de 12 meses. Podés pagar al recibir.",
   },
+  "open-box": {
+    titulo: "Open Box: originales a menor precio",
+    texto:
+      "Equipos originales con la caja ya abierta (no sellados de fábrica). Revisados, con IMEI verificado y la condición de cada uno por escrito.",
+  },
   audifonos: {
     titulo: "Audífonos inalámbricos",
     texto: "Audífonos Bluetooth originales para llamadas, música y ejercicio.",
@@ -77,7 +82,7 @@ async function Listado({ params }: { params: PageProps<"/[categoria]">["params"]
         )}
       </div>
       <div className="mt-12">
-        <BarraConfianza />
+        <BarraConfianza condicion={cat.slug === "open-box" ? "open_box" : "nuevo"} />
       </div>
     </>
   );

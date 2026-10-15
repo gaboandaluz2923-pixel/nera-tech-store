@@ -10,7 +10,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const c = await configTienda();
   return {
     title: "Envíos y formas de pago",
-    description: `${textoDescuento(c.descuentoSinTarjeta)}. Pagá al recibir, con transferencia, tarjeta o tasa 0%. Envíos a todo El Salvador en 24 a 48 horas.`,
+    description: `${textoDescuento(c.descuentoSinTarjeta)}. Pagá al recibir, con transferencia, tarjeta o tasa 0%. Envíos a todo El Salvador en menos de 48 horas.`,
     alternates: { canonical: "/envios-y-pagos" },
   };
 }
@@ -70,12 +70,12 @@ export default async function PaginaEnvios() {
             </div>
           ) : null}
           <div className="grid grid-cols-[1fr_auto] gap-3 p-4">
-            <dt>San Salvador y alrededores</dt>
-            <dd className="font-semibold">El mismo día o al siguiente</dd>
+            <dt>Producto en bodega</dt>
+            <dd className="font-semibold">Entrega en menos de 24 horas</dd>
           </div>
           <div className="grid grid-cols-[1fr_auto] gap-3 p-4">
-            <dt>Resto del país</dt>
-            <dd className="font-semibold">24 a 48 horas</dd>
+            <dt>Producto que pedimos al proveedor</dt>
+            <dd className="font-semibold">Recibilo en menos de 48 horas</dd>
           </div>
         </dl>
       </section>

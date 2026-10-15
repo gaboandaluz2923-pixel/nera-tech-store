@@ -77,9 +77,25 @@ export type DatosManual = {
   nota?: string;
   enviarCorreo: boolean;
   totalVisto: number;
+  /** Confirmó vender con precio especial bajo el costo */
+  aceptaBajoCosto?: boolean;
 };
 
 const FORMAS = ["contra_entrega", "transferencia", "wompi", "tasa_cero"] as const;
+
+/** Precios especiales que, con el descuento sin tarjeta, quedan por debajo del costo (el de bodega si hay) */
+async function avisosBajoCosto(cot: CotizacionManual): Promise<string[]> {
+  const especiales = cot.lineas.filter((l) => l.especial);
+  if (!especiales.length) return [];
+  const costos = await costosDeVariantes(especiales.map((l) => l.varianteId)).catch(() => new Map<string, number>());
+  const factor = cot.descuento > 0 ? 1 - cot.porcentaje / 100 : 1;
+  return especiales
+    .filter((l) => {
+      const c = costos.get(l.varianteId);
+      return c !== undefined && l.precio * factor < c;
+    })
+    .map((l) => `${l.nombre} a ${usd2(l.precio * factor)} queda bajo su costo (${usd2(costos.get(l.varianteId) ?? 0)}).`);
+}
 
 /** Totales del pedido manual (se recalculan en el servidor con los precios de la base). */
 export async function cotizarPedidoManual(e: {
@@ -95,14 +111,14 @@ export async function cotizarPedidoManual(e: {
       conEnvio: e.entrega !== "persona",
       puedePrecioEspecial: esSuperAdmin,
     });
-    return { ok: true, cotizacion };
+    return { ok: true, cotizacion: { ...cotizacion, avisos: await avisosBajoCosto(cotizacion) } };
   } catch (err) {
     return { ok: false, mensaje: err instanceof Error ? err.message : "No se pudo calcular el pedido." };
   }
 }
 
 export async function crearPedidoManual(d: DatosManual): Promise<{ ok: true; id: string; numero: number } | { ok: false; mensaje: string }> {
-  const { usuario, esSuperAdmin } = await equipo();
+  const { supabase, usuario, esSuperAdmin } = await equipo();
   const t = (v: unknown, max = 300) => String(v ?? "").trim().slice(0, max);
 
   const canal = t(d.canal, 20);
@@ -128,6 +144,10 @@ export async function crearPedidoManual(d: DatosManual): Promise<{ ok: true; id:
     cot = await cotizarManual({ lineas: Array.isArray(d.lineas) ? d.lineas.slice(0, 40) : [], formaPago, conEnvio: !enPersona, puedePrecioEspecial: esSuperAdmin });
   } catch (err) {
     return { ok: false, mensaje: err instanceof Error ? err.message : "No se pudo calcular el pedido." };
+  }
+  const bajoCosto = await avisosBajoCosto(cot);
+  if (bajoCosto.length && !d.aceptaBajoCosto) {
+    return { ok: false, mensaje: `${bajoCosto.join(" ")} Marcá «Sí, venderlo así» si es a propósito.` };
   }
   if (Math.abs(cot.total - Number(d.totalVisto)) > 0.009) {
     return { ok: false, mensaje: `El total cambió a ${usd2(cot.total)} (un precio o una oferta cambió). Revisalo y volvé a tocar Crear pedido.` };
@@ -227,12 +247,11 @@ export async function crearPedidoManual(d: DatosManual): Promise<{ ok: true; id:
     usuario,
   });
 
-  // Confirmado o entregado: se descuentan las unidades propias en bodega (igual que al confirmar en Pedidos)
+  // Confirmado o entregado: salen de bodega las unidades (igual que al confirmar en Pedidos), con la sesión
+  // de quien lo creó para que el kardex diga su nombre
   if (estado !== "pendiente_confirmar") {
-    for (const l of cot.lineas) {
-      const { data: v } = await sb.from("variantes").select("stock").eq("id", l.varianteId).single();
-      if (v && v.stock > 0) await sb.from("variantes").update({ stock: Math.max(0, v.stock - l.cantidad) }).eq("id", l.varianteId);
-    }
+    const { error: eInv } = await supabase.rpc("inv_confirmar_pedido", { p_pedido: pedido.id });
+    if (eInv) console.error("inventario", eInv);
     updateTag(ETIQUETA_CATALOGO);
   }
 

@@ -218,6 +218,33 @@ Además en fase 7: `clientes.etiquetas` (text[]), `pedidos.canal` (`web` | `what
 `tiktok` | `llamada` | `en_persona` | `otro`), `pedidos.creado_por` (correo de quien creó un pedido manual) y la
 vista `clientes_resumen` (pedidos, total comprado, última compra y canales por cliente; respeta RLS).
 
+### Fase 8: inventario
+- `variantes.disponibilidad_manual` (`auto` | `bajo_pedido` | `agotado`): qué mostrar cuando no hay en bodega.
+  La vista `disponibilidad_publica` da `en_bodega` (stock > 0) y `con_proveedor`.
+- `productos.condicion` (`nuevo` | `open_box` | `usado`), `producto_base_id` (el modelo nuevo), `condicion_detalle`.
+  Categoría `open-box`. `categorias.identificador` (`imei` | `serie`): qué pide cada unidad.
+- `proveedores.nit` (para reconocer la factura electrónica).
+- **compras**: proveedor_id, numero (número de control), codigo_generacion (DTE, único), fecha, condicion
+  (`contado` | `credito`), dias_credito, vence_en (= fecha + días), documento (`ccf` | `factura` | `sin_iva`),
+  otros_costos, subtotal, iva, total (lo que se le debe al proveedor), estado (`borrador` | `recibida` | `anulada`),
+  pagada_en, archivo (rutas en el almacenamiento privado `compras`), notas, creado_por, recibida_por, recibida_en.
+- **compra_lineas**: compra_id, variante_id, descripcion, sku_proveedor, cantidad, costo_unitario (como en el
+  documento), condicion, identificadores (jsonb: `[{identificador, identificador2}]`).
+- **lotes**: variante_id, compra_linea_id, origen (`compra` | `inicial` | `ajuste` | `devolucion`), fecha,
+  cantidad_inicial, cantidad (lo que queda), costo_unitario (null = sin dato). `variantes.stock` = suma de cantidad.
+- **movimientos_inventario** (kardex): variante_id, lote_id, tipo (`compra` | `inicial` | `venta` | `devolucion` |
+  `ajuste`), cantidad (+ entra / − sale), costo_unitario, pedido_id, linea_pedido_id, compra_id, unidad_id, nota,
+  usuario, created_at.
+- **unidades**: variante_id (null solo en `historial`), lote_id, identificador (IMEI 1, serie o código Nera, único),
+  identificador2 (IMEI 2, único), tipo (`imei` | `serie` | `codigo_nera`), condicion, estado (`en_bodega` |
+  `vendida` | `garantia` | `baja` | `historial`), pedido_id, linea_pedido_id, vendida_en, notas, descripcion y
+  proveedor_texto (del registro anterior), creado_por.
+- `pedidos.inventario_descontado` (ya salió de bodega) y `lineas_pedido.costo_proveedor` (costo que traía la línea).
+- Funciones (todas revisan permisos adentro): `inv_ajustar`, `inv_confirmar_pedido`, `inv_devolver_pedido`,
+  `inv_asignar_unidad`, `inv_registrar_unidades`, `inv_mover_unidad`, `inv_estado_unidad`, `inv_buscar_unidad`,
+  `inv_recibir_compra`, `inv_anular_compra`; internas: `inv_entrada`, `inv_salida` (FIFO), `inv_recalcular`,
+  `inv_lotes_a`, `inv_crear_unidades`, `inv_costo_linea`, `imei_valido`.
+
 ## Seguridad (RLS)
 - **anon** (visitantes): SELECT en categorias, productos (estado ≠ oculto), variantes (activo), imagenes, colecciones, coleccion_producto, promociones (activa y vigente), bundles, bundle_items, y la vista `configuracion_publica`.
 - **authenticated** (equipo, entra por /admin): el **super admin** todo en todas las tablas. El **operador**
@@ -226,4 +253,6 @@ vista `clientes_resumen` (pedidos, total comprado, última compra y canales por 
   coleccion_producto, clientes, direcciones, pedidos, pedido_eventos y cliente_notas; borra solo imágenes,
   coleccion_producto y sus notas. Nadie lee `lineas_pedido.costo_unitario` con la sesión (Analítica lo lee desde el
   servidor). Los clientes con Google no ven nada del panel.
+  Fase 8: compras, compra_lineas, lotes y movimientos_inventario (tienen costos) solo el super admin; unidades las
+  lee también el operador (para garantía y entregas); los cambios de inventario pasan por las funciones `inv_*`.
 - **service_role** (solo el servidor de Next.js): escribe pedidos, pagos, clientes, eventos y suscriptores desde Server Actions. El navegador nunca escribe directo.

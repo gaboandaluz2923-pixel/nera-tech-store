@@ -97,6 +97,8 @@ export type CotizacionManual = {
   descuento: number;
   envio: number;
   total: number;
+  /** Precios especiales que quedan bajo el costo (hay que confirmarlos) */
+  avisos?: string[];
 };
 
 /** Calcula el pedido manual con los precios de la base. Lanza un Error con el motivo si algo no cuadra. */

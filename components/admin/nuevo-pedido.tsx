@@ -111,6 +111,7 @@ export function NuevoPedido({
   const [refPago, setRefPago] = useState("");
   const [nota, setNota] = useState("");
   const [enviarCorreo, setEnviarCorreo] = useState(true);
+  const [aceptaBajoCosto, setAceptaBajoCosto] = useState(false);
   const [cotServidor, setCot] = useState<CotizacionManual | null>(null);
   const [errorServidor, setErrorCot] = useState<string | null>(null);
   const [creando, empezar] = useTransition();
@@ -208,6 +209,7 @@ export function NuevoPedido({
         nota,
         enviarCorreo,
         totalVisto: cot.total,
+        aceptaBajoCosto,
       });
       if (r.ok) {
         toast.success(`Pedido #${r.numero} creado`);
@@ -453,6 +455,17 @@ export function NuevoPedido({
         ) : (
           <p className="text-sm text-muted-foreground">{errorCot ?? "Agregá productos para ver el total."}</p>
         )}
+        {cot?.avisos?.length ? (
+          <div className="space-y-2 rounded-lg border border-red-300 bg-red-50 p-3 text-sm">
+            {cot.avisos.map((a) => (
+              <p key={a}>{a}</p>
+            ))}
+            <label className="flex items-center gap-2 font-medium">
+              <input type="checkbox" checked={aceptaBajoCosto} onChange={(e) => setAceptaBajoCosto(e.target.checked)} className="size-4" />
+              Sí, venderlo así
+            </label>
+          </div>
+        ) : null}
         <Button type="button" size="lg" className="w-full sm:w-auto" onClick={crear} disabled={creando || !cot}>
           {creando ? "Creando…" : "Crear pedido"}
         </Button>

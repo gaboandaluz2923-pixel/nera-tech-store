@@ -39,6 +39,11 @@ export function TarjetaProducto({
               fetchPriority={prioridad ? "high" : "auto"}
             />
           ) : null}
+          {p.condicion !== "nuevo" ? (
+            <span className="absolute top-1.5 right-1.5 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-900">
+              {p.condicion === "open_box" ? "Open Box" : "Usado"}
+            </span>
+          ) : null}
           {p.precioDesdeRegular ? (
             <span className="absolute top-1.5 left-1.5 rounded-full bg-marca px-2 py-0.5 text-[11px] font-semibold text-white">
               Oferta −{usd(p.precioDesdeRegular - p.precioDesde)}

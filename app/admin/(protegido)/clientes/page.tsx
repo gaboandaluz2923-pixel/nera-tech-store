@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { ChevronRight } from "lucide-react";
 import { CANAL } from "@/lib/admin/pedidos";
+import { rolActual } from "@/lib/admin/sesion";
 import { createClient } from "@/lib/supabase/server";
 import { fechaCorta, usd2 } from "@/lib/tienda/formato";
 
@@ -139,15 +140,30 @@ async function Lista({ searchParams }: { searchParams: Promise<{ q?: string; ord
   );
 }
 
+async function EnlaceImportar() {
+  const { rol } = await rolActual();
+  if (rol !== "super_admin") return null;
+  return (
+    <Link href="/admin/clientes/importar" className="rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted">
+      Importar del Excel · Brevo
+    </Link>
+  );
+}
+
 export default function Clientes(props: PageProps<"/admin/clientes">) {
   return (
     <div className="max-w-5xl space-y-4">
-      <div>
-        <h1 className="text-xl font-semibold">Clientes</h1>
-        <p className="text-sm text-muted-foreground">
-          Todos los que compraron, por la tienda o por WhatsApp, redes y en persona. Tocá uno para ver su historial, sus datos y
-          sus notas.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold">Clientes</h1>
+          <p className="text-sm text-muted-foreground">
+            Todos los que compraron, por la tienda o por WhatsApp, redes y en persona. Tocá uno para ver su historial, sus datos y
+            sus notas.
+          </p>
+        </div>
+        <Suspense fallback={null}>
+          <EnlaceImportar />
+        </Suspense>
       </div>
       <Suspense fallback={<p className="text-sm text-muted-foreground">Cargando…</p>}>
         <Lista searchParams={props.searchParams as Promise<{ q?: string; orden?: string; etiqueta?: string }>} />

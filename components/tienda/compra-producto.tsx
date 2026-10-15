@@ -84,12 +84,14 @@ function vigente(v: VarianteTienda, ahora: number): VarianteTienda {
 export function CompraProducto(props: Props) {
   const ahora = useSyncExternalStore(sinCambios, minutoActual, () => 0);
   const p = { ...props, variantes: props.variantes.map((v) => vigente(v, ahora)) };
-  // Arranca en la opción disponible más barata, en negro si existe (es el color de las fotos).
+  // Arranca en la opción más barata que está en bodega (si no hay, la disponible más barata),
+  // en negro si existe (es el color de las fotos).
   const [elegidaBase, setElegida] = useState<VarianteTienda>(() => {
+    const enBodega = p.variantes.filter((v) => v.disponibilidad === "bodega");
     const disponibles = p.variantes.filter(
       (v) => v.disponibilidad !== "agotado",
     );
-    const base = disponibles.length ? disponibles : p.variantes;
+    const base = enBodega.length ? enBodega : disponibles.length ? disponibles : p.variantes;
     const minimo = Math.min(...base.map((v) => v.precio));
     const baratas = base.filter((v) => v.precio === minimo);
     return (

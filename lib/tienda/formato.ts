@@ -67,15 +67,24 @@ export function descuentoSinTarjeta(subtotal: number, formaPago: string, pct: nu
 /** Precio de un producto con el descuento aplicado (para mostrarlo en la ficha). */
 export const precioConDescuento = (precio: number, pct: number) => Math.round(precio * (100 - pct)) / 100;
 
+// Open Box: el equipo no fue usado, pero la caja ya fue abierta (no viene sellado de fábrica)
+export const TEXTO_CONDICION = {
+  nuevo: { etiqueta: "Nuevo", largo: "Nuevo, sellado de fábrica" },
+  open_box: { etiqueta: "Open Box", largo: "Open Box: caja abierta, no sellado de fábrica" },
+  usado: { etiqueta: "Usado", largo: "Usado, revisado por Nera Tech" },
+} as const;
+
+// En bodega = unidades propias; proveedor = se pide al proveedor (Panel → Catálogo → variante → Disponibilidad)
 export const TEXTO_DISPONIBILIDAD = {
-  bodega: { corto: "En stock", largo: "En stock · entrega hoy en San Salvador" },
-  proveedor: { corto: "Disponible", largo: "Disponible · entrega en 24 a 48 horas" },
+  bodega: { corto: "Entrega en menos de 24 h", largo: "En bodega · Entrega en menos de 24 horas" },
+  proveedor: { corto: "Recibilo en menos de 48 h", largo: "Disponible · Recibilo en menos de 48 horas" },
   agotado: { corto: "Agotado", largo: "Agotado por ahora" },
 } as const;
 
 /** Categorías públicas: orden y nombre en el menú. Las que no tienen productos publicados no se muestran. */
 export const CATEGORIAS = [
   { slug: "celulares", nombre: "Celulares" },
+  { slug: "open-box", nombre: "Open Box" },
   { slug: "audifonos", nombre: "Audífonos" },
   { slug: "relojes", nombre: "Relojes" },
   { slug: "tablets", nombre: "Tablets" },

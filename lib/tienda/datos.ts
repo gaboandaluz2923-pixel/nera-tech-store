@@ -8,6 +8,7 @@ import { leerPorcentajeSinTarjeta, type ReglaContraEntrega } from "@/lib/tienda/
 export const ETIQUETA_CATALOGO = "catalogo";
 
 export type Disponibilidad = "bodega" | "proveedor" | "agotado";
+export type Condicion = "nuevo" | "open_box" | "usado";
 
 export type VarianteTienda = {
   id: string;
@@ -53,6 +54,8 @@ export type ProductoResumen = {
   almacenamientos: number[];
   es5g: boolean;
   disponibilidad: Disponibilidad;
+  /** nuevo (sellado), open_box (caja abierta, no sellado de fábrica) o usado */
+  condicion: Condicion;
   colecciones: string[];
   orden: number;
   publicadoEn: string | null;
@@ -72,6 +75,9 @@ export type ProductoDetalle = ProductoResumen & {
   metaTitulo: string | null;
   metaDescripcion: string | null;
   actualizado: string;
+  /** Open Box / usado: en qué estado viene (texto del panel) y el modelo nuevo del que sale */
+  condicionDetalle: string | null;
+  productoBase: { slug: string; nombre: string; precioDesde: number } | null;
 };
 
 export type Garantia = {
@@ -117,6 +123,9 @@ type FilaProducto = {
   garantia: string | null;
   faq: { pregunta: string; respuesta: string }[] | null;
   estado: string;
+  condicion?: Condicion | null;
+  producto_base_id?: string | null;
+  condicion_detalle?: string | null;
   orden: number;
   meta_titulo: string | null;
   meta_descripcion: string | null;
@@ -137,7 +146,7 @@ type FilaProducto = {
 };
 
 const SELECT_PRODUCTO = `id, slug, nombre, marca, modelo, resumen, descripcion, caracteristicas, incluye, garantia, faq,
-  estado, orden, meta_titulo, meta_descripcion, publicado_en, updated_at,
+  estado, condicion, producto_base_id, condicion_detalle, orden, meta_titulo, meta_descripcion, publicado_en, updated_at,
   categorias(slug, nombre),
   imagenes(url, alt, orden, principal),
   variantes(id, nombre, color, ram_gb, almacenamiento_gb, precio, activo),
@@ -262,7 +271,11 @@ async function leerCatalogoODaError(): Promise<Omit<Leido, "ok">> {
     const rams = variantes.map((v) => v.ramGb).filter((n): n is number => n !== null);
     const red = String(p.caracteristicas?.red ?? "");
     const minimo = Math.min(...base.map((v) => v.precio));
-    const baratas = base.filter((v) => v.precio === minimo && v.disponibilidad !== "agotado");
+    // Se muestra primero lo que está en bodega (prioridad: mover el inventario propio)
+    const enBodega = variantes.filter((v) => v.disponibilidad === "bodega");
+    const paraDestacar = enBodega.length ? enBodega : base;
+    const minDestacar = Math.min(...paraDestacar.map((v) => v.precio));
+    const baratas = paraDestacar.filter((v) => v.precio === minDestacar && v.disponibilidad !== "agotado");
     const destacada = baratas.find((v) => /negro|black/i.test(v.color ?? "")) ?? baratas[0] ?? null;
     const masBarata = base.find((v) => v.precio === minimo) ?? null;
 
@@ -284,6 +297,7 @@ async function leerCatalogoODaError(): Promise<Omit<Leido, "ok">> {
       almacenamientos,
       es5g: /5g/i.test(red) || /5g/i.test(p.nombre),
       disponibilidad: variantes.map((v) => v.disponibilidad).reduce(mejor),
+      condicion: p.condicion ?? "nuevo",
       colecciones: p.coleccion_producto.map((c) => c.colecciones?.slug).filter((s): s is string => Boolean(s)),
       orden: p.orden,
       publicadoEn: p.publicado_en,
@@ -299,9 +313,36 @@ async function leerCatalogoODaError(): Promise<Omit<Leido, "ok">> {
       metaTitulo: p.meta_titulo,
       metaDescripcion: p.meta_descripcion,
       actualizado: p.updated_at,
+      condicionDetalle: p.condicion_detalle ?? null,
+      productoBase: null,
     });
   }
-  return { lista: lista.sort((a, b) => a.orden - b.orden || a.nombre.localeCompare(b.nombre)), segundosHastaCambio };
+  // Open Box / usado: enlace al modelo nuevo y, si la ficha no tiene, sus características y fotos
+  const filas = new Map(((productos ?? []) as unknown as FilaProducto[]).map((f) => [f.id, f]));
+  const porId = new Map(lista.map((x) => [x.id, x]));
+  for (const x of lista) {
+    const baseId = filas.get(x.id)?.producto_base_id;
+    if (x.condicion === "nuevo" || !baseId) continue;
+    const base = porId.get(baseId);
+    const fila = filas.get(baseId);
+    if (base) x.productoBase = { slug: base.slug, nombre: base.nombre, precioDesde: base.precioDesde };
+    if (!Object.keys(x.caracteristicas).length && fila?.caracteristicas) x.caracteristicas = fila.caracteristicas;
+    if (!x.imagenes.length && fila?.imagenes.length) {
+      x.imagenes = [...fila.imagenes]
+        .sort((a, b) => Number(b.principal) - Number(a.principal) || a.orden - b.orden)
+        .map((i) => ({ url: i.url, alt: i.alt || x.nombre }));
+      x.imagen = x.imagenes[0] ?? null;
+    }
+  }
+
+  // Primero lo que está en bodega, luego lo del proveedor y al final lo agotado
+  return {
+    lista: lista.sort(
+      (a, b) =>
+        ORDEN_DISP[a.disponibilidad] - ORDEN_DISP[b.disponibilidad] || a.orden - b.orden || a.nombre.localeCompare(b.nombre)
+    ),
+    segundosHastaCambio,
+  };
 }
 
 function conOferta(normal: number, oferta: { precio: number; nombre: string; fin: string | null } | undefined) {
@@ -365,6 +406,7 @@ const aResumen = (p: ProductoDetalle): ProductoResumen => ({
   almacenamientos: p.almacenamientos,
   es5g: p.es5g,
   disponibilidad: p.disponibilidad,
+  condicion: p.condicion,
   colecciones: p.colecciones,
   orden: p.orden,
   publicadoEn: p.publicadoEn,

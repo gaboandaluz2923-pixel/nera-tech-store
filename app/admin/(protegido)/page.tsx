@@ -4,6 +4,7 @@ import { ChevronRight } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { rolActual } from "@/lib/admin/sesion";
 import { inicioDeHoySV } from "@/lib/admin/pedidos";
+import { diasParaVencer, porPagar, textoVencimiento } from "@/lib/admin/inventario";
 import { createClient } from "@/lib/supabase/server";
 import { ESTADO_PEDIDO, fechaHora, usd2 } from "@/lib/tienda/formato";
 
@@ -19,6 +20,7 @@ const FASES = [
   { n: 5, nombre: "Analítica y sugerencia de precios" },
   { n: 6, nombre: "Dominio, Google, Meta, velocidad y lanzamiento" },
   { n: 7, nombre: "Equipo, pedidos manuales y clientes" },
+  { n: 8, nombre: "Inventario, compras, IMEI y Open Box" },
 ];
 
 type Fila = { id: string; numero: number; total: number; estado: string; canal: string | null; created_at: string; entrega: { nombre?: string } | null };
@@ -169,6 +171,42 @@ async function Encabezado({ searchParams }: { searchParams: PageProps<"/admin">[
   );
 }
 
+/** Administradores: facturas de proveedor vencidas o que vencen en 3 días */
+async function PorPagar() {
+  const { rol } = await rolActual();
+  if (rol !== "super_admin") return null;
+  const supabase = await createClient();
+  const { compras } = await porPagar(supabase);
+  const urgentes = compras.filter((c) => diasParaVencer(c.vence_en) <= 3);
+  if (!urgentes.length) return null;
+  return (
+    <Card className="border-amber-300">
+      <CardHeader>
+        <CardTitle>Facturas por pagar</CardTitle>
+        <CardDescription>Vencidas o que vencen en los próximos 3 días.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ul className="divide-y rounded-lg border text-sm">
+          {urgentes.map((c) => (
+            <li key={c.id}>
+              <Link href={`/admin/inventario/compras/${c.id}`} className="flex items-center gap-3 p-3 hover:bg-muted/50">
+                <span className="flex-1">
+                  {c.proveedores?.nombre ?? "Sin proveedor"} · {c.numero || "sin número"}
+                  <span className={`block text-xs ${diasParaVencer(c.vence_en) < 0 ? "text-red-700" : "text-amber-700"}`}>
+                    {textoVencimiento(c)}
+                  </span>
+                </span>
+                <span className="font-semibold tabular-nums">{usd2(Number(c.total))}</span>
+                <ChevronRight className="size-4 text-muted-foreground" aria-hidden />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
+  );
+}
+
 async function Avance() {
   const { rol } = await rolActual();
   if (rol !== "super_admin") return null;
@@ -198,6 +236,9 @@ export default function InicioAdmin({ searchParams }: PageProps<"/admin">) {
       </Suspense>
       <Suspense fallback={<p className="text-sm text-muted-foreground">Cargando…</p>}>
         <Resumen />
+      </Suspense>
+      <Suspense fallback={null}>
+        <PorPagar />
       </Suspense>
       <Suspense fallback={null}>
         <Avance />

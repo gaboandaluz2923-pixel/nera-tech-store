@@ -8,7 +8,7 @@ import { CompraProducto } from "@/components/tienda/compra-producto";
 import { Galeria } from "@/components/tienda/galeria";
 import { TarjetaProducto } from "@/components/tienda/tarjeta-producto";
 import { catalogo, configTienda, productoPorSlug, type ProductoDetalle } from "@/lib/tienda/datos";
-import { CLAVES_DECISIVAS, NOMBRE_CARACTERISTICA, dondeContraEntrega, usd } from "@/lib/tienda/formato";
+import { CLAVES_DECISIVAS, NOMBRE_CARACTERISTICA, TEXTO_CONDICION, dondeContraEntrega, usd } from "@/lib/tienda/formato";
 import { SITE_URL } from "@/lib/url-sitio";
 
 const RELLENO = "_"; // Cache Components exige al menos un parámetro al compilar
@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: PageProps<"/producto/[slug]">
   const titulo = p.metaTitulo || `${p.nombre} precio en El Salvador`;
   const descripcion =
     p.metaDescripcion ||
-    `${p.nombre} nuevo y sellado desde ${usd(p.precioDesde)}. ${p.resumen ? `${p.resumen}. ` : ""}Garantía de 12 meses y pago contra entrega.`;
+    `${p.nombre} ${p.condicion === "nuevo" ? "nuevo y sellado" : TEXTO_CONDICION[p.condicion].largo.toLowerCase()} desde ${usd(p.precioDesde)}. ${p.resumen ? `${p.resumen}. ` : ""}Garantía de 12 meses y pago contra entrega.`;
   return {
     title: titulo,
     description: descripcion,
@@ -44,6 +44,8 @@ function datosEstructurados(p: ProductoDetalle) {
   const url = `${SITE_URL}/producto/${p.slug}`;
   const disponibilidad = (d: string) =>
     d === "agotado" ? "https://schema.org/OutOfStock" : "https://schema.org/InStock";
+  // Open Box y usado: para Google es "usado" (no es nuevo sellado)
+  const condicion = p.condicion === "nuevo" ? "https://schema.org/NewCondition" : "https://schema.org/UsedCondition";
   const vencimiento = new Date(p.actualizado);
   vencimiento.setMonth(vencimiento.getMonth() + 1);
   return {
@@ -63,6 +65,7 @@ function datosEstructurados(p: ProductoDetalle) {
             highPrice: p.precioHasta.toFixed(2),
             offerCount: p.variantes.length,
             availability: disponibilidad(p.disponibilidad),
+            itemCondition: condicion,
             url,
           }
         : {
@@ -71,7 +74,7 @@ function datosEstructurados(p: ProductoDetalle) {
             price: p.variantes[0].precio.toFixed(2),
             priceValidUntil: vencimiento.toISOString().slice(0, 10),
             availability: disponibilidad(p.variantes[0].disponibilidad),
-            itemCondition: "https://schema.org/NewCondition",
+            itemCondition: condicion,
             seller: { "@type": "Organization", name: "Nera Tech" },
             url,
           },
@@ -104,7 +107,8 @@ async function Ficha({ params }: { params: PageProps<"/producto/[slug]">["params
     .map((s) => s.replace(/^[-•·]\s*/, "").trim())
     .filter(Boolean);
   const g = c.garantia;
-  const esCelular = p.categoria === "celulares";
+  const esCelular = p.categoria === "celulares" || p.categoria === "open-box";
+  const abierto = p.condicion !== "nuevo";
 
   // "Completá tu equipo": a un celular le ofrecemos accesorios; a un accesorio, otros de su categoría.
   const disponibles = todos.filter((o) => o.id !== p.id && o.disponibilidad !== "agotado");
@@ -113,7 +117,7 @@ async function Ficha({ params }: { params: PageProps<"/producto/[slug]">["params
   ).slice(0, 4);
   const parecidos = esCelular
     ? disponibles
-        .filter((o) => o.categoria === "celulares")
+        .filter((o) => o.categoria === "celulares" || o.categoria === "open-box")
         .sort((a, b) => Math.abs(a.precioDesde - p.precioDesde) - Math.abs(b.precioDesde - p.precioDesde))
         .slice(0, 4)
     : [];
@@ -124,10 +128,22 @@ async function Ficha({ params }: { params: PageProps<"/producto/[slug]">["params
       pregunta: "¿Puedo pagar al recibir?",
       respuesta: `Sí. Pagás en efectivo cuando lo recibís ${dondeContraEntrega(c.contraEntrega)}, con ${c.descuentoSinTarjeta}% de descuento. El mismo descuento aplica por transferencia. También aceptamos tarjeta y tasa 0%.`,
     },
-    {
-      pregunta: "¿Es nuevo y original?",
-      respuesta: "Sí. Todos nuestros equipos son nuevos, sellados de fábrica, y verificamos el IMEI antes de entregarlo.",
-    },
+    p.condicion === "open_box"
+      ? {
+          pregunta: "¿Qué significa Open Box?",
+          respuesta:
+            "Es un equipo original al que ya se le abrió la caja: no viene sellado de fábrica. Lo revisamos, verificamos el IMEI y te decimos en la ficha en qué estado viene. Por eso cuesta menos que el nuevo sellado.",
+        }
+      : p.condicion === "usado"
+        ? {
+            pregunta: "¿Es usado?",
+            respuesta:
+              "Sí. Es un equipo original usado; lo revisamos, verificamos el IMEI y te decimos en la ficha en qué estado viene.",
+          }
+        : {
+            pregunta: "¿Es nuevo y original?",
+            respuesta: "Sí. Todos nuestros equipos son nuevos, sellados de fábrica, y verificamos el IMEI antes de entregarlo.",
+          },
   ].filter((f, i, arr) => arr.findIndex((o) => o.pregunta === f.pregunta) === i);
 
   const faqLd = {
@@ -159,8 +175,39 @@ async function Ficha({ params }: { params: PageProps<"/producto/[slug]">["params
           <Galeria imagenes={p.imagenes} nombre={p.nombre} />
         </div>
         <div>
+          {abierto ? (
+            <p className="mb-2 inline-flex rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-900">
+              {TEXTO_CONDICION[p.condicion].largo}
+            </p>
+          ) : null}
           <h1 className="text-2xl leading-tight font-bold sm:text-3xl">{p.nombre}</h1>
           {p.resumen ? <p className="mt-1 text-muted-foreground">{p.resumen}</p> : null}
+          {abierto ? (
+            <div className="mt-4 space-y-2 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm">
+              <p className="font-semibold">
+                {p.condicion === "open_box" ? "Qué significa Open Box" : "Equipo usado"}
+              </p>
+              <p>
+                {p.condicion === "open_box"
+                  ? "Es original y la caja ya fue abierta: no viene sellado de fábrica. Lo revisamos y verificamos el IMEI antes de entregarlo."
+                  : "Es original y ya fue usado. Lo revisamos y verificamos el IMEI antes de entregarlo."}
+              </p>
+              {p.condicionDetalle ? (
+                <p>
+                  <span className="font-semibold">Cómo viene este: </span>
+                  {p.condicionDetalle}
+                </p>
+              ) : null}
+              {p.productoBase ? (
+                <p>
+                  ¿Lo preferís sellado?{" "}
+                  <Link href={`/producto/${p.productoBase.slug}`} className="font-medium text-primary underline">
+                    Ver {p.productoBase.nombre} nuevo desde {usd(p.productoBase.precioDesde)}
+                  </Link>
+                </p>
+              ) : null}
+            </div>
+          ) : null}
           <div className="mt-5">
             <CompraProducto
               productoId={p.id}
@@ -198,7 +245,7 @@ async function Ficha({ params }: { params: PageProps<"/producto/[slug]">["params
               ))}
             </ul>
             <p className="text-xs text-muted-foreground">
-              Contra entrega {dondeContraEntrega(c.contraEntrega)}. Entregamos en 24 a 48 horas.{" "}
+              Contra entrega {dondeContraEntrega(c.contraEntrega)}. En bodega: entrega en menos de 24 horas; del proveedor: en menos de 48 horas.{" "}
               <Link href="/envios-y-pagos" className="underline">
                 Ver detalles
               </Link>
@@ -321,7 +368,7 @@ async function Ficha({ params }: { params: PageProps<"/producto/[slug]">["params
       ) : null}
 
       <div className="mt-12">
-        <BarraConfianza />
+        <BarraConfianza condicion={p.condicion} />
       </div>
     </>
   );

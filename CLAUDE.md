@@ -62,7 +62,8 @@ proveedores, listas_precios, lineas_lista, categorias, productos, variantes, ima
 producto_proveedor, precios_venta, precios_observados, colecciones, coleccion_producto,
 promociones, bundles, bundle_items, cupones, clientes, pedidos, lineas_pedido, pagos,
 pedido_eventos, suscriptores, eventos, gasto_pauta, configuracion, skus_ignorados, equipo (con rol),
-historial (quién cambió qué), cliente_notas; vista clientes_resumen.
+historial (quién cambió qué), cliente_notas; vista clientes_resumen. Fase 8: compras, compra_lineas, lotes (FIFO),
+movimientos_inventario (kardex), unidades (IMEI / serie / código Nera, condición y estado); funciones `inv_*`.
 
 Emparejamiento de listas: `lib/listas/normalizar.ts` (descripción → marca|modelo|ram|almacenamiento|color),
 `lib/listas/columnas.ts` (lectura de CSV/pegado y detección de columnas), `lib/admin/importar.ts` (núcleo de
@@ -77,10 +78,17 @@ Reglas de negocio:
 - Precio sugerido = f(costo puesto, margen objetivo por categoría, min/max/moda observados,
   rotación); siempre con explicación en texto; nunca se aplica sin aprobación humana.
 - Stock mostrado en la ficha = stock real; si es 0, la ficha ofrece "Avisame cuando haya".
+- Disponibilidad: en bodega → "Entrega en menos de 24 horas"; del proveedor → "Recibilo en menos de 48 horas"
+  (`TEXTO_DISPONIBILIDAD` en lib/tienda/formato.ts). Lo de bodega se muestra primero.
+- Inventario: el stock en bodega solo cambia con las funciones `inv_*` (compras, ventas, devoluciones, ajustes con
+  motivo); lo más viejo sale primero y cada venta guarda su costo real. Celulares con IMEI obligatorio; lo demás con
+  serie o código Nera. Open Box = ficha aparte enlazada al modelo nuevo (`productos.condicion`).
+- Ninguna oferta ni precio especial bajo el costo (el de bodega si hay) sin confirmación explícita.
 
 ## Seguridad de datos
 - Roles del equipo (`equipo.rol`): `super_admin` ve y cambia todo; `operador` ve Inicio (pedidos y ventas,
-  sin costos ni ganancia), Pedidos, Clientes y Catálogo (sin cambiar precios). Las rutas de administrador
+  sin costos ni ganancia), Pedidos (con el IMEI que sale), Clientes, Garantía (buscar IMEI) y Catálogo (sin cambiar
+  precios). Inventario y compras son solo de administradores. Las rutas de administrador
   están en `SOLO_SUPER_ADMIN` (lib/supabase/equipo.ts); sus acciones usan `superAdmin()` y las del
   operador `equipo()` (lib/admin/sesion.ts). RLS: `es_super_admin()` en todo, más políticas `operador_*`
   en las tablas que el operador usa; trigger `proteger_precio`; `lineas_pedido.costo_unitario` no se
@@ -93,7 +101,8 @@ Reglas de negocio:
 ## Estructura de carpetas
 /app              rutas públicas (/, /celulares, /accesorios, /producto/[slug], /carrito, /checkout, /guias)
 /app/admin        panel: /login (público) y (protegido)/… (proveedores, listas, precios, catalogo,
-                  pedidos (+ nuevo: pedido manual), clientes, promociones, correos, analitica,
+                  pedidos (+ nuevo: pedido manual), clientes (+ importar: Excel y Brevo), inventario
+                  (compras, variante/[id] kardex), garantia, promociones, correos, analitica,
                   configuracion, equipo, contrasena)
 /app/api          webhooks (wompi, brevo), endpoints internos
 /components/ui    shadcn (no editar a mano; regenerar con la CLI)

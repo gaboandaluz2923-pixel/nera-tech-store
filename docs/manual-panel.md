@@ -29,7 +29,9 @@ Cada persona del equipo tiene un rol (lo ves arriba a la derecha, junto a tu nom
 | Inicio: pedidos y ventas de hoy, la semana y el mes | Sí | Sí |
 | Pedidos (confirmar, enviar, cobrar, facturar) y **Nuevo pedido** | Sí | Sí |
 | Clientes | Sí | Sí |
-| Catálogo: fotos, textos, características, color, stock en bodega, publicar | Sí | Sí |
+| Catálogo: fotos, textos, características, color, stock en bodega (con motivo), publicar | Sí | Sí |
+| Garantía: buscar un IMEI o número de serie; en un pedido, el IMEI del equipo que sale | Sí | Sí |
+| Inventario: compras al proveedor, costos, cuentas por pagar, kardex, Open Box | Sí | No |
 | Cambiar precios (también precio especial en un pedido manual) | Sí | No |
 | Proveedores, listas, Precios, costos, ganancia, Promociones, Correos, Analítica, Configuración, Equipo | Sí | No |
 
@@ -171,16 +173,28 @@ Publicación), cambiá y **Guardar**. De arriba hacia abajo:
 4. **Características**: los campos cambian según la categoría (celulares: pantalla, procesador,
    cámaras, batería, carga, red, sistema, NFC, resistencia, peso). Lo que dejes vacío no se muestra.
    Si falta alguna, usá "Otra característica".
-5. **Variantes**: cada combinación de memoria y color. Podés corregir el color, poner cuántas
-   unidades **propias** tenés en bodega (si es más de 0, la tienda dice "En stock · entrega hoy") y
-   desmarcar **Mostrar** para esconder una variante (cada fila tiene su **Editar**). El precio lo cambia un
-   administrador en **Precios**.
+5. **Variantes**: cada combinación de memoria y color (cada fila tiene su **Editar**):
+   - **Color** y **Mostrar** (desmarcalo para esconder una variante).
+   - **En bodega**: las unidades propias. Normalmente no se toca: las compras (Inventario) las suben y los pedidos
+     las bajan solos. Si al contar hay diferencia, cambiá el número y escribí el **motivo** (conteo, dañado…);
+     queda en el kardex con tu nombre. Con unidades en bodega la tienda dice **"Entrega en menos de 24 horas"**.
+   - **Si no hay en bodega**: *Según la lista del proveedor* (lo normal: si un proveedor lo tiene, la tienda dice
+     **"Recibilo en menos de 48 horas"**), *Bajo pedido* (siempre "Recibilo en menos de 48 horas") o *Agotado*.
+   - El precio lo cambia un administrador en **Precios**.
 6. **Preguntas frecuentes**: lo que más te preguntan por WhatsApp de ese producto. Siempre hay dos
    espacios vacíos para agregar. Para quitar una, borrá la pregunta y la respuesta. "¿Puedo pagar al
-   recibir?" y "¿Es nuevo y original?" se agregan solas en todas las fichas.
+   recibir?" y "¿Es nuevo y original?" se agregan solas en todas las fichas (en un Open Box: "¿Qué significa
+   Open Box?").
 7. **Colecciones**: *Los más pedidos* y *Recién llegado* salen en la página de inicio con su etiqueta
    naranja.
 8. **Historial de cambios**: quién cambió qué y cuándo en ese producto.
+9. **Open Box o usado** (en los productos nuevos, debajo de Publicación): **+ Crear ficha Open Box** → elegí la
+   memoria y el color de la unidad, la condición (Open Box o usado) y escribí **cómo viene** (lo ve el cliente: "Sin
+   uso, caja abierta para revisión. Trae cargador y cable."). Se crea una ficha aparte, oculta, en la categoría
+   **Open Box**, con las características de este modelo y sin precio. Ponele precio en Precios, recibí la unidad en
+   Inventario (con su IMEI) y publicala. En la tienda dice "Open Box: caja abierta, no sellado de fábrica", muestra
+   cómo viene y enlaza al modelo nuevo. Si no le subís fotos, usa las del modelo nuevo (mejor subí fotos reales de la
+   unidad). En la ficha Open Box, **Condición** (Editar) cambia el texto o el modelo nuevo enlazado.
 
 Cada sección tiene su propio botón **Guardar**; arriba aparece "Guardado" o el error. Los cambios se
 ven en la tienda en el momento.
@@ -296,7 +310,7 @@ Marketplace, TikTok, llamada o en persona. Botón **+ Nuevo pedido** en Inicio, 
 En la lista de Pedidos y en el pedido se ve el canal y quién lo creó.
 
 ## Clientes
-Menú **Clientes**: todos los que compraron, por la tienda o a mano. Buscá por nombre, teléfono o correo;
+Menú **Clientes**: todos los que compraron, por la tienda, a mano o antes de la tienda (etiqueta "cliente anterior"). Buscá por nombre, teléfono o correo;
 ordená por compra más reciente, por los que más compran o por los recién agregados; filtrá por etiqueta.
 Cada fila dice cuánto ha comprado en total, cuántos pedidos y por dónde compra.
 En la ficha del cliente:
@@ -310,6 +324,84 @@ En la ficha del cliente:
 - **Historial de cambios**: quién cambió sus datos y cuándo.
 Si alguien compró por WhatsApp sin correo y después compra en la tienda con el mismo teléfono, queda como el
 mismo cliente.
+
+**Importar del Excel · Brevo** (botón arriba a la derecha, solo administradores):
+1. **Clientes del Excel**: elegí el archivo «Pedidos e Inventario». El panel lee la pestaña ORDENES y dice cuántos
+   clientes hay, cuántos son nuevos y cuántos ya estaban. Tocá **Importar**. Cada cliente entra una sola vez (por
+   teléfono o correo) con la etiqueta **cliente anterior**, y cada compra queda como nota: qué compró, cuánto pagó,
+   cómo pagó, el envío y el estado. No se crean pedidos (no cambian las ventas de Inicio ni Analítica). Si lo
+   importás otra vez con filas nuevas, solo agrega lo que falta.
+2. **Mandar clientes a Brevo**: sube a la lista **Clientes Nera Tech** de Brevo a todos los que tienen correo y
+   aceptan publicidad (quien se dio de baja no va). En Brevo → Campañas → crear campaña → elegí esa lista. Brevo
+   agrega solo el enlace para darse de baja.
+3. **Descargar todos los clientes (CSV)**: nombre, teléfonos (también con +503 para WhatsApp), correo, si acepta
+   publicidad y etiquetas. Sirve para listas de difusión de WhatsApp o para abrir en Excel.
+
+## Inventario (solo administradores)
+Menú **Inventario**. Arriba: unidades en bodega, cuánto valen al costo, cuánto se debe a proveedores y cuántas
+unidades se mueven lento (más de 30 días en bodega sin ventas en 30 días).
+- **Avisos**: cuántos IMEI o números de serie faltan por registrar, y los productos que se venden **bajo el costo**
+  de lo que hay en bodega (con el enlace para revisar el precio).
+- **Facturas por pagar**: de la que vence primero a la última, con "Vence en 3 días", "Vence hoy" o "Vencida hace…".
+  También salen en **Inicio** cuando faltan 3 días o menos.
+- **En bodega**: cada variante con sus unidades, días en bodega, última venta y costo; lo más viejo arriba (es lo que
+  conviene vender antes). Etiquetas: *Lento*, *Faltan N IMEI*, *Sin costo*, *Open Box*. Tocá una para ver su
+  detalle.
+
+**Detalle de una variante** (Inventario → tocá una fila):
+- Arriba: en bodega, valor al costo, precio, condición y cuántas unidades no tienen identificador.
+- **Registrar IMEI** (si faltan): pegá o escaneá un IMEI por línea (doble SIM: los dos en la misma línea separados
+  por coma). Para accesorios sin número de serie, poné cuántos **códigos Nera** querés: el sistema crea NT-000123,
+  NT-000124… para escribir o pegar en cada caja.
+- **Ajuste por conteo**: unidades contadas, costo de las que sobran (si sube) y motivo.
+- **Lotes**: cada entrada con su fecha, cuánto queda y su costo (lo más viejo sale primero).
+- **Unidades**: cada IMEI o serie con su estado (en bodega, vendida, en garantía, de baja) y el pedido. **Mover**
+  pasa una unidad en bodega a su ficha Open Box (por ejemplo, un equipo devuelto con la caja abierta), con el mismo
+  costo.
+- **Kardex**: todo lo que entró y salió, con quién y por qué.
+
+**Compras al proveedor** (Inventario → **+ Nueva compra**):
+1. **La factura**: subí el **.json** de la factura electrónica (llega en el mismo correo que el PDF) y el sistema
+   llena todo exacto: proveedor (por su NIT, guardalo en Proveedores), número, fecha, crédito y días, productos,
+   cantidades y costos. Si solo tenés el **PDF**, subilo: se lee como texto y casi siempre reconoce las filas; revisá
+   cada una. Si no tenés archivo, dejalo vacío.
+2. **Datos**: lo que dejes vacío sale de la factura. **Tipo de documento**: *Crédito fiscal* (precios sin IVA; el
+   IVA se recupera), *Factura de consumidor final* (precios con IVA) o *Sin IVA* (Miami, recibos). **Pago**: contado
+   o crédito con sus días (10, 14…; si el proveedor tiene días de crédito en Proveedores, se usan esos).
+   **Otros costos**: flete, envío, aduana, seguro; se reparten en el costo de cada unidad (no se suman a lo que se
+   le debe al proveedor).
+3. Tocá **Crear compra**. Se abre la compra **Sin recibir**: revisá cada producto (**Editar**): el producto del
+   catálogo (el sistema sugiere uno; si no está, crealo en Catálogo), la cantidad, el costo como sale en la factura,
+   la **condición** (Nuevo sellado / Open Box / Usado: revisá cada caja al recibir) y los **IMEI o números de serie**
+   (uno por línea; con un lector de código de barras se escanean directo). Los celulares necesitan el IMEI de cada
+   unidad; si falta uno o un número está mal digitado, avisa antes de recibir.
+4. **Recibir en bodega**: las unidades entran con su costo, la tienda las muestra como "Entrega en menos de 24 horas"
+   y cada IMEI queda registrado. Una unidad Open Box o usada no puede entrar a un producto nuevo: va en su ficha Open
+   Box.
+5. **Marcar pagada** con la fecha cuando le pagués al proveedor. **Anular** solo si ninguna unidad de esa compra se
+   vendió (marcá la casilla de confirmación).
+La lista **Compras** filtra **Por pagar** y **Sin recibir**. Los archivos de la factura quedan guardados (privados).
+
+**Ventas y bodega**: al **confirmar** un pedido salen de bodega las unidades más viejas con su IMEI, y la venta
+guarda su costo real. Si se cancela, se devuelve o vuelve a "por confirmar", las unidades regresan a bodega. Si un
+cliente devuelve un equipo con la caja abierta, pasalo a Open Box desde el detalle de la variante.
+
+**Ofertas sin pérdida**: en Promociones, el "Costo puesto" de cada opción es el de lo que hay **en bodega** (si hay).
+Si un precio de oferta queda bajo el mínimo sin pérdida, no se guarda salvo que marqués **Acepto vender con pérdida**.
+Lo mismo con un precio especial en un pedido manual («Sí, venderlo así»).
+
+## Garantía (buscar IMEI o serie)
+Menú **Garantía (IMEI)** (todo el equipo). Escribí o escaneá el IMEI (está en la caja o marcando \*#06# en el
+teléfono) o el número de serie. Dice si el equipo **es nuestro**, su condición, en qué pedido y a qué cliente se
+vendió, de qué proveedor y factura vino, y si la garantía está **vigente** (12 meses desde la entrega) o **vencida**.
+- **Entra a garantía**: anotá la falla que reporta el cliente; la unidad queda "En garantía".
+- **Sale de garantía**: anotá qué se hizo (reparado, cambiado…).
+- Si dice que **no está registrado**, pedile la factura y buscalo en Clientes por nombre o teléfono.
+Los 128 equipos del registro anterior (Excel de órdenes de compra) aparecen como "Registrada antes del sistema".
+
+**En un pedido** (Productos): debajo de cada celular o accesorio sale el IMEI o serie que el sistema apartó al
+confirmar. Si sale otro equipo, tocá **Cambiar** y escaneá el que sale. Si dice "Sin identificar", tocá
+**+ IMEI / serie** y escanealo (tiene que estar registrado en bodega).
 
 ## Historial con nombre
 Cada cambio queda con el nombre de quien lo hizo (el de Equipo):

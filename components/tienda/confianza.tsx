@@ -1,12 +1,22 @@
 import { PackageCheck, ShieldCheck, Truck, Wallet } from "lucide-react";
 
 // Confianza como infraestructura: las 4 razones para comprar sin miedo, siempre a la vista.
-export function BarraConfianza({ mesesGarantia = 12, compacta = false }: { mesesGarantia?: number; compacta?: boolean }) {
+export function BarraConfianza({
+  mesesGarantia = 12,
+  compacta = false,
+  condicion = "nuevo",
+}: {
+  mesesGarantia?: number;
+  compacta?: boolean;
+  condicion?: "nuevo" | "open_box" | "usado";
+}) {
   const items = [
     { icono: Wallet, titulo: "Pagás al recibir", texto: "Efectivo contra entrega" },
     { icono: ShieldCheck, titulo: `Garantía de ${mesesGarantia} meses`, texto: "Por escrito, con Nera Tech" },
-    { icono: PackageCheck, titulo: "Nuevos y sellados", texto: "IMEI verificado" },
-    { icono: Truck, titulo: "Envío a todo el país", texto: "24 a 48 horas" },
+    condicion === "nuevo"
+      ? { icono: PackageCheck, titulo: "Nuevos y sellados", texto: "IMEI verificado" }
+      : { icono: PackageCheck, titulo: "Revisado por Nera Tech", texto: "IMEI verificado" },
+    { icono: Truck, titulo: "Envío a todo el país", texto: "En menos de 48 horas" },
   ];
   return (
     <ul className={`grid grid-cols-2 gap-2 ${compacta ? "" : "sm:grid-cols-4"}`}>

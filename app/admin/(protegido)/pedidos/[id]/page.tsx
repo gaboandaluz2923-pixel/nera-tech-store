@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { COLUMNAS_DESCUENTOS, lineasDescuento } from "@/lib/tienda/descuentos";
 import { CANAL, SIGUIENTES, esperandoPago, porFacturar, type EstadoPedido, type PedidoBase } from "@/lib/admin/pedidos";
 import { nombresEquipo, quien } from "@/lib/admin/historial";
+import { asignarUnidad } from "../../inventario/actions";
 import { createClient } from "@/lib/supabase/server";
 import { ESTADO_PEDIDO, FORMA_PAGO, fechaHora, usd2 } from "@/lib/tienda/formato";
 import { enlaceWhatsAppA } from "@/lib/whatsapp";
@@ -69,7 +70,15 @@ type Pedido = PedidoBase & {
     acepta_correo: boolean;
     acepta_whatsapp: boolean;
   } | null;
-  lineas_pedido: { id: string; nombre: string; cantidad: number; precio_unitario: number; precio_regular: number | null }[];
+  lineas_pedido: {
+    id: string;
+    nombre: string;
+    cantidad: number;
+    precio_unitario: number;
+    precio_regular: number | null;
+    variante_id: string | null;
+  }[];
+  inventario_descontado?: boolean;
   pagos: { id: string; metodo: string; monto: number; estado: string; referencia_externa: string | null; created_at: string }[];
   pedido_eventos: { id: string; estado_anterior: string | null; estado_nuevo: string; nota: string | null; usuario: string | null; created_at: string }[];
 };
@@ -93,7 +102,7 @@ async function Detalle({ params }: { params: PageProps<"/admin/pedidos/[id]">["p
       `id, numero, token, estado, forma_pago, subtotal, envio, total, notas, ${COLUMNAS_DESCUENTOS}, created_at, canal, creado_por, entrega, facturacion,
        pagado_en, confirmado_en, entregado_en, factura_estado, factura_numero, factura_archivo, factura_emitida_en,
        cliente_id, clientes(correo, auth_user_id, telefono_alterno, cumple_dia, cumple_mes, acepta_correo, acepta_whatsapp),
-       lineas_pedido(id, nombre, cantidad, precio_unitario, precio_regular),
+       inventario_descontado, lineas_pedido(id, nombre, cantidad, precio_unitario, precio_regular, variante_id),
        pagos(id, metodo, monto, estado, referencia_externa, created_at),
        pedido_eventos(id, estado_anterior, estado_nuevo, nota, usuario, created_at)`
     )
@@ -123,7 +132,15 @@ async function Detalle({ params }: { params: PageProps<"/admin/pedidos/[id]">["p
         .not("estado", "in", "(cancelado,devuelto)")
     : { count: 0 };
   const alterno = p.entrega.telefono_alterno || p.clientes?.telefono_alterno;
-  const nombres = await nombresEquipo(supabase);
+  const [nombres, { data: unidadesData }] = await Promise.all([
+    nombresEquipo(supabase),
+    supabase.from("unidades").select("id, identificador, identificador2, linea_pedido_id, estado").eq("pedido_id", p.id),
+  ]);
+  const unidadesDe = (lineaId: string) =>
+    ((unidadesData ?? []) as { id: string; identificador: string; identificador2: string | null; linea_pedido_id: string | null }[]).filter(
+      (u) => u.linea_pedido_id === lineaId
+    );
+  const conInventario = Boolean(p.inventario_descontado);
   const esEnPersona = p.entrega.municipio === "Entrega en persona";
 
   return (
@@ -332,20 +349,72 @@ async function Detalle({ params }: { params: PageProps<"/admin/pedidos/[id]">["p
           </CardHeader>
           <CardContent>
             <ul className="space-y-2 text-sm">
-              {p.lineas_pedido.map((l) => (
-                <li key={l.id} className="flex justify-between gap-3">
-                  <span>
-                    {l.cantidad} × {l.nombre}
-                  </span>
-                  <span className="text-right">
-                    {l.precio_regular ? (
-                      <span className="block text-xs text-muted-foreground line-through">{usd2(Number(l.precio_regular) * l.cantidad)}</span>
+              {p.lineas_pedido.map((l) => {
+                const unidades = unidadesDe(l.id);
+                return (
+                  <li key={l.id} className="space-y-1.5">
+                    <div className="flex justify-between gap-3">
+                      <span>
+                        {l.cantidad} × {l.nombre}
+                      </span>
+                      <span className="text-right">
+                        {l.precio_regular ? (
+                          <span className="block text-xs text-muted-foreground line-through">{usd2(Number(l.precio_regular) * l.cantidad)}</span>
+                        ) : null}
+                        {usd2(Number(l.precio_unitario) * l.cantidad)}
+                      </span>
+                    </div>
+                    {/* El equipo que sale: IMEI o serie (sirve para la garantía) */}
+                    {l.variante_id && conInventario ? (
+                      <div className="space-y-1 rounded-md bg-muted/40 p-2 text-xs">
+                        {unidades.map((u) => (
+                          <FilaEditable
+                            key={u.id}
+                            accion={asignarUnidad}
+                            className="rounded border bg-background p-2"
+                            textoEditar="Cambiar"
+                            textoGuardar="Cambiar equipo"
+                            vista={
+                              <span className="font-mono">
+                                {u.identificador}
+                                {u.identificador2 ? ` · ${u.identificador2}` : ""}
+                              </span>
+                            }
+                          >
+                            <input type="hidden" name="linea_id" value={l.id} />
+                            <input type="hidden" name="pedido_id" value={p.id} />
+                            <input type="hidden" name="quitar" value={u.id} />
+                            <p className="text-xs text-muted-foreground">Sale otro equipo en vez de {u.identificador}:</p>
+                            <Input name="identificador" required autoComplete="off" className="font-mono" placeholder="IMEI o serie del que sale" />
+                          </FilaEditable>
+                        ))}
+                        {unidades.length < l.cantidad ? (
+                          <FilaEditable
+                            accion={asignarUnidad}
+                            className="rounded border border-dashed bg-background p-2"
+                            textoEditar={`+ IMEI / serie (${unidades.length} de ${l.cantidad})`}
+                            textoGuardar="Asignar"
+                            vista={
+                              <span className="text-amber-700">
+                                {unidades.length ? "Falta" : "Sin"} identificar el equipo que sale
+                              </span>
+                            }
+                          >
+                            <input type="hidden" name="linea_id" value={l.id} />
+                            <input type="hidden" name="pedido_id" value={p.id} />
+                            <Input name="identificador" required autoComplete="off" className="font-mono" placeholder="IMEI o serie (escaneá la caja)" />
+                            <p className="text-xs text-muted-foreground">Tiene que estar registrado en bodega (Inventario).</p>
+                          </FilaEditable>
+                        ) : null}
+                      </div>
                     ) : null}
-                    {usd2(Number(l.precio_unitario) * l.cantidad)}
-                  </span>
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ul>
+            {!conInventario && p.lineas_pedido.some((l) => l.variante_id) && !["cancelado", "devuelto"].includes(p.estado) ? (
+              <p className="mt-2 text-xs text-muted-foreground">Al confirmar el pedido se apartan de bodega los equipos (con su IMEI o serie).</p>
+            ) : null}
             <dl className="mt-3 border-t pt-2 text-sm">
               <Dato etiqueta="Subtotal">{usd2(Number(p.subtotal))}</Dato>
               <Dato etiqueta="Envío">{Number(p.envio) ? usd2(Number(p.envio)) : "Gratis"}</Dato>

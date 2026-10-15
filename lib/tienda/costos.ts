@@ -18,10 +18,35 @@ type Var = {
 const clave = (v: { producto_id: string; ram_gb: number | null; almacenamiento_gb: number | null }) =>
   `${v.producto_id}|${v.ram_gb ?? "-"}|${v.almacenamiento_gb ?? "-"}`;
 
-/** Costo puesto por variante. Si no hay proveedor, se estima con el margen objetivo de la categoría. */
+/**
+ * Costo de lo que hay en bodega por variante (Inventario): el más alto de sus lotes con existencia,
+ * para que una oferta o un descuento no deje en pérdida ninguna de esas unidades.
+ */
+export async function costoEnBodega(ids: string[]): Promise<Map<string, number>> {
+  const costos = new Map<string, number>();
+  if (!ids.length) return costos;
+  const { data, error } = await createServiceClient()
+    .from("lotes")
+    .select("variante_id, costo_unitario")
+    .in("variante_id", ids)
+    .gt("cantidad", 0)
+    .not("costo_unitario", "is", null);
+  if (error) return costos; // antes de la migración 0009 no hay lotes
+  for (const l of data ?? []) {
+    const c = Math.round(Number(l.costo_unitario) * 100) / 100;
+    costos.set(l.variante_id as string, Math.max(costos.get(l.variante_id as string) ?? 0, c));
+  }
+  return costos;
+}
+
+/**
+ * Costo por variante: el de bodega si hay unidades propias con costo; si no, el costo puesto del mejor
+ * proveedor; si tampoco hay, se estima con el margen objetivo de la categoría.
+ */
 export async function costosDeVariantes(ids: string[]): Promise<Map<string, number>> {
   const costos = new Map<string, number>();
   if (!ids.length) return costos;
+  const bodega = await costoEnBodega(ids);
   const sb = createServiceClient();
   const { data: vs } = await sb
     .from("variantes")
@@ -58,6 +83,11 @@ export async function costosDeVariantes(ids: string[]): Promise<Map<string, numb
   }
 
   for (const v of pedidas) {
+    const enBodega = bodega.get(v.id);
+    if (enBodega !== undefined) {
+      costos.set(v.id, enBodega);
+      continue;
+    }
     const x = porGrupo.get(clave(v));
     const lista = x?.conStock.length ? x.conStock : x?.todos;
     if (lista?.length) costos.set(v.id, Math.min(...lista));

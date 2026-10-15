@@ -5,7 +5,9 @@ import { redirect } from "next/navigation";
 import type { EstadoAccion } from "@/components/admin/formulario-accion";
 import { superAdmin } from "@/lib/admin/sesion";
 import { normalizarCodigo } from "@/lib/tienda/beneficios";
-import { ETIQUETA_CATALOGO } from "@/lib/tienda/datos";
+import { minimoSinPerdida } from "@/lib/pricing";
+import { costosDeVariantes } from "@/lib/tienda/costos";
+import { ETIQUETA_CATALOGO, configTienda } from "@/lib/tienda/datos";
 
 // Promociones del panel: ofertas con fecha, combos y cupones.
 // Nada se borra: las ofertas, combos y cupones se apagan (así el historial de pedidos queda intacto).
@@ -80,6 +82,29 @@ export async function guardarOferta(_prev: EstadoAccion, form: FormData): Promis
   const normal = new Map((normales ?? []).map((v) => [v.id as string, Number(v.precio)]));
   const caro = precios.find((p) => p.precio >= (normal.get(p.variante_id) ?? 0));
   if (caro) return falla("Un precio de oferta es igual o mayor que el precio normal. Bajalo o dejalo vacío.");
+
+  // Ninguna oferta por debajo del mínimo sin pérdida (con el costo de lo que hay en bodega) sin confirmarlo
+  if (form.get("acepta_perdida") !== "on" && precios.length) {
+    const [costos, config] = await Promise.all([costosDeVariantes(precios.map((p) => p.variante_id)), configTienda()]);
+    const bajos = precios.filter((p) => {
+      const c = costos.get(p.variante_id);
+      return c !== undefined && p.precio < minimoSinPerdida(c, config.descuentoSinTarjeta);
+    });
+    if (bajos.length) {
+      const { data: nombres } = await supabase
+        .from("variantes")
+        .select("id, nombre, productos(nombre)")
+        .in("id", bajos.map((b) => b.variante_id));
+      const nombre = (id: string) => {
+        const v = (nombres ?? []).find((n) => n.id === id) as unknown as { nombre: string; productos: { nombre: string } | null } | undefined;
+        return v ? `${v.productos?.nombre ?? ""} ${v.nombre}`.trim() : "un producto";
+      };
+      return falla(
+        `${bajos.map((b) => `${nombre(b.variante_id)} a $${b.precio.toFixed(2)}`).join(", ")}: con ese precio se pierde dinero. ` +
+          "Subilo al «Mínimo sin pérdida» o marcá «Acepto vender con pérdida» abajo si es a propósito."
+      );
+    }
+  }
 
   const activa = form.get("activa") === "on";
   if (activa && !precios.length) return falla("Poné al menos un precio de oferta antes de activarla.");

@@ -215,8 +215,17 @@ export async function guardarVariante(_prev: EstadoAccion, form: FormData): Prom
   const color = textoONulo(form.get("color"));
   const stock = Math.max(0, Math.round(Number(form.get("stock")) || 0));
   const activo = form.get("activo") === "on";
+  const disp = texto(form.get("disponibilidad_manual"));
+  const disponibilidad_manual = ["auto", "bajo_pedido", "agotado"].includes(disp) ? disp : "auto";
+  const nota = textoONulo(form.get("nota"));
   const { supabase } = await equipo();
-  const { data: v } = await supabase.from("variantes").select("ram_gb, almacenamiento_gb").eq("id", varianteId).single();
+  const { data: v } = await supabase
+    .from("variantes")
+    .select("ram_gb, almacenamiento_gb, stock")
+    .eq("id", varianteId)
+    .eq("producto_id", id)
+    .single();
+  if (!v) return falla("No se encontró la variante.");
   const memoria =
     v?.almacenamiento_gb == null
       ? null
@@ -226,10 +235,19 @@ export async function guardarVariante(_prev: EstadoAccion, form: FormData): Prom
   const nombre = [memoria, color].filter(Boolean).join(" · ") || "Único";
   const { error } = await supabase
     .from("variantes")
-    .update({ color, stock, activo, nombre, updated_at: new Date().toISOString() })
+    .update({ color, activo, nombre, disponibilidad_manual, updated_at: new Date().toISOString() })
     .eq("id", varianteId)
     .eq("producto_id", id);
   if (error) return falla(`No se pudo guardar: ${error.message}`);
+  // El stock en bodega cambia con un ajuste de inventario (queda en el kardex con quién y por qué)
+  if (stock !== v.stock) {
+    const { error: e2 } = await supabase.rpc("inv_ajustar", {
+      p_variante: varianteId,
+      p_total: stock,
+      p_nota: nota ?? "Conteo de bodega",
+    });
+    if (e2) return falla(`Se guardó lo demás, pero no el stock: ${e2.message}`);
+  }
   refrescar(id);
   return ok(`${nombre}: guardado`);
 }
@@ -300,4 +318,124 @@ export async function refrescarTienda(): Promise<EstadoAccion> {
   await equipo();
   refrescar();
   return ok("Listo: la tienda ya muestra los datos actuales");
+}
+
+// ---------------------------------------------------------------------------
+// Open Box: ficha aparte (categoría Open Box), enlazada al modelo nuevo.
+// No copia las fotos (se usan las del modelo nuevo hasta que subás las reales de la unidad)
+// ni las claves de proveedor (las listas de precios siguen yendo al producto nuevo).
+// ---------------------------------------------------------------------------
+export async function crearOpenBox(_prev: EstadoAccion, form: FormData): Promise<EstadoAccion> {
+  const baseId = texto(form.get("id"));
+  const varianteBaseId = texto(form.get("varianteId"));
+  const condicion = texto(form.get("condicion")) === "usado" ? "usado" : "open_box";
+  const detalle = textoONulo(form.get("condicion_detalle"));
+  const { supabase } = await equipo();
+  const [{ data: base }, { data: cat }] = await Promise.all([
+    supabase
+      .from("productos")
+      .select("id, slug, nombre, marca, modelo, resumen, descripcion, caracteristicas, incluye, condicion")
+      .eq("id", baseId)
+      .single(),
+    supabase.from("categorias").select("id").eq("slug", "open-box").maybeSingle(),
+  ]);
+  if (!base) return falla("No se encontró el producto.");
+  if (base.condicion !== "nuevo") return falla("Este producto ya es Open Box o usado.");
+  const { data: vb } = await supabase
+    .from("variantes")
+    .select("nombre, color, ram_gb, almacenamiento_gb, memoria")
+    .eq("id", varianteBaseId)
+    .eq("producto_id", baseId)
+    .maybeSingle();
+  if (!vb) return falla("Elegí la variante (memoria y color) de la unidad.");
+
+  const sufijo = condicion === "usado" ? "Usado" : "Open Box";
+  const nombre = `${base.nombre} ${sufijo}`;
+  let slug = slugDe(`${base.slug}-${sufijo}`);
+  // Si ya existe (otro Open Box del mismo modelo), se agrega la variante a esa ficha
+  const { data: existente } = await supabase
+    .from("productos")
+    .select("id")
+    .eq("producto_base_id", baseId)
+    .eq("condicion", condicion)
+    .maybeSingle();
+  let id = existente?.id as string | undefined;
+  if (!id) {
+    for (let n = 2; ; n++) {
+      const { data: usado } = await supabase.from("productos").select("id").eq("slug", slug).maybeSingle();
+      if (!usado) break;
+      slug = slugDe(`${base.slug}-${sufijo}-${n}`);
+    }
+    const { data: nuevo, error } = await supabase
+      .from("productos")
+      .insert({
+        slug,
+        nombre,
+        marca: base.marca,
+        modelo: base.modelo,
+        categoria_id: cat?.id ?? null,
+        resumen: base.resumen,
+        descripcion: base.descripcion,
+        caracteristicas: base.caracteristicas ?? {},
+        incluye: base.incluye,
+        condicion,
+        producto_base_id: baseId,
+        condicion_detalle: detalle,
+        estado: "oculto",
+      })
+      .select("id")
+      .single();
+    if (error || !nuevo) return falla(`No se pudo crear: ${error?.message ?? "sin respuesta"}`);
+    id = nuevo.id as string;
+  }
+  const { data: yaVariante } = await supabase
+    .from("variantes")
+    .select("id")
+    .eq("producto_id", id)
+    .eq("ram_gb", vb.ram_gb ?? -1)
+    .eq("almacenamiento_gb", vb.almacenamiento_gb ?? -1)
+    .eq("color", vb.color ?? "")
+    .maybeSingle();
+  if (!yaVariante) {
+    const { error } = await supabase.from("variantes").insert({
+      producto_id: id,
+      nombre: vb.nombre,
+      memoria: vb.memoria,
+      color: vb.color,
+      ram_gb: vb.ram_gb,
+      almacenamiento_gb: vb.almacenamiento_gb,
+      precio: 0,
+      stock: 0,
+      activo: true,
+    });
+    if (error) return falla(`Se creó la ficha, pero no la variante: ${error.message}`);
+  }
+  refrescar(id);
+  return ok(
+    existente
+      ? `Listo: ${vb.nombre} agregado a ${nombre}. Ponele precio y recibí la unidad en Inventario.`
+      : `Listo: se creó "${nombre}" (oculto). Ponele precio, recibí la unidad en Inventario y publicalo.`
+  );
+}
+
+/** Condición de un producto Open Box / usado: en qué estado viene y de qué modelo nuevo sale */
+export async function guardarCondicion(_prev: EstadoAccion, form: FormData): Promise<EstadoAccion> {
+  const id = texto(form.get("id"));
+  const condicion = texto(form.get("condicion"));
+  if (!["open_box", "usado"].includes(condicion)) return falla("Elegí Open Box o usado.");
+  const baseId = textoONulo(form.get("producto_base_id"));
+  const { supabase } = await equipo();
+  const { error } = await supabase
+    .from("productos")
+    .update({
+      condicion,
+      condicion_detalle: textoONulo(form.get("condicion_detalle")),
+      producto_base_id: baseId && baseId !== id ? baseId : null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .neq("condicion", "nuevo");
+  if (error) return falla(`No se pudo guardar: ${error.message}`);
+  refrescar(id);
+  return ok("Condición guardada");
 }

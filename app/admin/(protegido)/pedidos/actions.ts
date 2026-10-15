@@ -79,14 +79,18 @@ export async function cambiarEstadoPedido(_prev: EstadoAccion, form: FormData): 
     usuario,
   });
 
-  // Al confirmar, se descuentan las unidades propias en bodega (si había)
-  if (nuevo === "confirmado" && !p.confirmado_en) {
-    for (const l of (p.lineas_pedido ?? []) as { variante_id: string | null; cantidad: number }[]) {
-      if (!l.variante_id) continue;
-      const { data: v } = await supabase.from("variantes").select("stock").eq("id", l.variante_id).single();
-      if (v && v.stock > 0) {
-        await supabase.from("variantes").update({ stock: Math.max(0, v.stock - l.cantidad) }).eq("id", l.variante_id);
-      }
+  // Inventario: al confirmar salen de bodega las unidades (las más viejas primero, con su IMEI);
+  // al cancelar, devolver o regresar a "por confirmar" vuelven. Las funciones no descuentan dos veces.
+  let avisoInventario = "";
+  const sale = ["confirmado", "pagado", "en_camino", "entregado"].includes(nuevo);
+  const vuelve = ["cancelado", "devuelto", "pendiente_confirmar"].includes(nuevo);
+  if (sale || vuelve) {
+    const { error: eInv } = await supabase.rpc(sale ? "inv_confirmar_pedido" : "inv_devolver_pedido", { p_pedido: id });
+    if (eInv) {
+      console.error("inventario", eInv);
+      avisoInventario = ` (ojo: el inventario no se actualizó: ${eInv.message})`;
+    } else if (nuevo === "devuelto") {
+      avisoInventario = ". Las unidades volvieron a bodega; si el cliente abrió la caja, pasalas a Open Box en Inventario";
     }
     updateTag(ETIQUETA_CATALOGO);
   }
@@ -111,7 +115,7 @@ export async function cambiarEstadoPedido(_prev: EstadoAccion, form: FormData): 
   if (nuevo === "entregado") await otorgarPuntos(id).catch((e) => console.error("otorgarPuntos", e));
   if (nuevo === "cancelado" || nuevo === "devuelto") await revertirPuntos(id, usuario).catch((e) => console.error("revertirPuntos", e));
   refrescar(id);
-  return ok("Estado actualizado");
+  return ok(`Estado actualizado${avisoInventario}`);
 }
 
 export async function registrarPago(_prev: EstadoAccion, form: FormData): Promise<EstadoAccion> {

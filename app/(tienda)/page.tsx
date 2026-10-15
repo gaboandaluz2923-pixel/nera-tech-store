@@ -146,7 +146,7 @@ export default async function Inicio() {
           {[
             ["Elegí tu equipo", "Compará modelos y precios con calma. Si tenés dudas, escribinos."],
             ["Confirmamos tu pedido", "Te escribimos por WhatsApp para confirmar dirección y forma de pago."],
-            ["Lo recibís y pagás", `Te lo entregamos en 24 a 48 horas y pagás al recibir ${dondeContraEntrega(c.contraEntrega)}.`],
+            ["Lo recibís y pagás", `Te lo entregamos en menos de 48 horas (menos de 24 si está en bodega) y pagás al recibir ${dondeContraEntrega(c.contraEntrega)}.`],
           ].map(([titulo, texto], i) => (
             <li key={titulo} className="flex gap-3">
               <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-marca text-sm font-bold text-white">

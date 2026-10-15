@@ -20,6 +20,8 @@ import { NOMBRE_CARACTERISTICA } from "@/lib/tienda/formato";
 import {
   cambiarEstado,
   cambiarFoto,
+  crearOpenBox,
+  guardarCondicion,
   guardarCaracteristicas,
   guardarColecciones,
   guardarDatos,
@@ -40,6 +42,9 @@ type Producto = {
   incluye: string | null;
   faq: { pregunta: string; respuesta: string }[];
   estado: "activo" | "agotado" | "oculto";
+  condicion: "nuevo" | "open_box" | "usado";
+  producto_base_id: string | null;
+  condicion_detalle: string | null;
   orden: number;
   meta_titulo: string | null;
   meta_descripcion: string | null;
@@ -55,9 +60,16 @@ type Producto = {
     stock: number;
     precio: number;
     activo: boolean;
+    disponibilidad_manual: "auto" | "bajo_pedido" | "agotado";
   }[];
   coleccion_producto: { coleccion_id: string }[];
 };
+
+const DISPONIBILIDAD_MANUAL = {
+  auto: "Según la lista del proveedor",
+  bajo_pedido: "Bajo pedido (48 h)",
+  agotado: "Agotado",
+} as const;
 
 const ESTADO_PRODUCTO = { activo: "Publicado", agotado: "Publicado como agotado", oculto: "Oculto" } as const;
 
@@ -103,9 +115,10 @@ async function Editor({ params }: { params: PageProps<"/admin/catalogo/[id]">["p
       .from("productos")
       .select(
         `id, slug, nombre, marca, categoria_id, resumen, descripcion, caracteristicas, incluye, faq, estado, orden,
+         condicion, producto_base_id, condicion_detalle,
          meta_titulo, meta_descripcion, publicado_en, categorias(slug, nombre),
          imagenes(id, url, alt, orden, principal),
-         variantes(id, nombre, color, ram_gb, almacenamiento_gb, stock, precio, activo),
+         variantes(id, nombre, color, ram_gb, almacenamiento_gb, stock, precio, activo, disponibilidad_manual),
          coleccion_producto(coleccion_id)`
       )
       .eq("id", id)
@@ -125,6 +138,16 @@ async function Editor({ params }: { params: PageProps<"/admin/catalogo/[id]">["p
   if (error) throw error;
   if (!data) notFound();
   const p = data as unknown as Producto;
+  // Open Box / usado: su modelo nuevo; producto nuevo: sus fichas Open Box
+  const [{ data: relacionadosOB }, { data: nuevos }] = await Promise.all([
+    p.condicion === "nuevo"
+      ? supabase.from("productos").select("id, nombre, condicion, estado").eq("producto_base_id", p.id)
+      : supabase.from("productos").select("id, nombre, condicion, estado").eq("id", p.producto_base_id ?? "00000000-0000-0000-0000-000000000000"),
+    p.condicion === "nuevo"
+      ? Promise.resolve({ data: [] as { id: string; nombre: string }[] })
+      : supabase.from("productos").select("id, nombre").eq("condicion", "nuevo").order("nombre").limit(1000),
+  ]);
+  const base = p.condicion === "nuevo" ? null : (relacionadosOB?.[0] ?? null);
   const esAdmin = rol === "super_admin";
 
   const fotos = [...p.imagenes].sort((a, b) => a.orden - b.orden);
@@ -141,7 +164,7 @@ async function Editor({ params }: { params: PageProps<"/admin/catalogo/[id]">["p
   const faq = [...p.faq, { pregunta: "", respuesta: "" }, { pregunta: "", respuesta: "" }];
   const enColeccion = new Set(p.coleccion_producto.map((c) => c.coleccion_id));
   const faltas = [
-    !fotos.length && "una foto",
+    !fotos.length && !base && "una foto",
     !variantes.some((v) => v.activo && Number(v.precio) > 0) && "precio de venta",
     !p.categoria_id && "categoría",
   ].filter(Boolean);
@@ -202,6 +225,117 @@ async function Editor({ params }: { params: PageProps<"/admin/catalogo/[id]">["p
           </select>
         </div>
       </Editable>
+
+      {/* Open Box / usado */}
+      {p.condicion === "nuevo" ? (
+        <Editable
+          titulo="Open Box o usado"
+          descripcion="Una unidad con la caja abierta (o usada) va en su propia ficha, en la categoría Open Box, enlazada a este modelo."
+          accion={crearOpenBox}
+          textoEditar="+ Crear ficha Open Box"
+          textoGuardar="Crear"
+          vista={
+            relacionadosOB?.length ? (
+              <ul className="space-y-1 text-sm">
+                {relacionadosOB.map((r) => (
+                  <li key={r.id}>
+                    <Link href={`/admin/catalogo/${r.id}`} className="font-medium text-primary underline">
+                      {r.nombre}
+                    </Link>{" "}
+                    <span className="text-muted-foreground">· {ESTADO_PRODUCTO[r.estado as Producto["estado"]] ?? r.estado}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">Este modelo no tiene fichas Open Box ni usadas.</p>
+            )
+          }
+        >
+          <input type="hidden" name="id" value={p.id} />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label htmlFor="ob-variante">Memoria y color de la unidad</Label>
+              <select id="ob-variante" name="varianteId" required className="h-9 w-full rounded-md border bg-background px-2 text-sm">
+                {variantes.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="ob-condicion">Condición</Label>
+              <select id="ob-condicion" name="condicion" defaultValue="open_box" className="h-9 w-full rounded-md border bg-background px-2 text-sm">
+                <option value="open_box">Open Box (caja abierta, no sellado)</option>
+                <option value="usado">Usado</option>
+              </select>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="ob-detalle">Cómo viene (lo ve el cliente)</Label>
+            <Textarea
+              id="ob-detalle"
+              name="condicion_detalle"
+              rows={2}
+              placeholder="Sin uso, caja abierta para revisión. Trae cargador y cable. Pantalla y cuerpo sin rayones."
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Se crea oculta, con las características de este modelo y sin precio. Si no le subís fotos, usa las de este modelo.
+          </p>
+        </Editable>
+      ) : (
+        <Editable
+          titulo={p.condicion === "open_box" ? "Condición: Open Box" : "Condición: usado"}
+          accion={guardarCondicion}
+          vista={
+            <Datos>
+              <Dato etiqueta="Condición">{p.condicion === "open_box" ? "Open Box (caja abierta, no sellado de fábrica)" : "Usado"}</Dato>
+              <Dato etiqueta="Cómo viene">{p.condicion_detalle || "—"}</Dato>
+              <Dato etiqueta="Modelo nuevo">
+                {base ? (
+                  <Link href={`/admin/catalogo/${base.id}`} className="text-primary underline">
+                    {base.nombre}
+                  </Link>
+                ) : (
+                  "—"
+                )}
+              </Dato>
+            </Datos>
+          }
+        >
+          <input type="hidden" name="id" value={p.id} />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label htmlFor="c-condicion">Condición</Label>
+              <select id="c-condicion" name="condicion" defaultValue={p.condicion} className="h-9 w-full rounded-md border bg-background px-2 text-sm">
+                <option value="open_box">Open Box (caja abierta, no sellado)</option>
+                <option value="usado">Usado</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="c-base">Modelo nuevo</Label>
+              <select
+                id="c-base"
+                name="producto_base_id"
+                defaultValue={p.producto_base_id ?? ""}
+                className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+              >
+                <option value="">— Ninguno —</option>
+                {(nuevos ?? []).map((n) => (
+                  <option key={n.id} value={n.id}>
+                    {n.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="c-detalle">Cómo viene (lo ve el cliente)</Label>
+            <Textarea id="c-detalle" name="condicion_detalle" rows={3} defaultValue={p.condicion_detalle ?? ""} />
+          </div>
+        </Editable>
+      )}
 
       {/* Fotos: cada botón actúa al instante */}
       <Card>
@@ -383,10 +517,15 @@ async function Editor({ params }: { params: PageProps<"/admin/catalogo/[id]">["p
                 <Link href={`/admin/precios?q=${encodeURIComponent(p.nombre)}`} className="text-primary underline">
                   Precios
                 </Link>{" "}
-                (guarda el historial). Aquí: color, unidades propias en bodega y si se muestra.
+                (guarda el historial). Aquí: color, unidades propias en bodega, disponibilidad y si se muestra. Las
+                compras al proveedor se registran en{" "}
+                <Link href="/admin/inventario" className="text-primary underline">
+                  Inventario
+                </Link>
+                .
               </>
             ) : (
-              "Aquí cambiás el color, las unidades propias en bodega y si se muestra. El precio lo pone un administrador."
+              "Aquí cambiás el color, las unidades propias en bodega (después de contarlas), la disponibilidad y si se muestra. El precio lo pone un administrador."
             )}
           </p>
           {variantes.map((v) => (
@@ -394,7 +533,7 @@ async function Editor({ params }: { params: PageProps<"/admin/catalogo/[id]">["p
               key={v.id}
               accion={guardarVariante}
               vista={
-                <div className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-[1.4fr_1fr_1fr_1fr]">
+                <div className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-[1.4fr_1fr_1fr_1.3fr_1fr]">
                   <p className="font-medium">{v.nombre}</p>
                   <p>
                     <span className="text-muted-foreground">Precio </span>
@@ -403,6 +542,10 @@ async function Editor({ params }: { params: PageProps<"/admin/catalogo/[id]">["p
                   <p>
                     <span className="text-muted-foreground">En bodega </span>
                     {v.stock}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">Sin bodega </span>
+                    {DISPONIBILIDAD_MANUAL[v.disponibilidad_manual]}
                   </p>
                   <p className={v.activo ? "" : "text-muted-foreground"}>{v.activo ? "Se muestra" : "No se muestra"}</p>
                 </div>
@@ -426,10 +569,36 @@ async function Editor({ params }: { params: PageProps<"/admin/catalogo/[id]">["p
                   </Label>
                   <Input id={`stock-${v.id}`} name="stock" type="number" min="0" defaultValue={v.stock} />
                 </div>
+                <div className="space-y-1">
+                  <Label htmlFor={`disp-${v.id}`} className="text-xs">
+                    Si no hay en bodega
+                  </Label>
+                  <select
+                    id={`disp-${v.id}`}
+                    name="disponibilidad_manual"
+                    defaultValue={v.disponibilidad_manual}
+                    className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+                  >
+                    {Object.entries(DISPONIBILIDAD_MANUAL).map(([valor, texto]) => (
+                      <option key={valor} value={valor}>
+                        {texto}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <label className="flex h-9 items-center gap-2 text-sm">
                   <input type="checkbox" name="activo" defaultChecked={v.activo} className="size-4 accent-[var(--marca)]" />
                   Mostrar
                 </label>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor={`nota-${v.id}`} className="text-xs">
+                  Si cambiaste las unidades en bodega: ¿por qué? (conteo, dañado, regalo…)
+                </Label>
+                <Input id={`nota-${v.id}`} name="nota" placeholder="Conteo de bodega" />
+                <p className="text-xs text-muted-foreground">
+                  Las compras al proveedor y las ventas mueven el stock solas; aquí solo se corrige después de contar.
+                </p>
               </div>
             </FilaEditable>
           ))}

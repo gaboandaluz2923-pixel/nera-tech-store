@@ -11,6 +11,7 @@ import { createClient } from "@/lib/supabase/server";
 import { usd2 } from "@/lib/tienda/formato";
 import { configTienda } from "@/lib/tienda/datos";
 import { minimoSinPerdida as minimoSinPerdidaBase } from "@/lib/pricing";
+import { costoEnBodega } from "@/lib/tienda/costos";
 import { formatoAlmacenamiento } from "@/lib/listas/normalizar";
 import { guardarOferta } from "../../actions";
 import { aLocalSV, estadoOferta } from "../../util";
@@ -49,6 +50,8 @@ async function Editor({ params }: { params: PageProps<"/admin/promociones/oferta
   if (!oferta) notFound();
   const precioOferta = new Map((precios ?? []).map((p) => [p.variante_id as string, Number(p.precio)]));
   const costo = new Map(filas.map((f) => [`${f.productoId}|${f.ramGb ?? "-"}|${f.almacenamientoGb ?? "-"}`, f.mejor?.costo ?? null]));
+  // Lo que está en bodega manda: entró a un costo y tiene que salir sin pérdida
+  const bodega = await costoEnBodega(((vs ?? []) as { id: string }[]).map((v) => v.id));
 
   // Agrupar por producto, en el orden de la tienda
   const grupos = new Map<string, { nombre: string; categoria: string; orden: number; variantes: Variante[] }>();
@@ -123,7 +126,8 @@ async function Editor({ params }: { params: PageProps<"/admin/promociones/oferta
                     {g.variantes
                       .sort((a, b) => (a.almacenamiento_gb ?? 0) - (b.almacenamiento_gb ?? 0) || (a.color ?? "").localeCompare(b.color ?? ""))
                       .map((v) => {
-                        const c = costo.get(`${v.producto_id}|${v.ram_gb ?? "-"}|${v.almacenamiento_gb ?? "-"}`) ?? null;
+                        const cb = bodega.get(v.id);
+                        const c = cb ?? costo.get(`${v.producto_id}|${v.ram_gb ?? "-"}|${v.almacenamiento_gb ?? "-"}`) ?? null;
                         const actual = precioOferta.get(v.id);
                         const memoria =
                           v.almacenamiento_gb === null
@@ -135,7 +139,10 @@ async function Editor({ params }: { params: PageProps<"/admin/promociones/oferta
                           <tr key={v.id}>
                             <td className="p-2">{[memoria, v.color].filter(Boolean).join(" · ") || "Única"}</td>
                             <td className="p-2 text-right">{usd2(Number(v.precio))}</td>
-                            <td className="p-2 text-right text-muted-foreground">{c === null ? "—" : usd2(c)}</td>
+                            <td className="p-2 text-right text-muted-foreground">
+                              {c === null ? "—" : usd2(c)}
+                              {cb !== undefined ? <span className="block text-[11px]">en bodega</span> : null}
+                            </td>
                             <td className="p-2 text-right text-muted-foreground">{c === null ? "—" : usd2(minimoSinPerdida(c))}</td>
                             <td className="p-2">
                               <Input
@@ -159,7 +166,11 @@ async function Editor({ params }: { params: PageProps<"/admin/promociones/oferta
           ))}
         </CardContent>
       </Card>
-      <div className="sticky bottom-0 flex items-center gap-3 border-t bg-background py-3">
+      <div className="sticky bottom-0 flex flex-wrap items-center gap-3 border-t bg-background py-3">
+        <label className="flex items-center gap-2 text-sm text-muted-foreground">
+          <input type="checkbox" name="acepta_perdida" className="size-4" />
+          Acepto vender con pérdida (solo si es a propósito, por ejemplo para liquidar)
+        </label>
         <BotonGuardar>Guardar oferta</BotonGuardar>
         <Link href="/admin/promociones" className="text-sm text-muted-foreground hover:underline">
           Volver a Promociones
