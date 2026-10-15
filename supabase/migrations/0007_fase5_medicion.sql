@@ -115,7 +115,8 @@ language sql stable as $$
   order by 2 desc
   limit 40
 $$;
-revoke execute on function public.analitica_busquedas(timestamptz) from anon;
+revoke execute on function public.analitica_busquedas(timestamptz) from public, anon;
+grant execute on function public.analitica_busquedas(timestamptz) to authenticated;
 
 -- Unidades vendidas por configuración (producto + RAM + almacenamiento): rotación para la sugerencia de precio
 create or replace function public.ventas_por_configuracion(desde timestamptz)
@@ -129,11 +130,17 @@ language sql stable as $$
   group by 1, 2, 3
 $$;
 
-revoke execute on function public.ventas_por_configuracion(timestamptz) from anon;
-revoke execute on function public.analitica_embudo(timestamptz) from anon;
-revoke execute on function public.analitica_productos(timestamptz) from anon;
-revoke execute on function public.analitica_origenes(timestamptz) from anon;
-revoke execute on function public.analitica_whatsapp(timestamptz) from anon;
-revoke execute on function public.ventas_por_producto(timestamptz) from anon;
+revoke execute on function public.ventas_por_configuracion(timestamptz) from public, anon;
+grant execute on function public.ventas_por_configuracion(timestamptz) to authenticated;
+revoke execute on function public.analitica_embudo(timestamptz) from public, anon;
+grant execute on function public.analitica_embudo(timestamptz) to authenticated;
+revoke execute on function public.analitica_productos(timestamptz) from public, anon;
+grant execute on function public.analitica_productos(timestamptz) to authenticated;
+revoke execute on function public.analitica_origenes(timestamptz) from public, anon;
+grant execute on function public.analitica_origenes(timestamptz) to authenticated;
+revoke execute on function public.analitica_whatsapp(timestamptz) from public, anon;
+grant execute on function public.analitica_whatsapp(timestamptz) to authenticated;
+revoke execute on function public.ventas_por_producto(timestamptz) from public, anon;
+grant execute on function public.ventas_por_producto(timestamptz) to authenticated;
 
 notify pgrst, 'reload schema';
