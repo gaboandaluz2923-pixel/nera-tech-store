@@ -7,6 +7,10 @@ import { IconoWhatsApp } from "@/components/tienda/whatsapp-flotante";
 import { catalogo, configTienda } from "@/lib/tienda/datos";
 import { CATEGORIAS, dondeContraEntrega } from "@/lib/tienda/formato";
 import { enlaceWhatsAppA } from "@/lib/whatsapp";
+import { SITE_URL } from "@/lib/url-sitio";
+
+// Perfiles oficiales de Nera Tech (se agregan a los datos para Google)
+const REDES = ["https://www.instagram.com/neratech.sv/", "https://www.tiktok.com/@neratech.sv"];
 
 export default async function Inicio() {
   const [productos, c] = await Promise.all([catalogo(), configTienda()]);
@@ -31,8 +35,25 @@ export default async function Inicio() {
     Number.POSITIVE_INFINITY
   );
 
+  // Datos de la empresa para Google: une el sitio con Instagram, TikTok y Facebook (búsquedas por "Nera Tech")
+  const empresaLd = {
+    "@context": "https://schema.org",
+    "@type": "OnlineStore",
+    name: "Nera Tech",
+    legalName: "Nera Tech SV, S.A.S. de C.V.",
+    url: SITE_URL,
+    logo: `${SITE_URL}/marca/logo-claro.png`,
+    description: "Tienda en línea de celulares y accesorios nuevos y sellados en El Salvador.",
+    telephone: c.whatsapp ? `+${c.whatsapp}` : undefined,
+    taxID: c.negocio.nit || undefined,
+    address: { "@type": "PostalAddress", addressLocality: "San Salvador", addressCountry: "SV" },
+    areaServed: "SV",
+    sameAs: REDES,
+  };
+
   return (
     <div className="mx-auto max-w-6xl space-y-12 px-4 pt-6">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(empresaLd).replace(/</g, "\\u003c") }} />
       {/* 1. Qué vendemos, cómo te ayuda y qué hacer (StoryBrand, prueba de 5 segundos) */}
       <section className="overflow-hidden rounded-2xl bg-marca-oscuro px-6 py-10 text-white sm:px-10 sm:py-14">
         <p className="text-sm font-semibold tracking-wide text-marca uppercase">Nera Tech · El Salvador</p>
