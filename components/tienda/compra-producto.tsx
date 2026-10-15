@@ -10,11 +10,11 @@ import {
 } from "@/app/(tienda)/producto/[slug]/actions";
 import type { ComboTienda, VarianteTienda } from "@/lib/tienda/datos";
 import {
-  DESCUENTO_SIN_TARJETA,
   TEXTO_DISPONIBILIDAD,
   cuota,
   finDeOferta,
   precioConDescuento,
+  textoDescuento,
   usd,
   usd2,
 } from "@/lib/tienda/formato";
@@ -35,6 +35,8 @@ type Props = {
   mesesTasaCero: number;
   costoEnvio: number;
   envioGratisDesde: number | null;
+  /** % de descuento al pagar en efectivo o transferencia (Configuración) */
+  descuentoSinTarjeta: number;
 };
 
 const PUNTO_DISP = {
@@ -239,8 +241,8 @@ export function CompraProducto(props: Props) {
         <p className="mt-1.5 inline-flex items-center gap-1.5 rounded-md bg-green-50 px-2 py-1 text-sm font-medium text-green-800">
           <Banknote className="size-4 shrink-0" aria-hidden />
           <span>
-            {DESCUENTO_SIN_TARJETA.texto}:{" "}
-            <strong>{usd2(precioConDescuento(elegida.precio))}</strong>
+            {textoDescuento(p.descuentoSinTarjeta)}:{" "}
+            <strong>{usd2(precioConDescuento(elegida.precio, p.descuentoSinTarjeta))}</strong>
           </span>
         </p>
         <p className="mt-1 text-sm text-muted-foreground">

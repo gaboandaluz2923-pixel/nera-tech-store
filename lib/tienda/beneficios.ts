@@ -2,10 +2,10 @@ import "server-only";
 import { createServiceClient } from "@/lib/supabase/server";
 import { calcularCarrito, type ResumenCarrito } from "@/lib/tienda/calculo";
 import { costosDeVariantes, descuentoMaximo } from "@/lib/tienda/costos";
-import { descuentoSinTarjeta } from "@/lib/tienda/formato";
+import { descuentoSinTarjeta, leerPorcentajeSinTarjeta } from "@/lib/tienda/formato";
 
 // Beneficios de la fase 4: cupones y Puntos Nera, y el cálculo completo del pedido.
-// Regla de Gabriel: el 6% (efectivo o transferencia) siempre aplica y además el cliente
+// Regla de Gabriel: el descuento sin tarjeta (efectivo o transferencia, % en Configuración) siempre aplica y además el cliente
 // usa UN beneficio: un cupón o sus puntos. Ningún beneficio deja el pedido bajo costo.
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -23,8 +23,11 @@ export type ReglasPuntos = {
 };
 export type ReglasRegalo = { activo: boolean; monto: number; minimo: number };
 
-export async function reglasBeneficios(): Promise<{ puntos: ReglasPuntos; regalo: ReglasRegalo }> {
-  const { data } = await createServiceClient().from("configuracion").select("clave, valor").in("clave", ["puntos", "regalo_cumple"]);
+export async function reglasBeneficios(): Promise<{ puntos: ReglasPuntos; regalo: ReglasRegalo; descuentoSinTarjeta: number }> {
+  const { data } = await createServiceClient()
+    .from("configuracion")
+    .select("clave, valor")
+    .in("clave", ["puntos", "regalo_cumple", "descuento_sin_tarjeta"]);
   const c = new Map((data ?? []).map((f) => [f.clave as string, (f.valor ?? {}) as Record<string, unknown>]));
   const p = c.get("puntos") ?? {};
   const g = c.get("regalo_cumple") ?? {};
@@ -41,6 +44,7 @@ export async function reglasBeneficios(): Promise<{ puntos: ReglasPuntos; regalo
       monto: Number(g.monto) > 0 ? Number(g.monto) : 5,
       minimo: Number(g.minimo) >= 0 ? Number(g.minimo) : 20,
     },
+    descuentoSinTarjeta: leerPorcentajeSinTarjeta(c.get("descuento_sin_tarjeta")),
   };
 }
 
@@ -191,8 +195,10 @@ export async function usosDeCupon(cuponId: string, correo: string) {
 // ---------------------------------------------------------------------------
 export type Cotizacion = {
   resumen: ResumenCarrito;
-  /** 6% por efectivo o transferencia */
+  /** Descuento por efectivo o transferencia (% en Configuración) */
   descuentoPago: number;
+  /** % de descuento sin tarjeta con el que se calculó */
+  porcentajeSinTarjeta: number;
   /** Lo que ahorraría con efectivo o transferencia (para el aviso al elegir tarjeta) */
   descuentoPagoPosible: number;
   cupon: { id: string; codigo: string; monto: number; recortado: boolean; envioGratis: boolean } | null;
@@ -215,8 +221,9 @@ export async function cotizarPedido(e: {
 }): Promise<Cotizacion> {
   const [resumen, reglas] = await Promise.all([calcularCarrito(e.lineas), reglasBeneficios()]);
   const correo = (e.correo ?? "").trim().toLowerCase();
-  const descuentoPago = descuentoSinTarjeta(resumen.productos, e.formaPago);
-  const descuentoPagoPosible = descuentoSinTarjeta(resumen.productos, "transferencia");
+  const pct = reglas.descuentoSinTarjeta;
+  const descuentoPago = descuentoSinTarjeta(resumen.productos, e.formaPago, pct);
+  const descuentoPagoPosible = descuentoSinTarjeta(resumen.productos, "transferencia", pct);
   const cobradoSinBeneficio = r2(resumen.productos - descuentoPago + resumen.envio);
 
   const saldo =
@@ -224,6 +231,7 @@ export async function cotizarPedido(e: {
   const base: Cotizacion = {
     resumen,
     descuentoPago,
+    porcentajeSinTarjeta: pct,
     descuentoPagoPosible,
     cupon: null,
     cuponError: null,

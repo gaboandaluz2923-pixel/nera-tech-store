@@ -3,7 +3,7 @@
 
 export type DescuentosPedido = {
   forma_pago: string;
-  descuento: number | string | null; // 6% por efectivo o transferencia
+  descuento: number | string | null; // descuento por efectivo o transferencia (% en Configuración)
   descuento_combos?: number | string | null;
   descuento_cupon?: number | string | null;
   puntos_usados?: number | null;

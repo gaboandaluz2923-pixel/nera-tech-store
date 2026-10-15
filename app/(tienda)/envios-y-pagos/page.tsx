@@ -3,21 +3,23 @@ import { Banknote, CreditCard, Landmark, Percent, Truck, Wallet } from "lucide-r
 import { Button } from "@/components/ui/button";
 import { IconoWhatsApp } from "@/components/tienda/icono-whatsapp";
 import { configTienda } from "@/lib/tienda/datos";
-import { DESCUENTO_SIN_TARJETA, dondeContraEntrega, usd } from "@/lib/tienda/formato";
+import { dondeContraEntrega, textoDescuento, usd } from "@/lib/tienda/formato";
 import { enlaceWhatsAppA } from "@/lib/whatsapp";
 
-export const metadata: Metadata = {
-  title: "Envíos y formas de pago",
-  description:
-    "6% de descuento al pagar con efectivo o transferencia. Pagá al recibir, con transferencia, tarjeta o tasa 0%. Envíos a todo El Salvador en 24 a 48 horas.",
-  alternates: { canonical: "/envios-y-pagos" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const c = await configTienda();
+  return {
+    title: "Envíos y formas de pago",
+    description: `${textoDescuento(c.descuentoSinTarjeta)}. Pagá al recibir, con transferencia, tarjeta o tasa 0%. Envíos a todo El Salvador en 24 a 48 horas.`,
+    alternates: { canonical: "/envios-y-pagos" },
+  };
+}
 
 export default async function PaginaEnvios() {
   const c = await configTienda();
   const { envio, tasaCero } = c;
 
-  const insignia = `${DESCUENTO_SIN_TARJETA.porcentaje}% de descuento`;
+  const insignia = `${c.descuentoSinTarjeta}% de descuento`;
   const pagos: { icono: typeof Wallet; titulo: string; texto: string; insignia?: string }[] = [
     {
       icono: Wallet,
@@ -43,7 +45,7 @@ export default async function PaginaEnvios() {
     <div className="mx-auto max-w-3xl px-4 pt-6 pb-16">
       <h1 className="text-2xl font-bold sm:text-3xl">Envíos y formas de pago</h1>
       <p className="mt-2 text-muted-foreground">
-        {DESCUENTO_SIN_TARJETA.texto}. El descuento es sobre los productos; el envío no cambia. Sin crear cuenta.
+        {textoDescuento(c.descuentoSinTarjeta)}. El descuento es sobre los productos; el envío no cambia. Sin crear cuenta.
       </p>
 
       <section aria-labelledby="t-envios" className="mt-8">

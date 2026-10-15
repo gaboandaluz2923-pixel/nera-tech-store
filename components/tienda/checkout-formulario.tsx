@@ -34,10 +34,10 @@ import { Button } from "@/components/ui/button";
 import { quitarDelCarrito, useCarrito, vaciarCarrito } from "@/lib/tienda/carrito";
 import { cookiesMeta, medir } from "@/lib/analytics";
 import {
-  DESCUENTO_SIN_TARJETA,
   cuota,
   motivoSinContraEntrega,
   type ReglaContraEntrega,
+  textoDescuento,
   tieneDescuentoSinTarjeta,
   usd2,
 } from "@/lib/tienda/formato";
@@ -49,6 +49,8 @@ type FormaPago = "contra_entrega" | "wompi" | "transferencia" | "tasa_cero";
 type Props = {
   zonasContraEntrega: string[];
   reglaContraEntrega: ReglaContraEntrega;
+  /** % de descuento al pagar en efectivo o transferencia (Configuración) */
+  descuentoSinTarjeta: number;
   departamentos: readonly string[];
   otraZona: string;
   mesesTasaCero: number;
@@ -154,7 +156,7 @@ export function CheckoutFormulario(p: Props) {
         ? "wompi"
         : forma;
 
-  // El total (6%, cupón o puntos, tope de margen) siempre lo calcula el servidor
+  // El total (descuento sin tarjeta, cupón o puntos, tope de margen) siempre lo calcula el servidor
   const claveCotizacion = JSON.stringify({ lineas, formaValida, cuponAplicado, usarPuntos, correoCupon });
   useEffect(() => {
     let vigente = true;
@@ -286,7 +288,9 @@ export function CheckoutFormulario(p: Props) {
     });
   }
 
-  const etiquetaDescuento = `${DESCUENTO_SIN_TARJETA.porcentaje}% de descuento`;
+  // El % que usó el servidor al cotizar (si ya cotizó); si no, el de Configuración
+  const pctSinTarjeta = cot?.porcentajeSinTarjeta ?? p.descuentoSinTarjeta;
+  const etiquetaDescuento = `${pctSinTarjeta}% de descuento`;
   const opciones: {
     id: FormaPago;
     titulo: string;
@@ -582,7 +586,7 @@ export function CheckoutFormulario(p: Props) {
             3. ¿Cómo pagás?
           </h2>
           <p className="text-sm text-muted-foreground">
-            {DESCUENTO_SIN_TARJETA.texto}.
+            {textoDescuento(pctSinTarjeta)}.
           </p>
           <div
             className="grid gap-2"
@@ -790,7 +794,7 @@ export function CheckoutFormulario(p: Props) {
               {descuento > 0 ? (
                 <div className="flex justify-between text-green-700">
                   <dt>
-                    Descuento {DESCUENTO_SIN_TARJETA.porcentaje}% ·{" "}
+                    Descuento {pctSinTarjeta}% ·{" "}
                     {formaValida === "contra_entrega" ? "efectivo" : "transferencia"}
                   </dt>
                   <dd className="font-medium">−{usd2(descuento)}</dd>

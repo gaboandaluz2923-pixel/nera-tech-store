@@ -17,6 +17,7 @@ export default async function PaginaCheckout() {
       <CheckoutFormulario
         zonasContraEntrega={c.municipiosContraEntrega}
         reglaContraEntrega={c.contraEntrega}
+        descuentoSinTarjeta={c.descuentoSinTarjeta}
         departamentos={DEPARTAMENTOS}
         otraZona={OTRA_ZONA}
         mesesTasaCero={c.tasaCero.meses}

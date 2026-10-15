@@ -7,9 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { tablaPrecios } from "@/lib/admin/precios-tabla";
-import { COMISION_PAQUETERA, COSTO_ENVIO_FIJO } from "@/lib/precios";
 import { createClient } from "@/lib/supabase/server";
-import { DESCUENTO_SIN_TARJETA, usd2 } from "@/lib/tienda/formato";
+import { usd2 } from "@/lib/tienda/formato";
+import { configTienda } from "@/lib/tienda/datos";
+import { minimoSinPerdida as minimoSinPerdidaBase } from "@/lib/pricing";
 import { formatoAlmacenamiento } from "@/lib/listas/normalizar";
 import { guardarOferta } from "../../actions";
 import { aLocalSV, estadoOferta } from "../../util";
@@ -27,14 +28,13 @@ type Variante = {
   productos: { nombre: string; estado: string; orden: number; categorias: { nombre: string } | null } | null;
 };
 
-/** Precio más bajo que no pierde dinero, aun con el 6% de efectivo y sin cobrar envío */
-const minimoSinPerdida = (costo: number) =>
-  Math.ceil(((costo + COSTO_ENVIO_FIJO) / ((1 - COMISION_PAQUETERA) * (1 - DESCUENTO_SIN_TARJETA.porcentaje / 100))) * 100) / 100;
 
 async function Editor({ params }: { params: PageProps<"/admin/promociones/oferta/[id]">["params"] }) {
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   const supabase = await createClient();
+  const pct = (await configTienda()).descuentoSinTarjeta;
+  const minimoSinPerdida = (costo: number) => minimoSinPerdidaBase(costo, pct);
   const [{ data: oferta }, { data: precios }, { data: vs, error }, filas] = await Promise.all([
     supabase.from("promociones").select("id, nombre, inicio, fin, activa").eq("id", id).maybeSingle(),
     supabase.from("promocion_precios").select("variante_id, precio").eq("promocion_id", id),
@@ -96,7 +96,7 @@ async function Editor({ params }: { params: PageProps<"/admin/promociones/oferta
           <CardTitle>Precios de oferta</CardTitle>
           <CardDescription>
             Dejá vacío lo que no entra en la oferta. &quot;Mínimo sin pérdida&quot; es el precio más bajo que no pierde dinero aunque el
-            cliente pague en efectivo con {DESCUENTO_SIN_TARJETA.porcentaje}% y sin cobrar envío.
+            cliente pague en efectivo con {pct}% y sin cobrar envío.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">

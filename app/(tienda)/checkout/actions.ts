@@ -46,7 +46,7 @@ async function clienteDeSesion(): Promise<string | null> {
   return (await perfilDeUsuario(user)).id;
 }
 
-/** Total del checkout con 6%, cupón o puntos, calculado en el servidor (igual que al confirmar). */
+/** Total del checkout con el descuento sin tarjeta, cupón o puntos, calculado en el servidor (igual que al confirmar). */
 export async function cotizar(e: {
   lineas: unknown;
   formaPago: string;

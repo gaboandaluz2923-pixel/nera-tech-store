@@ -10,6 +10,7 @@ import {
   type CostosProveedor,
 } from "@/lib/precios";
 import { resumirMercado, sugerirPrecio, type Mercado, type Sugerencia } from "@/lib/pricing";
+import { configTienda } from "@/lib/tienda/datos";
 
 export type Oferta = {
   proveedor: string;
@@ -76,6 +77,7 @@ type Observado = { producto_id: string; ram_gb: number | null; almacenamiento_gb
 
 export async function tablaPrecios(supabase: SupabaseClient): Promise<FilaPrecio[]> {
   const hace30 = new Date(Date.now() - 30 * 86_400_000);
+  const pct = (await configTienda()).descuentoSinTarjeta;
   const [vinculos, variantes, productos, proveedores, observadosR, ventasR] = await Promise.all([
     todo<Vinculo>((a, b) =>
       supabase
@@ -219,7 +221,7 @@ export async function tablaPrecios(supabase: SupabaseClient): Promise<FilaPrecio
       observados: obs.slice(0, 6).map((o) => ({ precio: Number(o.precio), fuente: o.fuente, fecha: o.fecha })),
       unidades30,
       sugerencia: mejor
-        ? sugerirPrecio({ costo: mejor.costo, margenObjetivoPct: Number(prod.categorias?.margen_objetivo_pct ?? 10), mercado, unidades30 })
+        ? sugerirPrecio({ costo: mejor.costo, margenObjetivoPct: Number(prod.categorias?.margen_objetivo_pct ?? 10), mercado, unidades30, descuentoSinTarjetaPct: pct })
         : null,
     });
   }

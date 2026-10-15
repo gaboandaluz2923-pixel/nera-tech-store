@@ -4,7 +4,6 @@
 // en Precios el equipo toca "Usar" para aprobarlo.
 
 import { COMISION_PAQUETERA, COSTO_ENVIO_FIJO, contribucion, precioConMargen, redondeoComercial, usd } from "@/lib/precios";
-import { DESCUENTO_SIN_TARJETA } from "@/lib/tienda/formato";
 
 export type Mercado = { min: number; max: number; moda: number; n: number };
 export type Rotacion = "rapida" | "normal" | "lenta";
@@ -13,9 +12,9 @@ export type Sugerencia = { precio: number; contribucion: number; rotacion: Rotac
 /** Unidades vendidas en 30 días → rotación. */
 export const rotacionDe = (unidades30: number): Rotacion => (unidades30 >= 5 ? "rapida" : unidades30 >= 1 ? "normal" : "lenta");
 
-/** Precio más bajo que no pierde dinero aunque paguen en efectivo con 6% y sin cobrar envío. */
-export function minimoSinPerdida(costo: number): number {
-  return Math.ceil(((costo + COSTO_ENVIO_FIJO) / ((1 - COMISION_PAQUETERA) * (1 - DESCUENTO_SIN_TARJETA.porcentaje / 100))) * 100) / 100;
+/** Precio más bajo que no pierde dinero aunque paguen en efectivo con el descuento sin tarjeta (pct) y sin cobrar envío. */
+export function minimoSinPerdida(costo: number, pct: number): number {
+  return Math.ceil(((costo + COSTO_ENVIO_FIJO) / ((1 - COMISION_PAQUETERA) * (1 - pct / 100))) * 100) / 100;
 }
 
 /** Redondeo comercial hacia ABAJO (para quedar por debajo del mercado): .99 bajo $30; 9 o 5 desde $30. */
@@ -42,10 +41,12 @@ export function sugerirPrecio(e: {
   margenObjetivoPct: number;
   mercado: Mercado | null;
   unidades30: number;
+  /** % de descuento sin tarjeta vigente (Configuración) */
+  descuentoSinTarjetaPct: number;
 }): Sugerencia {
   const { costo, margenObjetivoPct: m, mercado } = e;
   const rotacion = rotacionDe(e.unidades30);
-  const piso = redondeoComercial(minimoSinPerdida(costo));
+  const piso = redondeoComercial(minimoSinPerdida(costo, e.descuentoSinTarjetaPct));
   const objetivo = precioConMargen(costo, m);
   const txt: string[] = [`Costo puesto ${usd(costo)}. Con tu margen objetivo de ${m}% el precio sería ${usd(objetivo)}.`];
   const vendidas = `${e.unidades30} ${e.unidades30 === 1 ? "unidad vendida" : "unidades vendidas"} en 30 días`;
@@ -90,7 +91,7 @@ export function sugerirPrecio(e: {
 
   if (precio < piso) {
     precio = piso;
-    txt.push(`No baja de ${usd(piso)}: debajo de eso se pierde dinero con el 6% de efectivo y sin cobrar envío.`);
+    txt.push(`No baja de ${usd(piso)}: debajo de eso se pierde dinero con el ${e.descuentoSinTarjetaPct}% de efectivo y sin cobrar envío.`);
   }
   const contrib = contribucion(precio, costo);
   txt.push(`Sugerido ${usd(precio)}: deja ${usd(contrib)} de contribución por unidad (con envío de $5).`);

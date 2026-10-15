@@ -3,7 +3,7 @@
 import { cacheLife, cacheTag } from "next/cache";
 import { clientePublico } from "@/lib/supabase/publico";
 import { formatoAlmacenamiento } from "@/lib/listas/normalizar";
-import type { ReglaContraEntrega } from "@/lib/tienda/formato";
+import { leerPorcentajeSinTarjeta, type ReglaContraEntrega } from "@/lib/tienda/formato";
 
 export const ETIQUETA_CATALOGO = "catalogo";
 
@@ -92,6 +92,8 @@ export type ConfigTienda = {
   tasaCero: { meses: number; banco: string };
   negocio: { nombre: string; nit: string; direccion: string; correo: string };
   garantia: Garantia | null;
+  /** % de descuento al pagar en efectivo o por transferencia (Configuración) */
+  descuentoSinTarjeta: number;
 };
 
 const ORDEN_DISP: Record<Disponibilidad, number> = { bodega: 0, proveedor: 1, agotado: 2 };
@@ -427,5 +429,6 @@ export async function configTienda(): Promise<ConfigTienda> {
     tasaCero: c.get("tasa_cero") ?? { meses: 12, banco: "" },
     negocio: c.get("negocio") ?? { nombre: "Nera Tech", nit: "", direccion: "", correo: "" },
     garantia: garantia && "plazo_meses" in garantia ? garantia : null,
+    descuentoSinTarjeta: leerPorcentajeSinTarjeta(c.get("descuento_sin_tarjeta")),
   };
 }

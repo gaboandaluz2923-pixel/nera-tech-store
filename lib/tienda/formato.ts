@@ -11,15 +11,25 @@ export function cuota(precio: number, meses: number) {
 }
 
 /**
- * Descuento por pagar sin tarjeta: 6% sobre los productos (no sobre el envío) al pagar
+ * Descuento por pagar sin tarjeta: un % sobre los productos (no sobre el envío) al pagar
  * en efectivo contra entrega o por transferencia. El precio publicado es el de tarjeta y tasa 0%.
- * El mismo cálculo se usa en el navegador (checkout) y en el servidor (crear el pedido).
+ * El % se edita en Panel → Configuración (clave `descuento_sin_tarjeta`) y llega con configTienda();
+ * el mismo cálculo se usa en el navegador (checkout) y en el servidor (crear el pedido).
  */
 export const DESCUENTO_SIN_TARJETA = {
-  porcentaje: 6,
+  /** Si todavía no se guardó otro en Configuración */
+  porcentajeInicial: 6,
+  maximo: 30,
   formas: ["contra_entrega", "transferencia"] as const,
-  texto: "6% de descuento al pagar con efectivo o transferencia",
 };
+
+export const textoDescuento = (pct: number) => `${pct}% de descuento al pagar con efectivo o transferencia`;
+
+/** Lee el % guardado en Configuración (o el inicial si falta o no es válido). */
+export function leerPorcentajeSinTarjeta(v: unknown): number {
+  const n = Number((v as { porcentaje?: unknown } | null)?.porcentaje);
+  return Number.isFinite(n) && n >= 0 && n <= DESCUENTO_SIN_TARJETA.maximo ? n : DESCUENTO_SIN_TARJETA.porcentajeInicial;
+}
 
 /**
  * Dónde y hasta qué monto se puede pagar en efectivo al recibir (Configuración → Contra entrega).
@@ -49,14 +59,13 @@ export const tieneDescuentoSinTarjeta = (formaPago: string) =>
   (DESCUENTO_SIN_TARJETA.formas as readonly string[]).includes(formaPago);
 
 /** Monto del descuento, redondeado al centavo; 0 si la forma de pago no lo tiene. */
-export function descuentoSinTarjeta(subtotal: number, formaPago: string) {
+export function descuentoSinTarjeta(subtotal: number, formaPago: string, pct: number) {
   if (!tieneDescuentoSinTarjeta(formaPago)) return 0;
-  return Math.round(subtotal * DESCUENTO_SIN_TARJETA.porcentaje) / 100;
+  return Math.round(subtotal * pct) / 100;
 }
 
 /** Precio de un producto con el descuento aplicado (para mostrarlo en la ficha). */
-export const precioConDescuento = (precio: number) =>
-  Math.round(precio * (100 - DESCUENTO_SIN_TARJETA.porcentaje)) / 100;
+export const precioConDescuento = (precio: number, pct: number) => Math.round(precio * (100 - pct)) / 100;
 
 export const TEXTO_DISPONIBILIDAD = {
   bodega: { corto: "En stock", largo: "En stock · entrega hoy en San Salvador" },

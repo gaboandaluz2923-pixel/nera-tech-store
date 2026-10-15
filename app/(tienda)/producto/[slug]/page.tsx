@@ -8,7 +8,7 @@ import { CompraProducto } from "@/components/tienda/compra-producto";
 import { Galeria } from "@/components/tienda/galeria";
 import { TarjetaProducto } from "@/components/tienda/tarjeta-producto";
 import { catalogo, configTienda, productoPorSlug, type ProductoDetalle } from "@/lib/tienda/datos";
-import { CLAVES_DECISIVAS, DESCUENTO_SIN_TARJETA, NOMBRE_CARACTERISTICA, dondeContraEntrega, usd } from "@/lib/tienda/formato";
+import { CLAVES_DECISIVAS, NOMBRE_CARACTERISTICA, dondeContraEntrega, usd } from "@/lib/tienda/formato";
 import { SITE_URL } from "@/lib/url-sitio";
 
 const RELLENO = "_"; // Cache Components exige al menos un parámetro al compilar
@@ -122,7 +122,7 @@ async function Ficha({ params }: { params: PageProps<"/producto/[slug]">["params
     ...p.faq,
     {
       pregunta: "¿Puedo pagar al recibir?",
-      respuesta: `Sí. Pagás en efectivo cuando lo recibís ${dondeContraEntrega(c.contraEntrega)}, con ${DESCUENTO_SIN_TARJETA.porcentaje}% de descuento. El mismo descuento aplica por transferencia. También aceptamos tarjeta y tasa 0%.`,
+      respuesta: `Sí. Pagás en efectivo cuando lo recibís ${dondeContraEntrega(c.contraEntrega)}, con ${c.descuentoSinTarjeta}% de descuento. El mismo descuento aplica por transferencia. También aceptamos tarjeta y tasa 0%.`,
     },
     {
       pregunta: "¿Es nuevo y original?",
@@ -171,6 +171,7 @@ async function Ficha({ params }: { params: PageProps<"/producto/[slug]">["params
               mesesTasaCero={c.tasaCero.meses}
               costoEnvio={c.envio.costo}
               envioGratisDesde={c.envio.gratis_desde}
+              descuentoSinTarjeta={c.descuentoSinTarjeta}
             />
           </div>
 
@@ -189,7 +190,7 @@ async function Ficha({ params }: { params: PageProps<"/producto/[slug]">["params
                     {f.texto}
                     {f.descuento ? (
                       <span className="ml-1.5 rounded bg-green-100 px-1.5 py-0.5 text-xs font-semibold text-green-800">
-                        −{DESCUENTO_SIN_TARJETA.porcentaje}%
+                        −{c.descuentoSinTarjeta}%
                       </span>
                     ) : null}
                   </span>

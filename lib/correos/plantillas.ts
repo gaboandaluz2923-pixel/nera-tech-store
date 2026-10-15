@@ -6,7 +6,7 @@ export type DatosPedidoCorreo = {
   nombre: string;
   total: number;
   envio: number;
-  /** Combos, 6% por efectivo o transferencia, cupón y puntos (ver lib/tienda/descuentos.ts) */
+  /** Combos, descuento por efectivo o transferencia, cupón y puntos (ver lib/tienda/descuentos.ts) */
   descuentos: { texto: string; monto: number }[];
   formaPago: string;
   pagado: boolean;
