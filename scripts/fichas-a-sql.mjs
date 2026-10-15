@@ -1,5 +1,6 @@
 // Convierte un archivo de fichas (supabase/contenido/*.json) en SQL para pegar en el SQL Editor de Supabase.
 // Uso:  node scripts/fichas-a-sql.mjs supabase/contenido/fichas-2026-10.json > supabase/contenido/fichas-2026-10.sql
+//       node scripts/fichas-a-sql.mjs ARCHIVO.json --sin-publicar > ARCHIVO.sql   (carga textos y fotos sin publicar)
 //
 // - Actualiza textos, características y FAQ de cada producto (por slug) y lo publica (estado activo).
 //   Un producto publicado igual NO aparece en la tienda hasta que tenga precio de venta.
@@ -10,6 +11,7 @@ import { readFileSync, readdirSync, existsSync } from "node:fs";
 import path from "node:path";
 
 const archivo = process.argv[2];
+const sinPublicar = process.argv.includes("--sin-publicar");
 if (!archivo) {
   console.error("Falta el archivo .json de fichas");
   process.exit(1);
@@ -59,7 +61,7 @@ console.log(`-- ================================================================
 -- Se puede correr más de una vez.
 -- =====================================================================
 
--- 1. Textos, características, preguntas frecuentes y publicación
+-- 1. Textos, características, preguntas frecuentes${sinPublicar ? " (sin publicar: el estado no cambia)" : " y publicación"}
 update public.productos p
 set nombre = d.nombre,
     resumen = d.resumen,
@@ -69,9 +71,9 @@ set nombre = d.nombre,
     faq = d.faq,
     meta_descripcion = d.meta_descripcion,
     orden = d.orden,
-    estado = case when p.estado = 'oculto' then 'activo'::public.estado_producto else p.estado end,
+${sinPublicar ? "" : `    estado = case when p.estado = 'oculto' then 'activo'::public.estado_producto else p.estado end,
     publicado_en = coalesce(p.publicado_en, now()),
-    updated_at = now()
+`}    updated_at = now()
 from jsonb_to_recordset(${json(productos)}) as d(
   slug text, nombre text, resumen text, descripcion text, caracteristicas jsonb,
   incluye text, faq jsonb, meta_descripcion text, orden int
