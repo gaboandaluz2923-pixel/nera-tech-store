@@ -3,6 +3,8 @@ import { Pie } from "@/components/tienda/pie";
 import { WhatsAppFlotante } from "@/components/tienda/whatsapp-flotante";
 import { BarraComparar } from "@/components/tienda/comparar";
 import { CarritoHoja } from "@/components/tienda/carrito-hoja";
+import { Medicion } from "@/components/tienda/medicion";
+import { Suspense } from "react";
 import { catalogo } from "@/lib/tienda/datos";
 
 // Accesorios que se ofrecen en el carrito ("Completá tu equipo") cuando hay un celular
@@ -22,6 +24,9 @@ export default function LayoutTienda({ children }: { children: React.ReactNode }
       <WhatsAppFlotante />
       <BarraComparar />
       <Carrito />
+      <Suspense fallback={null}>
+        <Medicion />
+      </Suspense>
     </>
   );
 }

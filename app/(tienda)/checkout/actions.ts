@@ -1,5 +1,6 @@
 "use server";
 
+import { headers } from "next/headers";
 import { sitioActual } from "@/lib/sitio";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { cotizarPedido, type Cotizacion } from "@/lib/tienda/beneficios";
@@ -22,7 +23,9 @@ export async function confirmarPedido(entrada: unknown): Promise<ResultadoPedido
   }
   try {
     const clientePuntos = datos.data.usarPuntos ? await clienteDeSesion() : null;
-    const r = await crearPedido(datos.data, await sitioActual(), { clientePuntos });
+    const h = await headers();
+    const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || null;
+    const r = await crearPedido(datos.data, await sitioActual(), { clientePuntos, ip, agente: h.get("user-agent") });
     // Con sesión: guardar la dirección nueva en su cuenta (si la pidió)
     if (r.ok && (entrada as { guardarDireccion?: boolean })?.guardarDireccion) {
       await guardarDireccionDeCompra(datos.data).catch((e) => console.error("guardarDireccionDeCompra", e));

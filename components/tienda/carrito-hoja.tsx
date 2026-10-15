@@ -20,6 +20,7 @@ import {
 } from "@/lib/tienda/carrito";
 import type { ProductoResumen } from "@/lib/tienda/datos";
 import { usd, usd2 } from "@/lib/tienda/formato";
+import { medir } from "@/lib/analytics";
 
 /** Recalcula el carrito en el servidor cada vez que cambia. Lo usan la hoja y el checkout. */
 export function useResumenCarrito() {
@@ -162,7 +163,10 @@ export function CarritoHoja({ accesorios }: { accesorios: ProductoResumen[] }) {
                       <Button
                         size="sm"
                         className="mt-2"
-                        onClick={() => c.faltan.forEach((f) => agregarAlCarrito(f.varianteId, f.cantidad))}
+                        onClick={() => {
+                          c.faltan.forEach((f) => agregarAlCarrito(f.varianteId, f.cantidad));
+                          medir("clic_bundle", { nombre: c.nombre, combo: c.id, desde: "carrito" });
+                        }}
                       >
                         Agregar combo
                       </Button>
@@ -186,7 +190,14 @@ export function CarritoHoja({ accesorios }: { accesorios: ProductoResumen[] }) {
                           {a.nombre}
                           <span className="block text-xs text-muted-foreground">{usd(a.precioDesde)}</span>
                         </span>
-                        <Button size="sm" variant="outline" onClick={() => agregarAlCarrito(a.varianteDestacada!)}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            agregarAlCarrito(a.varianteDestacada!);
+                            medir("agregar_carrito", { productoId: a.id, varianteId: a.varianteDestacada, nombre: a.nombre, valor: a.precioDesde, desde: "completa_tu_equipo" });
+                          }}
+                        >
                           Agregar
                         </Button>
                       </li>

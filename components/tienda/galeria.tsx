@@ -2,11 +2,21 @@
 
 import Image from "next/image";
 import { useRef, useState } from "react";
+import { medir } from "@/lib/analytics";
 import type { ImagenTienda } from "@/lib/tienda/datos";
 
 // Galería: en el teléfono se desliza con el dedo; en escritorio se eligen las miniaturas.
 export function Galeria({ imagenes, nombre }: { imagenes: ImagenTienda[]; nombre: string }) {
-  const [actual, setActual] = useState(0);
+  const [actual, setActualBase] = useState(0);
+  const [medido, setMedido] = useState(false);
+  // La primera vez que mira otra foto, se cuenta como interés en el producto
+  const setActual = (i: number) => {
+    setActualBase(i);
+    if (i > 0 && !medido) {
+      setMedido(true);
+      medir("clic_foto", { nombre, foto: i + 1 });
+    }
+  };
   const pista = useRef<HTMLDivElement>(null);
 
   if (imagenes.length === 0) {

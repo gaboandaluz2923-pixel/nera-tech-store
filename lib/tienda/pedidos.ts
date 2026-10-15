@@ -2,8 +2,10 @@ import "server-only";
 import { after } from "next/server";
 import { z } from "zod";
 import { avisarPagoConfirmado, avisarPedidoNuevo } from "@/lib/correos/avisos";
+import { enviarCompraMeta } from "@/lib/meta";
 import { createServiceClient } from "@/lib/supabase/server";
 import { cotizarPedido, otorgarPuntos, saldoPuntos, usosDeCupon } from "@/lib/tienda/beneficios";
+import { costosDeVariantes } from "@/lib/tienda/costos";
 import type { ResumenCarrito } from "@/lib/tienda/calculo";
 import { configTienda } from "@/lib/tienda/datos";
 import { crearEnlacePago, ErrorWompi } from "@/lib/wompi";
@@ -62,6 +64,10 @@ export const esquemaCheckout = z
     usarPuntos: z.boolean().optional().default(false),
     /** "No quiero recibir publicidad" (por defecto sí recibe) */
     noOfertas: z.boolean().optional().default(false),
+    /** Cookies de Meta y origen de la visita (para unir la compra con el anuncio) */
+    atribucion: z
+      .object({ fbp: z.string().max(120).nullish(), fbc: z.string().max(300).nullish(), origen: z.string().max(120).nullish() })
+      .optional(),
     totalVisto: z.number().nonnegative(),
     lineas: z.array(z.object({ v: z.string(), c: z.number() })).min(1, "Tu carrito está vacío.").max(30),
   })
@@ -93,7 +99,7 @@ const ahora = () => new Date().toISOString();
 export async function crearPedido(
   datos: DatosCheckout,
   origen: string,
-  opciones: { clientePuntos?: string | null } = {}
+  opciones: { clientePuntos?: string | null; ip?: string | null; agente?: string | null } = {}
 ): Promise<ResultadoPedido> {
   const sb = createServiceClient();
   const [cot, config] = await Promise.all([
@@ -209,15 +215,24 @@ export async function crearPedido(
         ...direccion,
       },
       facturacion,
-      origen: "web",
+      origen: datos.atribucion?.origen || "web",
+      atribucion: {
+        fbp: datos.atribucion?.fbp ?? null,
+        fbc: datos.atribucion?.fbc ?? null,
+        ip: opciones.ip ?? null,
+        agente: opciones.agente?.slice(0, 300) ?? null,
+      },
       notas: datos.notas || null,
     })
     .select("id, numero, token, total")
     .single();
   if (e1) throw e1;
 
+  // Costo puesto al momento de vender: la contribución de cada semana usa este costo
+  const costos = await costosDeVariantes(resumen.lineas.map((l) => l.varianteId)).catch(() => new Map<string, number>());
   const { error: e2 } = await sb.from("lineas_pedido").insert(
     resumen.lineas.map((l) => ({
+      costo_unitario: costos.get(l.varianteId) ?? null,
       pedido_id: pedido.id,
       variante_id: l.varianteId,
       nombre: l.nombre,
@@ -394,6 +409,9 @@ export async function marcarPagado(p: {
     const sitio = p.sitio;
     after(() => avisarPagoConfirmado(p.pedidoId, sitio).catch((e) => console.error("avisarPagoConfirmado", e)));
   }
+  // Meta (API de conversiones): compra pagada
+  const sitioMeta = p.sitio || process.env.NEXT_PUBLIC_SITE_URL || "https://nera-tech-store.vercel.app";
+  after(() => enviarCompraMeta(p.pedidoId, sitioMeta).catch((e) => console.error("enviarCompraMeta", e)));
   // Puntos Nera: se ganan cuando el pedido está entregado y pagado
   if (pedido.estado === "entregado") await otorgarPuntos(p.pedidoId).catch((e) => console.error("otorgarPuntos", e));
   return true;

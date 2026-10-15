@@ -49,10 +49,19 @@ Registro corto de decisiones técnicas y de negocio, con fecha, para no volver a
 | 2026-10-14 | Ofertas con fecha por variante (promocion_precios); la caché de la tienda se refresca a la hora en que empieza o termina una oferta y el navegador muestra el precio normal si ya terminó | Que el precio cambie solo, sin tocar el panel |
 | 2026-10-14 | Combos = producto principal (cualquier variante) + accesorios con ahorro fijo en dólares | Más simple que un precio de combo y no se rompe si cambia el precio de un accesorio |
 | 2026-10-14 | Puntos: se ganan sobre lo pagado por productos (sin envío) al quedar entregado y pagado; se usan con sesión de Google; al cancelar se devuelven los usados y se quitan los ganados | Evita dar puntos por pedidos que no se cobran |
+| 2026-10-15 | Fase 5: medición desde un solo módulo (lib/analytics.ts) → tabla `eventos` + GA4 + Meta Pixel; los pasos del embudo también van a Meta desde el servidor con el mismo event_id | Meta recomienda navegador + servidor; no se pierden con bloqueadores |
+| 2026-10-15 | La compra (Purchase) va a Meta solo desde el servidor y solo cuando el pago está confirmado; correo y teléfono cifrados con SHA-256 | Que Meta aprenda de ventas reales, no de pedidos que luego se cancelan |
+| 2026-10-15 | Aviso sencillo de cookies (no bloquea la compra) y texto de medición en Privacidad | Recomendado; Gabriel no tuvo preferencia |
+| 2026-10-15 | Rotación = unidades vendidas de la configuración en 30 días (≥5 rápida, 1–4 normal, 0 lenta) | Recomendado; Gabriel no tuvo preferencia |
+| 2026-10-15 | Precio sugerido: costo + margen objetivo, ajustado por mercado (anotado a mano) y rotación; nunca bajo el mínimo sin pérdida; se aplica solo con "Usar" | CLAUDE.md: siempre con explicación y aprobación humana |
+| 2026-10-15 | Se guarda el costo puesto de cada línea al vender (`lineas_pedido.costo_unitario`) | La contribución de semanas pasadas no cambia cuando cambian los costos |
+| 2026-10-15 | Meta: conjunto de datos nuevo "Nera Tech tienda" (no el "OFFLINE DATA" que ya existía); configuración manual, sin Birch | Evita mezclar datos y pagar un intermediario |
 ## Fase actual
 Fase 1 — Proveedores, listas y mejor precio: terminada.
 Fase 2 — Catálogo y tienda: terminada y en producción (14 oct 2026).
 Fase 3 — Carrito, checkout sin cuenta, Wompi, Ver mi pedido, Mis pedidos y Mi cuenta con Google, Pedidos y Por facturar:
 terminada y en producción (14 oct 2026). Primera compra real con tarjeta: pedido #1001, aprobada.
 Fase 4 — Ofertas con fecha, combos, cupones, Puntos Nera (opción B), regalo de cumpleaños, avisos "ya hay stock",
-baja de publicidad y correos con Brevo: terminada (14 oct 2026). Requiere migración 0006 y CRON_SECRET en Vercel.
+baja de publicidad y correos con Brevo: terminada y en producción (14 oct 2026).
+Fase 5 — Medición (eventos propios, GA4, Meta Pixel y API de conversiones), panel de Analítica, precios de mercado y
+sugerencia con explicación: terminada (15 oct 2026). Requiere migración 0007 y las variables de GA4 y Meta en Vercel.

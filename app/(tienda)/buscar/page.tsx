@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { IconoWhatsApp } from "@/components/tienda/icono-whatsapp";
 import { TarjetaProducto } from "@/components/tienda/tarjeta-producto";
+import { MedirEvento } from "@/components/tienda/medir-evento";
 import { catalogo, configTienda, type ProductoResumen } from "@/lib/tienda/datos";
 import { sinAcentos } from "@/lib/listas/normalizar";
 import { enlaceWhatsAppA } from "@/lib/whatsapp";
@@ -43,6 +44,7 @@ async function Resultados({ searchParams }: { searchParams: PageProps<"/buscar">
 
   return (
     <>
+      {q ? <MedirEvento key={q} tipo="busqueda" datos={{ termino: q, resultados: encontrados.length }} /> : null}
       <h1 className="text-2xl font-bold">{q ? <>Resultados para “{q}”</> : "Buscar"}</h1>
       <form action="/buscar" className="mt-4 flex gap-2" role="search">
         <input

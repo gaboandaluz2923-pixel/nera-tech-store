@@ -4,8 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/server";
 import { tablaPrecios, type FilaPrecio } from "@/lib/admin/precios-tabla";
-import { contribucion, pct, roasMinimo, usd } from "@/lib/precios";
-import { fijarPrecio } from "./actions";
+import { pct, roasMinimo, usd } from "@/lib/precios";
+import { BotonGuardar, FormularioAccion } from "@/components/admin/formulario-accion";
+import { anotarPrecioObservado, fijarPrecio } from "./actions";
+
+const ROTACION = { rapida: "se vende rápido", normal: "rotación normal", lenta: "sin ventas en 30 días" } as const;
 
 type Filtros = { q?: string; categoria?: string; vista?: string };
 
@@ -23,7 +26,6 @@ function Cambio({ valor }: { valor: number | null }) {
 }
 
 function FilaTabla({ f }: { f: FilaPrecio }) {
-  const contribObjetivo = f.mejor && f.precioObjetivo ? contribucion(f.precioObjetivo, f.mejor.costo) : null;
   const margenBajo = f.margen !== null && f.margen * 100 < f.margenObjetivoPct - 0.05;
   return (
     <tr className="border-t align-top">
@@ -57,16 +59,70 @@ function FilaTabla({ f }: { f: FilaPrecio }) {
         </ul>
       </td>
       <td className="p-2 text-right tabular-nums">{usd(f.mejor?.costo)}</td>
-      <td className="p-2 text-right tabular-nums">
-        {f.precioObjetivo ? (
-          <>
-            <div>{usd(f.precioObjetivo)}</div>
-            <div className="text-xs text-muted-foreground">
-              {f.margenObjetivoPct}% · deja {usd(contribObjetivo)}
+      <td className="w-64 p-2 align-top">
+        {f.sugerencia ? (
+          <div className="space-y-1">
+            <div className="flex items-center justify-end gap-2">
+              <span className="text-right">
+                <span className="block font-semibold tabular-nums">{usd(f.sugerencia.precio)}</span>
+                <span className="block text-xs text-muted-foreground">
+                  deja {usd(f.sugerencia.contribucion)} · {ROTACION[f.sugerencia.rotacion]}
+                </span>
+              </span>
+              {f.precioVenta !== f.sugerencia.precio ? (
+                <form action={fijarPrecio}>
+                  <input type="hidden" name="productoId" value={f.productoId} />
+                  <input type="hidden" name="ram" value={f.ramGb ?? ""} />
+                  <input type="hidden" name="alm" value={f.almacenamientoGb ?? ""} />
+                  <input type="hidden" name="precio" value={f.sugerencia.precio} />
+                  <input type="hidden" name="razon" value="sugerido aprobado" />
+                  <Button type="submit" size="sm" variant="outline" aria-label={`Usar ${usd(f.sugerencia.precio)} en ${f.producto} ${f.memoria}`}>
+                    Usar
+                  </Button>
+                </form>
+              ) : (
+                <span className="text-xs text-green-700">= tu precio</span>
+              )}
             </div>
-          </>
+            <details className="text-xs">
+              <summary className="cursor-pointer text-right text-primary">
+                Por qué
+                {f.mercado
+                  ? f.mercado.min === f.mercado.max
+                    ? ` · mercado ${usd(f.mercado.min)}`
+                    : ` · mercado ${usd(f.mercado.min)}–${usd(f.mercado.max)}`
+                  : " · sin mercado"}
+              </summary>
+              <ul className="mt-1 list-disc space-y-0.5 pl-4 text-muted-foreground">
+                {f.sugerencia.explicacion.map((t) => (
+                  <li key={t}>{t}</li>
+                ))}
+              </ul>
+              {f.observados.length ? (
+                <p className="mt-1 text-muted-foreground">
+                  Anotados: {f.observados.map((o) => `${usd(o.precio)} ${o.fuente} (${o.fecha.slice(5).split("-").reverse().join("/")})`).join(" · ")}
+                </p>
+              ) : null}
+              <FormularioAccion accion={anotarPrecioObservado} className="mt-2 space-y-1 rounded-md bg-muted/50 p-2">
+                <input type="hidden" name="productoId" value={f.productoId} />
+                <input type="hidden" name="ram" value={f.ramGb ?? ""} />
+                <input type="hidden" name="alm" value={f.almacenamientoGb ?? ""} />
+                <p className="font-medium text-foreground">Anotar un precio que viste</p>
+                <div className="flex gap-1">
+                  <Input name="precio" inputMode="decimal" placeholder="$" className="h-7 w-20 text-xs" aria-label="Precio visto" />
+                  <Input name="fuente" placeholder="Dónde (ej. Tienda X)" className="h-7 min-w-0 flex-1 text-xs" aria-label="Dónde lo viste" />
+                </div>
+                <label className="flex items-center gap-1">
+                  <input type="checkbox" name="usado" className="size-3.5" /> Era usado o reacondicionado (no cuenta)
+                </label>
+                <BotonGuardar size="sm" variant="outline">
+                  Anotar
+                </BotonGuardar>
+              </FormularioAccion>
+            </details>
+          </div>
         ) : (
-          "—"
+          <span className="text-muted-foreground">—</span>
         )}
       </td>
       <td className="p-2">
@@ -128,6 +184,7 @@ async function Contenido({ searchParams }: { searchParams: Promise<Filtros> }) {
     if (filtros.vista === "comparar" && f.ofertas.length < 2) return false;
     if (filtros.vista === "cambios" && !f.cambio) return false;
     if (filtros.vista === "sin-precio" && f.precioVenta) return false;
+    if (filtros.vista === "sugerido" && (!f.sugerencia || f.sugerencia.precio === f.precioVenta)) return false;
     return true;
   });
 
@@ -156,6 +213,7 @@ async function Contenido({ searchParams }: { searchParams: Promise<Filtros> }) {
           <option value="comparar">En 2 o más proveedores</option>
           <option value="cambios">Con cambio de precio</option>
           <option value="sin-precio">Sin precio de venta</option>
+          <option value="sugerido">Sugerido distinto de tu precio</option>
         </select>
         <Button type="submit" variant="outline">
           Filtrar
@@ -170,7 +228,7 @@ async function Contenido({ searchParams }: { searchParams: Promise<Filtros> }) {
               <th className="p-2">Producto</th>
               <th className="p-2">Proveedores (existencia)</th>
               <th className="p-2 text-right">Costo puesto</th>
-              <th className="p-2 text-right">Precio con margen objetivo</th>
+              <th className="p-2 text-right">Precio sugerido</th>
               <th className="p-2">Tu precio de venta</th>
               <th className="p-2 text-right">Margen</th>
               <th className="p-2 text-right">Contribución</th>
@@ -186,7 +244,9 @@ async function Contenido({ searchParams }: { searchParams: Promise<Filtros> }) {
       <p className="text-xs text-muted-foreground">
         En negrita el mejor proveedor (menor costo puesto con existencia). Tachado = sin existencia. Contribución
         = precio + $5 de envío − costo − $1.75 de paquetería y seguro − 2.5% de comisión. ROAS mínimo = lo que
-        necesitás vender por cada dólar de pauta para no perder.
+        necesitás vender por cada dólar de pauta para no perder. El precio sugerido combina tu costo, el margen
+        objetivo de la categoría, los precios de mercado que anotaste en los últimos 30 días y cuánto se vendió;
+        nunca baja del mínimo sin pérdida y solo se aplica si tocás <strong>Usar</strong>.
       </p>
     </div>
   );

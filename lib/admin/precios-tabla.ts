@@ -9,6 +9,7 @@ import {
   precioConMargen,
   type CostosProveedor,
 } from "@/lib/precios";
+import { resumirMercado, sugerirPrecio, type Mercado, type Sugerencia } from "@/lib/pricing";
 
 export type Oferta = {
   proveedor: string;
@@ -40,6 +41,11 @@ export type FilaPrecio = {
   margenObjetivoPct: number;
   precioObjetivo: number | null;
   cambio: number | null; // diferencia del mejor costo vs su precio anterior
+  /** Precios de mercado anotados a mano en los últimos 30 días */
+  mercado: Mercado | null;
+  observados: { precio: number; fuente: string; fecha: string }[];
+  unidades30: number;
+  sugerencia: Sugerencia | null;
 };
 
 type Vinculo = {
@@ -66,8 +72,11 @@ type Producto = {
 };
 type Proveedor = CostosProveedor & { id: string; nombre: string; plazo_credito_dias: number };
 
+type Observado = { producto_id: string; ram_gb: number | null; almacenamiento_gb: number | null; precio: number; fuente: string; fecha: string };
+
 export async function tablaPrecios(supabase: SupabaseClient): Promise<FilaPrecio[]> {
-  const [vinculos, variantes, productos, proveedores] = await Promise.all([
+  const hace30 = new Date(Date.now() - 30 * 86_400_000);
+  const [vinculos, variantes, productos, proveedores, observadosR, ventasR] = await Promise.all([
     todo<Vinculo>((a, b) =>
       supabase
         .from("producto_proveedor")
@@ -91,7 +100,23 @@ export async function tablaPrecios(supabase: SupabaseClient): Promise<FilaPrecio
         .range(a, b)
     ),
     todo<Proveedor>((a, b) => supabase.from("proveedores").select("*").range(a, b)),
+    supabase
+      .from("precios_observados")
+      .select("producto_id, ram_gb, almacenamiento_gb, precio, fuente, fecha")
+      .eq("nuevo_sellado", true)
+      .gte("fecha", hace30.toISOString().slice(0, 10))
+      .order("fecha", { ascending: false })
+      .limit(5000),
+    supabase.rpc("ventas_por_configuracion", { desde: hace30.toISOString() }),
   ]);
+  // Sin la migración 0007 la tabla sigue funcionando, solo sin mercado ni rotación
+  const observados = (observadosR.error ? [] : (observadosR.data ?? [])) as Observado[];
+  const ventas = new Map(
+    ((ventasR.error ? [] : (ventasR.data ?? [])) as { producto_id: string; ram_gb: number | null; almacenamiento_gb: number | null; unidades: number }[]).map((v) => [
+      `${v.producto_id}|${v.ram_gb ?? "-"}|${v.almacenamiento_gb ?? "-"}`,
+      Number(v.unidades),
+    ])
+  );
 
   const varPorId = new Map(variantes.map((v) => [v.id, v]));
   const prodPorId = new Map(productos.map((p) => [p.id, p]));
@@ -153,6 +178,14 @@ export async function tablaPrecios(supabase: SupabaseClient): Promise<FilaPrecio
     const mejor = ofertas.find((o) => o.disponible) ?? null;
 
     const precios = [...g.variantes.values()].map((v) => Number(v.precio)).filter((p) => p > 0);
+    // Mercado: lo anotado para esta memoria, o para el producto sin memoria (ej. accesorios)
+    const obs = observados.filter(
+      (o) =>
+        o.producto_id === v0.producto_id &&
+        ((o.ram_gb === null && o.almacenamiento_gb === null) || (o.ram_gb === v0.ram_gb && o.almacenamiento_gb === v0.almacenamiento_gb))
+    );
+    const mercado = resumirMercado(obs.map((o) => Number(o.precio)));
+    const unidades30 = ventas.get(clave) ?? 0;
     const precioVenta = precios.length ? Math.max(...precios) : null;
     const margenObjetivoPct = Number(prod.categorias?.margen_objetivo_pct ?? 10);
 
@@ -182,6 +215,12 @@ export async function tablaPrecios(supabase: SupabaseClient): Promise<FilaPrecio
       precioObjetivo: mejor ? precioConMargen(mejor.costo, margenObjetivoPct) : null,
       cambio:
         mejor && mejor.anterior !== null ? Math.round((mejor.precio - mejor.anterior) * 100) / 100 : null,
+      mercado,
+      observados: obs.slice(0, 6).map((o) => ({ precio: Number(o.precio), fuente: o.fuente, fecha: o.fecha })),
+      unidades30,
+      sugerencia: mejor
+        ? sugerirPrecio({ costo: mejor.costo, margenObjetivoPct: Number(prod.categorias?.margen_objetivo_pct ?? 10), mercado, unidades30 })
+        : null,
     });
   }
 

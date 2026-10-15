@@ -112,7 +112,8 @@ editan tienen `updated_at` (se actualiza solo). Los precios son `numeric(10,2)` 
 | --- | --- | --- |
 | producto_id | → productos | |
 | precio | numeric | |
-| fuente | text | marketplace, tienda_fisica, encuentra24, competidor_web |
+| ram_gb, almacenamiento_gb | int | Memoria del equipo visto (vacío en accesorios) |
+| fuente | text | Dónde se vio, escrito a mano (ej. "Tienda X", "Marketplace") |
 | nuevo_sellado | bool | Solo se usan los `true` para comparar |
 | url, notas | text | |
 | fecha | date | |
@@ -167,13 +168,15 @@ el cliente elige no recibir), ofertas_elegido_en (cuándo eligió), baja_token (
 | descuento | numeric | 6% por efectivo o transferencia |
 | descuento_cupon, puntos_usados, descuento_puntos | numeric / int | Un solo beneficio: cupón o puntos |
 | envio, total | numeric | total = subtotal − combos − descuento − cupón − puntos + envío |
+| atribucion | jsonb | fbp, fbc (cookies de Meta), ip y navegador, para la API de conversiones |
+| meta_enviado_en | timestamptz | Cuándo se avisó a Meta de la compra pagada (una sola vez) |
 | cupon_id | → cupones (null) | |
 | entrega | jsonb | Copia de la dirección al momento del pedido |
 | origen | text | Código de página / campaña |
 | notas | text | |
 
 ### lineas_pedido
-pedido_id, variante_id, nombre (copia), cantidad, precio_unitario (el cobrado), precio_regular (si fue de oferta), bundle_id (null).
+pedido_id, variante_id, nombre (copia), cantidad, precio_unitario (el cobrado), precio_regular (si fue de oferta), costo_unitario (costo puesto al vender), bundle_id (null).
 
 ### pagos
 pedido_id, metodo, monto, estado (`pendiente` | `aprobado` | `rechazado`), referencia_externa (id de Wompi), comprobante_url (captura de transferencia), payload (jsonb, respuesta de Wompi).

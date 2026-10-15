@@ -21,6 +21,7 @@ import {
 import { enlaceWhatsAppA, mensajeProducto } from "@/lib/whatsapp";
 import { IconoWhatsApp } from "./icono-whatsapp";
 import { abrirCarrito, agregarAlCarrito } from "@/lib/tienda/carrito";
+import { medir } from "@/lib/analytics";
 
 // Caja de compra de la ficha: elegir memoria y color, ver precio, cuota, disponibilidad y comprar.
 // En el teléfono, una barra fija abajo mantiene precio y botón siempre a la vista.
@@ -96,6 +97,11 @@ export function CompraProducto(props: Props) {
 
   // Con el precio vigente (si la oferta terminó, el normal)
   const elegida = p.variantes.find((v) => v.id === elegidaBase.id) ?? elegidaBase;
+
+  // Vista del producto (una vez por ficha)
+  useEffect(() => {
+    medir("vista_producto", { productoId: props.productoId, nombre: props.nombre, valor: Math.min(...props.variantes.map((v) => v.precio)) });
+  }, [props.productoId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // La barra fija de abajo aparece cuando el botón principal no está en pantalla
   // (todavía no llegaste o ya lo pasaste): siempre hay un solo botón de compra a la vista.
@@ -184,10 +190,12 @@ export function CompraProducto(props: Props) {
   );
   const comprar = () => {
     agregarAlCarrito(elegida.id);
+    medir("agregar_carrito", { productoId: p.productoId, varianteId: elegida.id, nombre: nombreCompleto, valor: elegida.precio });
     abrirCarrito();
   };
   const comprarCombo = (c: ComboTienda) => {
     agregarAlCarrito(elegida.id);
+    medir("clic_bundle", { productoId: p.productoId, varianteId: elegida.id, nombre: c.nombre, combo: c.id });
     c.items.forEach((i) => agregarAlCarrito(i.varianteId, i.cantidad));
     abrirCarrito();
   };
@@ -317,6 +325,7 @@ export function CompraProducto(props: Props) {
         {agotada ? (
           <AvisoStock
             productoId={p.productoId}
+            nombre={p.nombre}
             enlacePregunta={enlacePregunta}
           />
         ) : (
@@ -431,15 +440,20 @@ export function CompraProducto(props: Props) {
 
 function AvisoStock({
   productoId,
+  nombre,
   enlacePregunta,
 }: {
   productoId: string;
+  nombre: string;
   enlacePregunta: string;
 }) {
   const [estado, accion, enviando] = useActionState<EstadoAviso, FormData>(
     avisarStock,
     null,
   );
+  useEffect(() => {
+    if (estado?.ok) medir("correo_capturado", { productoId, nombre, motivo: "aviso_stock" });
+  }, [estado, productoId, nombre]);
   if (estado?.ok) {
     return (
       <p className="rounded-lg bg-green-50 p-3 text-sm font-medium text-green-800">

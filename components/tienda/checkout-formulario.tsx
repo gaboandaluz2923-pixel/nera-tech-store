@@ -32,6 +32,7 @@ import type { Cotizacion } from "@/lib/tienda/beneficios";
 import type { Direccion } from "@/lib/tienda/cuentas";
 import { Button } from "@/components/ui/button";
 import { quitarDelCarrito, useCarrito, vaciarCarrito } from "@/lib/tienda/carrito";
+import { cookiesMeta, medir } from "@/lib/analytics";
 import {
   DESCUENTO_SIN_TARJETA,
   cuota,
@@ -176,6 +177,16 @@ export function CheckoutFormulario(p: Props) {
   const descuento = cot?.descuentoPago ?? 0;
   const totalAPagar = cot?.total ?? 0;
 
+  // Medición: inicio del checkout (una vez, con el primer total) y cupón aplicado
+  const [inicioMedido, setInicioMedido] = useState(false);
+  if (cot && cot.resumen.lineas.length && !inicioMedido) setInicioMedido(true);
+  useEffect(() => {
+    if (inicioMedido && cot) medir("inicio_checkout", { valor: cot.total, productos: cot.resumen.lineas.length });
+  }, [inicioMedido]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (cot?.cupon) medir("cupon_aplicado", { cupon: cot.cupon.codigo, monto: cot.cupon.monto });
+  }, [cot?.cupon?.codigo]); // eslint-disable-line react-hooks/exhaustive-deps
+
   function aplicarCupon() {
     const correo = (document.getElementById("co-correo") as HTMLInputElement | null)?.value ?? "";
     setCorreoCupon(correo.trim().toLowerCase());
@@ -241,6 +252,7 @@ export function CheckoutFormulario(p: Props) {
       cupon: cot?.cupon ? cuponAplicado : "",
       usarPuntos: Boolean(cot?.puntos),
       noOfertas,
+      atribucion: { ...cookiesMeta(), origen: (() => { try { return sessionStorage.getItem("nera-origen"); } catch { return null; } })() },
       totalVisto: totalAPagar,
       lineas,
     };
@@ -592,7 +604,10 @@ export function CheckoutFormulario(p: Props) {
                     value={id}
                     checked={formaValida === id}
                     disabled={!activa}
-                    onChange={() => setForma(id)}
+                    onChange={() => {
+                      setForma(id);
+                      medir("pago_elegido", { forma: id, valor: totalAPagar });
+                    }}
                     className="mt-1 size-4 accent-[var(--marca)]"
                   />
                   <Icono

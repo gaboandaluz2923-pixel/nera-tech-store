@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { COLUMNAS_DESCUENTOS, lineasDescuento } from "@/lib/tienda/descuentos";
+import { MedirEvento } from "@/components/tienda/medir-evento";
 import { Check, CircleAlert, Clock, FileText, Landmark, Truck } from "lucide-react";
 import { BotonGoogle } from "@/components/tienda/boton-google";
 import { IconoWhatsApp } from "@/components/tienda/icono-whatsapp";
@@ -102,6 +103,13 @@ async function Detalle({ params, searchParams }: PageProps<"/pedido/[token]">) {
 
   return (
     <div className="space-y-6">
+      {sp.nuevo === "1" || aviso === "aprobado" ? (
+        <MedirEvento
+          tipo="compra"
+          unaVez={`compra-${p.numero}`}
+          datos={{ pedido: String(p.numero), valor: total, forma: p.forma_pago, productos: p.lineas_pedido.length }}
+        />
+      ) : null}
       {/* Encabezado */}
       <div>
         <p className="text-sm text-muted-foreground">

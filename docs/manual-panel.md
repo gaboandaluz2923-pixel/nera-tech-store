@@ -210,6 +210,42 @@ y abajo un botón verde grande **Escribinos por WhatsApp**. El de "En camino" in
 llenaste, y cualquier correo de cambio de estado incluye el **Mensaje para el cliente** si escribiste uno.
 Cada correo enviado (o que no se pudo enviar, con el motivo) queda en el **Historial** del pedido.
 
+## Precios: sugerencia y precios de mercado (fase 5)
+La columna **Precio sugerido** ya no es solo "costo + margen". Combina:
+- tu **costo puesto** y el **margen objetivo** de la categoría;
+- los **precios de mercado** que anotaste en los últimos 30 días (mínimo, máximo y el más común);
+- cuánto se **vendió** esa configuración en 30 días: con 5 o más es "se vende rápido" y la sugerencia se acerca
+  al mercado; sin ventas, se queda en tu margen o baja un poco para moverlo.
+Nunca baja del **mínimo sin pérdida** (aun pagando en efectivo con 6% y sin cobrar envío). Debajo dice cuánto
+deja de contribución. **Por qué** abre la explicación en palabras y los precios anotados. **Usar** aplica el
+sugerido a todos los colores de esa memoria y queda en el historial como "sugerido aprobado"; si dice "= tu
+precio", ya está aplicado. El filtro **Sugerido distinto de tu precio** muestra solo lo que conviene revisar.
+
+**Anotar un precio que viste** (dentro de "Por qué"): escribí el precio y dónde lo viste (ej. "Tienda X",
+"Marketplace") y tocá **Anotar**. Si era usado o reacondicionado, marcalo: no cuenta para la sugerencia. Los precios
+de Facebook o Marketplace se anotan a mano: la tienda nunca los lee sola.
+
+## Analítica (fase 5)
+Menú **Analítica**. Son datos propios de la tienda (no dependen de Google ni de Meta), de las últimas 8 semanas, de
+lunes a domingo:
+- **Esta semana**: visitas, pedidos, conversión, clics a WhatsApp, ventas, contribución, gasto en pauta y ganancia
+  después de pauta, comparados con la semana pasada.
+- **Embudo por semana**: cuántas personas vieron un producto, agregaron al carrito, fueron a pagar e hicieron el
+  pedido. El porcentaje chico es contra el paso anterior: donde cae mucho, ahí se pierde la venta.
+- **Ventas y pauta por semana**: ventas, contribución (con el costo guardado al vender), gasto en pauta, costo por
+  pedido, ROAS (ventas ÷ pauta) y ganancia después de pauta (en rojo si la pauta cuesta más de lo que deja).
+- **Gasto de pauta**: cada semana anotá lo que gastaste (lo ves en el Administrador de anuncios de Meta), el canal
+  y, si querés, cuántas conversaciones de WhatsApp trajo. Si ya había un gasto para esa semana y canal, se corrige.
+- **Productos (30 días)**: vistas, agregados al carrito, vendidos y "Mucho interés, pocas ventas" (para revisar
+  precio, fotos o descripción).
+- **Lo que más buscan**: lo que escriben en el buscador; **Buscaron y no encontraron nada** son ideas de productos
+  para agregar al catálogo.
+- **De dónde vienen** (Facebook, Google, directo…) y **Clics a WhatsApp** por parte de la tienda.
+
+La tienda también avisa a **Google Analytics** y a **Meta** (Pixel + API de conversiones) de cada paso, y a Meta de
+cada **compra pagada** desde el servidor, para que los anuncios aprendan de ventas reales. En la tienda aparece un
+aviso pequeño de cookies con el botón **Entendido**.
+
 ## Promociones
 Menú **Promociones**. Tiene tres recuadros. Nada se borra: las ofertas, combos y cupones se apagan.
 

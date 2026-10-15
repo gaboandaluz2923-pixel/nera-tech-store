@@ -64,6 +64,13 @@ export default async function Privacidad() {
         La tienda guarda en tu navegador tu carrito y los productos que comparás, para que no se pierdan. Si entrás con
         Google, también guarda tu sesión. Podés borrarlos en cualquier momento desde la configuración de tu navegador.
       </p>
+      <p>
+        <strong>Medición.</strong> Para saber qué productos interesan y mejorar la tienda, registramos qué páginas y productos
+        se ven, qué se agrega al carrito, qué se busca y las compras, con un identificador anónimo del navegador. Usamos
+        también Google Analytics y el Pixel de Meta (Facebook e Instagram), que ponen sus propias cookies. Cuando un pago se
+        confirma, le avisamos a Meta de la compra con tu correo y teléfono <strong>cifrados</strong> (Meta no los ve en texto),
+        para medir qué anuncios funcionan. Podés bloquear estas cookies desde tu navegador.
+      </p>
 
       <h2>Cuánto tiempo los guardamos</h2>
       <p>
