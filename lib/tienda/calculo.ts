@@ -49,7 +49,7 @@ export type ResumenCarrito = {
   subtotal: number;
   combos: ComboAplicado[];
   descuentoCombos: number;
-  /** Lo que se paga por los productos: subtotal − combos (base del 6%, cupones y envío gratis) */
+  /** Lo que se paga por los productos: subtotal − combos (base del descuento sin tarjeta, cupones y envío gratis) */
   productos: number;
   combosSugeridos: ComboSugerido[];
   envio: number;
@@ -204,7 +204,7 @@ export async function calcularCarrito(entrada: unknown): Promise<ResumenCarrito>
 }
 
 /** Precio de oferta vigente por variante (el más bajo si hay varias ofertas). */
-async function preciosDeOferta(ids: string[]) {
+export async function preciosDeOferta(ids: string[]) {
   const mapa = new Map<string, { precio: number; nombre: string; fin: string | null }>();
   // La base solo deja ver precios de ofertas activas y dentro de sus fechas
   const { data, error } = await clientePublico()

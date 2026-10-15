@@ -3,13 +3,15 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ExternalLink, FileText } from "lucide-react";
+import { Editable, FilaEditable } from "@/components/admin/editable";
 import { BotonGuardar, FormularioAccion } from "@/components/admin/formulario-accion";
 import { IconoWhatsApp } from "@/components/tienda/icono-whatsapp";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { COLUMNAS_DESCUENTOS, lineasDescuento } from "@/lib/tienda/descuentos";
-import { SIGUIENTES, esperandoPago, porFacturar, type EstadoPedido, type PedidoBase } from "@/lib/admin/pedidos";
+import { CANAL, SIGUIENTES, esperandoPago, porFacturar, type EstadoPedido, type PedidoBase } from "@/lib/admin/pedidos";
+import { nombresEquipo, quien } from "@/lib/admin/historial";
 import { createClient } from "@/lib/supabase/server";
 import { ESTADO_PEDIDO, FORMA_PAGO, fechaHora, usd2 } from "@/lib/tienda/formato";
 import { enlaceWhatsAppA } from "@/lib/whatsapp";
@@ -18,6 +20,7 @@ import {
   cambiarCorreoCliente,
   cambiarEstadoPedido,
   facturaNoAplica,
+  guardarEntrega,
   guardarFactura,
   registrarPago,
 } from "../actions";
@@ -38,6 +41,8 @@ type Pedido = PedidoBase & {
   total: number;
   notas: string | null;
   created_at: string;
+  canal: string;
+  creado_por: string | null;
   entrega: {
     nombre: string;
     telefono: string;
@@ -85,7 +90,7 @@ async function Detalle({ params }: { params: PageProps<"/admin/pedidos/[id]">["p
   const { data, error } = await supabase
     .from("pedidos")
     .select(
-      `id, numero, token, estado, forma_pago, subtotal, envio, total, notas, ${COLUMNAS_DESCUENTOS}, created_at, entrega, facturacion,
+      `id, numero, token, estado, forma_pago, subtotal, envio, total, notas, ${COLUMNAS_DESCUENTOS}, created_at, canal, creado_por, entrega, facturacion,
        pagado_en, confirmado_en, entregado_en, factura_estado, factura_numero, factura_archivo, factura_emitida_en,
        cliente_id, clientes(correo, auth_user_id, telefono_alterno, cumple_dia, cumple_mes, acepta_correo, acepta_whatsapp),
        lineas_pedido(id, nombre, cantidad, precio_unitario, precio_regular),
@@ -118,6 +123,8 @@ async function Detalle({ params }: { params: PageProps<"/admin/pedidos/[id]">["p
         .not("estado", "in", "(cancelado,devuelto)")
     : { count: 0 };
   const alterno = p.entrega.telefono_alterno || p.clientes?.telefono_alterno;
+  const nombres = await nombresEquipo(supabase);
+  const esEnPersona = p.entrega.municipio === "Entrega en persona";
 
   return (
     <div className="space-y-6">
@@ -136,7 +143,8 @@ async function Detalle({ params }: { params: PageProps<"/admin/pedidos/[id]">["p
             ) : null}
           </h1>
           <p className="text-sm text-muted-foreground">
-            {fechaHora(p.created_at)} · {FORMA_PAGO[p.forma_pago]} · {usd2(Number(p.total))}
+            {fechaHora(p.created_at)} · {FORMA_PAGO[p.forma_pago]} · {usd2(Number(p.total))} · {CANAL[p.canal] ?? p.canal}
+            {p.creado_por ? ` · lo creó ${quien(p.creado_por, nombres)}` : ""}
           </p>
         </div>
         <a href={enlacePedido} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm font-medium text-primary hover:underline">
@@ -270,22 +278,29 @@ async function Detalle({ params }: { params: PageProps<"/admin/pedidos/[id]">["p
               <FileText className="size-4" /> Ver PDF subido
             </a>
           ) : null}
-          <FormularioAccion key={`${p.factura_estado}-${p.factura_numero}`} accion={guardarFactura} className="space-y-3 border-t pt-3">
-            <input type="hidden" name="id" value={p.id} />
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1">
-                <Label htmlFor="factura-numero">Código de generación o número de control</Label>
-                <Input id="factura-numero" name="factura_numero" defaultValue={p.factura_numero ?? ""} />
+          <div className="border-t pt-3">
+            <FilaEditable
+              accion={guardarFactura}
+              className=""
+              vista={
+                <p className="text-sm text-muted-foreground">
+                  {p.factura_estado === "emitida" ? "Para corregir el número o subir otro PDF, tocá Editar." : "Cuando la emitás, tocá Editar y cargá el código y el PDF."}
+                </p>
+              }
+            >
+              <input type="hidden" name="id" value={p.id} />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <Label htmlFor="factura-numero">Código de generación o número de control</Label>
+                  <Input id="factura-numero" name="factura_numero" defaultValue={p.factura_numero ?? ""} />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="factura-pdf">PDF de la factura</Label>
+                  <Input id="factura-pdf" name="archivo" type="file" accept="application/pdf,.pdf" />
+                </div>
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="factura-pdf">PDF de la factura</Label>
-                <Input id="factura-pdf" name="archivo" type="file" accept="application/pdf,.pdf" />
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <BotonGuardar>{p.factura_estado === "emitida" ? "Actualizar factura" : "Guardar factura"}</BotonGuardar>
-            </div>
-          </FormularioAccion>
+            </FilaEditable>
+          </div>
           <div className="flex flex-wrap gap-2">
             {p.factura_estado === "emitida" ? (
               <a
@@ -347,53 +362,102 @@ async function Detalle({ params }: { params: PageProps<"/admin/pedidos/[id]">["p
         </Card>
 
         {/* Cliente y entrega */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Cliente y entrega</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <dl>
-              <Dato etiqueta="Nombre">{p.entrega.nombre}</Dato>
-              <Dato etiqueta="Teléfono">{p.entrega.telefono}</Dato>
-              {alterno ? <Dato etiqueta="Teléfono alterno">{alterno}</Dato> : null}
-              {(pedidosCliente ?? 0) > 1 ? (
-                <Dato etiqueta="Cliente">
-                  <span className="rounded-full bg-marca/10 px-2 py-0.5 text-xs font-medium text-marca">Frecuente · {pedidosCliente} pedidos</span>
+        <Editable
+          titulo="Cliente y entrega"
+          accion={guardarEntrega}
+          extra={
+            p.cliente_id ? (
+              <Link href={`/admin/clientes/${p.cliente_id}`} className="inline-flex h-8 items-center rounded-md border px-3 text-sm font-medium hover:bg-muted">
+                Ver cliente
+              </Link>
+            ) : null
+          }
+          vista={
+            <div className="space-y-3">
+              <dl>
+                <Dato etiqueta="Nombre">{p.entrega.nombre}</Dato>
+                <Dato etiqueta="Teléfono">{p.entrega.telefono}</Dato>
+                {alterno ? <Dato etiqueta="Teléfono alterno">{alterno}</Dato> : null}
+                {(pedidosCliente ?? 0) > 1 ? (
+                  <Dato etiqueta="Cliente">
+                    <span className="rounded-full bg-marca/10 px-2 py-0.5 text-xs font-medium text-marca">Frecuente · {pedidosCliente} pedidos</span>
+                  </Dato>
+                ) : null}
+                {p.clientes?.cumple_dia && p.clientes?.cumple_mes ? (
+                  <Dato etiqueta="Cumpleaños">{`${p.clientes.cumple_dia}/${p.clientes.cumple_mes}`}</Dato>
+                ) : null}
+                <Dato etiqueta="Correo">{p.entrega.correo || "—"}</Dato>
+                {p.clientes && !(p.clientes.acepta_correo && p.clientes.acepta_whatsapp) ? (
+                  <Dato etiqueta="Publicidad">
+                    No quiere por {[!p.clientes.acepta_whatsapp && "WhatsApp", !p.clientes.acepta_correo && "correo"].filter(Boolean).join(" ni ")}
+                  </Dato>
+                ) : null}
+                <Dato etiqueta="Entrega">
+                  {esEnPersona
+                    ? "En persona (sin envío)"
+                    : `${p.entrega.direccion}, ${[p.entrega.municipio, p.entrega.departamento].filter(Boolean).join(", ")}`}
                 </Dato>
-              ) : null}
-              {p.clientes?.cumple_dia && p.clientes?.cumple_mes ? (
-                <Dato etiqueta="Cumpleaños">{`${p.clientes.cumple_dia}/${p.clientes.cumple_mes}`}</Dato>
-              ) : null}
-              <Dato etiqueta="Correo">{p.entrega.correo}</Dato>
-              {p.clientes && !(p.clientes.acepta_correo && p.clientes.acepta_whatsapp) ? (
-                <Dato etiqueta="Publicidad">
-                  No quiere por {[!p.clientes.acepta_whatsapp && "WhatsApp", !p.clientes.acepta_correo && "correo"].filter(Boolean).join(" ni ")}
-                </Dato>
-              ) : null}
-              <Dato etiqueta="Dirección">
-                {p.entrega.direccion}, {[p.entrega.municipio, p.entrega.departamento].filter(Boolean).join(", ")}
-              </Dato>
-              {p.entrega.referencia ? <Dato etiqueta="Referencia">{p.entrega.referencia}</Dato> : null}
-              {p.notas ? <Dato etiqueta="Nota del cliente">{p.notas}</Dato> : null}
-              {p.entrega.repartidor ? (
-                <Dato etiqueta="Repartidor">{[p.entrega.repartidor.nombre, p.entrega.repartidor.telefono].filter(Boolean).join(" · ")}</Dato>
-              ) : null}
-              <Dato etiqueta="Cuenta">
-                {p.clientes?.auth_user_id ? `Enlazado a ${p.clientes.correo}` : `Sin cuenta (se enlaza si entra con ${p.clientes?.correo ?? p.entrega.correo})`}
-              </Dato>
-            </dl>
-            <FormularioAccion accion={cambiarCorreoCliente} className="flex flex-wrap items-end gap-2 border-t pt-3">
-              <input type="hidden" name="id" value={p.id} />
-              <div className="min-w-56 flex-1 space-y-1">
-                <Label htmlFor="correo-cuenta">Enlazar a otro correo de Google</Label>
-                <Input id="correo-cuenta" name="correo" type="email" placeholder="correo@gmail.com" />
+                {p.entrega.referencia ? <Dato etiqueta="Referencia">{p.entrega.referencia}</Dato> : null}
+                {p.notas ? <Dato etiqueta="Nota del pedido">{p.notas}</Dato> : null}
+                {p.entrega.repartidor ? (
+                  <Dato etiqueta="Repartidor">{[p.entrega.repartidor.nombre, p.entrega.repartidor.telefono].filter(Boolean).join(" · ")}</Dato>
+                ) : null}
+              </dl>
+              <div className="border-t pt-3">
+                <FilaEditable
+                  accion={cambiarCorreoCliente}
+                  className=""
+                  vista={
+                    <dl>
+                      <Dato etiqueta="Cuenta">
+                        {p.clientes?.auth_user_id
+                          ? `Enlazado a ${p.clientes.correo}`
+                          : p.clientes?.correo || p.entrega.correo
+                            ? `Sin cuenta (se enlaza si entra con ${p.clientes?.correo ?? p.entrega.correo})`
+                            : "Sin correo: no puede ver el pedido en Mis pedidos"}
+                      </Dato>
+                    </dl>
+                  }
+                >
+                  <input type="hidden" name="id" value={p.id} />
+                  <div className="space-y-1">
+                    <Label htmlFor="correo-cuenta">Enlazar a otro correo de Google</Label>
+                    <Input id="correo-cuenta" name="correo" type="email" placeholder="correo@gmail.com" />
+                  </div>
+                </FilaEditable>
               </div>
-              <BotonGuardar variant="outline" size="sm">
-                Enlazar
-              </BotonGuardar>
-            </FormularioAccion>
-          </CardContent>
-        </Card>
+            </div>
+          }
+        >
+          <input type="hidden" name="id" value={p.id} />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label htmlFor="ent-nombre">Nombre</Label>
+              <Input id="ent-nombre" name="nombre" defaultValue={p.entrega.nombre} />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="ent-tel">Teléfono</Label>
+              <Input id="ent-tel" name="telefono" inputMode="tel" defaultValue={p.entrega.telefono} />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="ent-alterno">Teléfono alterno</Label>
+              <Input id="ent-alterno" name="telefono_alterno" inputMode="tel" defaultValue={p.entrega.telefono_alterno ?? ""} />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="ent-municipio">Municipio</Label>
+              <Input id="ent-municipio" name="municipio" defaultValue={p.entrega.municipio} />
+            </div>
+            <div className="space-y-1 sm:col-span-2">
+              <Label htmlFor="ent-direccion">Dirección</Label>
+              <Input id="ent-direccion" name="direccion" defaultValue={p.entrega.direccion} />
+            </div>
+            <div className="space-y-1 sm:col-span-2">
+              <Label htmlFor="ent-ref">Referencia</Label>
+              <Input id="ent-ref" name="referencia" defaultValue={p.entrega.referencia ?? ""} />
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">Cambia los datos de este pedido; queda anotado en el historial.</p>
+        </Editable>
       </div>
 
       {/* Historial */}
@@ -416,7 +480,7 @@ async function Detalle({ params }: { params: PageProps<"/admin/pedidos/[id]">["p
             {eventos.map((ev) => (
               <li key={ev.id} className="border-l-2 pl-3">
                 <span className="text-xs text-muted-foreground">
-                  {fechaHora(ev.created_at)} · {ev.usuario ?? "sistema"}
+                  {fechaHora(ev.created_at)} · {quien(ev.usuario ?? "tienda", nombres)}
                 </span>
                 <span className="block">
                   {ev.estado_anterior && ev.estado_anterior !== ev.estado_nuevo

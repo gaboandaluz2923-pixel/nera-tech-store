@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { tablaPrecios, type FilaPrecio } from "@/lib/admin/precios-tabla";
 import { pct, roasMinimo, usd } from "@/lib/precios";
 import { BotonGuardar, FormularioAccion } from "@/components/admin/formulario-accion";
+import { PrecioEditable } from "@/components/admin/precio-editable";
 import { anotarPrecioObservado, fijarPrecio } from "./actions";
 
 const ROTACION = { rapida: "se vende rápido", normal: "rotación normal", lenta: "sin ventas en 30 días" } as const;
@@ -126,25 +127,13 @@ function FilaTabla({ f }: { f: FilaPrecio }) {
         )}
       </td>
       <td className="p-2">
-        <form action={fijarPrecio} className="flex items-center gap-1">
-          <input type="hidden" name="productoId" value={f.productoId} />
-          <input type="hidden" name="ram" value={f.ramGb ?? ""} />
-          <input type="hidden" name="alm" value={f.almacenamientoGb ?? ""} />
-          <Input
-            name="precio"
-            type="number"
-            step="0.01"
-            min="0"
-            inputMode="decimal"
-            defaultValue={f.precioVenta ?? ""}
-            placeholder={f.precioObjetivo ? String(f.precioObjetivo) : ""}
-            className="h-8 w-24 text-right tabular-nums"
-            aria-label={`Precio de venta de ${f.producto} ${f.memoria}`}
-          />
-          <Button type="submit" size="sm" variant="outline">
-            Guardar
-          </Button>
-        </form>
+        <PrecioEditable
+          accion={fijarPrecio}
+          ocultos={{ productoId: f.productoId, ram: String(f.ramGb ?? ""), alm: String(f.almacenamientoGb ?? "") }}
+          valor={f.precioVenta}
+          sugerido={f.precioObjetivo}
+          etiqueta={`Precio de venta de ${f.producto} ${f.memoria}`}
+        />
         {f.precioVaria ? <p className="mt-1 text-xs text-amber-700">Los colores tienen precios distintos</p> : null}
       </td>
       <td className={`p-2 text-right tabular-nums ${margenBajo ? "text-red-600 dark:text-red-400" : ""}`}>

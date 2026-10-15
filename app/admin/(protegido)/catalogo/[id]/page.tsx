@@ -3,13 +3,18 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ArrowDown, ArrowUp, ExternalLink, Star, Trash2 } from "lucide-react";
+import { Editable, FilaEditable } from "@/components/admin/editable";
 import { BotonGuardar, FormularioAccion } from "@/components/admin/formulario-accion";
+import { ListaHistorial, type Entrada } from "@/components/admin/lista-historial";
+import { Dato, Datos, Lineas } from "@/components/admin/vista";
 import { SubirFotos } from "@/components/admin/subir-fotos";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { describir, nombresEquipo, quien, type FilaHistorial } from "@/lib/admin/historial";
 import { EJEMPLOS, PLANTILLAS } from "@/lib/admin/plantillas";
+import { rolActual } from "@/lib/admin/sesion";
 import { createClient } from "@/lib/supabase/server";
 import { NOMBRE_CARACTERISTICA } from "@/lib/tienda/formato";
 import {
@@ -54,6 +59,8 @@ type Producto = {
   coleccion_producto: { coleccion_id: string }[];
 };
 
+const ESTADO_PRODUCTO = { activo: "Publicado", agotado: "Publicado como agotado", oculto: "Oculto" } as const;
+
 const usd = (n: number) => (n > 0 ? n.toLocaleString("en-US", { style: "currency", currency: "USD" }) : "—");
 
 function Campo({
@@ -91,7 +98,7 @@ async function Editor({ params }: { params: PageProps<"/admin/catalogo/[id]">["p
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   const supabase = await createClient();
-  const [{ data, error }, { data: categorias }, { data: colecciones }] = await Promise.all([
+  const [{ data, error }, { data: categorias }, { data: colecciones }, { rol }, historial, nombres] = await Promise.all([
     supabase
       .from("productos")
       .select(
@@ -105,10 +112,20 @@ async function Editor({ params }: { params: PageProps<"/admin/catalogo/[id]">["p
       .maybeSingle(),
     supabase.from("categorias").select("id, slug, nombre").order("orden"),
     supabase.from("colecciones").select("id, slug, nombre").order("orden"),
+    rolActual(),
+    supabase
+      .from("historial")
+      .select("id, tabla, registro_id, accion, campos, antes, despues, usuario, created_at")
+      .eq("producto_id", id)
+      .order("created_at", { ascending: false })
+      .limit(40)
+      .then((r) => (r.error ? [] : ((r.data ?? []) as FilaHistorial[]))),
+    nombresEquipo(supabase),
   ]);
   if (error) throw error;
   if (!data) notFound();
   const p = data as unknown as Producto;
+  const esAdmin = rol === "super_admin";
 
   const fotos = [...p.imagenes].sort((a, b) => a.orden - b.orden);
   const variantes = [...p.variantes].sort(
@@ -120,6 +137,7 @@ async function Editor({ params }: { params: PageProps<"/admin/catalogo/[id]">["p
   const plantilla = PLANTILLAS[p.categorias?.slug ?? "otros"] ?? [];
   const extras = Object.keys(p.caracteristicas ?? {}).filter((k) => !plantilla.includes(k));
   const claves = [...plantilla, ...extras];
+  const conValor = claves.filter((k) => p.caracteristicas?.[k]);
   const faq = [...p.faq, { pregunta: "", respuesta: "" }, { pregunta: "", respuesta: "" }];
   const enColeccion = new Set(p.coleccion_producto.map((c) => c.coleccion_id));
   const faltas = [
@@ -127,6 +145,13 @@ async function Editor({ params }: { params: PageProps<"/admin/catalogo/[id]">["p
     !variantes.some((v) => v.activo && Number(v.precio) > 0) && "precio de venta",
     !p.categoria_id && "categoría",
   ].filter(Boolean);
+  const nombreVariante = new Map(variantes.map((v) => [v.id, v.nombre]));
+  const entradas: Entrada[] = historial.map((h) => ({
+    id: h.id,
+    cuando: h.created_at,
+    quien: quien(h.usuario, nombres),
+    que: describir(h, nombreVariante.get(h.registro_id) ?? (h.antes?.nombre as string | undefined)),
+  }));
 
   return (
     <div className="space-y-6">
@@ -150,34 +175,35 @@ async function Editor({ params }: { params: PageProps<"/admin/catalogo/[id]">["p
       </div>
 
       {/* Publicación */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Publicación</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <FormularioAccion key={p.estado} accion={cambiarEstado} className="flex flex-wrap items-end gap-3">
-            <input type="hidden" name="id" value={p.id} />
-            <div className="space-y-1">
-              <Label htmlFor="estado">Estado</Label>
-              <select id="estado" name="estado" defaultValue={p.estado} className="h-9 rounded-md border px-2 text-sm">
-                <option value="activo">Publicado</option>
-                <option value="agotado">Publicado como agotado</option>
-                <option value="oculto">Oculto</option>
-              </select>
-            </div>
-            <BotonGuardar>Cambiar</BotonGuardar>
-            <p className="basis-full text-sm text-muted-foreground">
+      <Editable
+        titulo="Publicación"
+        accion={cambiarEstado}
+        textoEditar="Cambiar"
+        vista={
+          <div className="space-y-1 text-sm">
+            <p className="text-base font-medium">{ESTADO_PRODUCTO[p.estado]}</p>
+            <p className="text-muted-foreground">
               {faltas.length
                 ? `Para que se vea en la tienda falta: ${faltas.join(", ")}.`
                 : p.estado === "oculto"
                   ? "Tiene lo necesario para publicarse."
                   : "Se ve en la tienda."}
             </p>
-          </FormularioAccion>
-        </CardContent>
-      </Card>
+          </div>
+        }
+      >
+        <input type="hidden" name="id" value={p.id} />
+        <div className="space-y-1">
+          <Label htmlFor="estado">Estado</Label>
+          <select id="estado" name="estado" defaultValue={p.estado} className="h-9 rounded-md border px-2 text-sm">
+            <option value="activo">Publicado</option>
+            <option value="agotado">Publicado como agotado</option>
+            <option value="oculto">Oculto</option>
+          </select>
+        </div>
+      </Editable>
 
-      {/* Fotos */}
+      {/* Fotos: cada botón actúa al instante */}
       <Card>
         <CardHeader>
           <CardTitle>Fotos</CardTitle>
@@ -226,119 +252,123 @@ async function Editor({ params }: { params: PageProps<"/admin/catalogo/[id]">["p
       </Card>
 
       {/* Datos */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Datos y textos</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <FormularioAccion key={`${p.categoria_id}-${p.slug}`} accion={guardarDatos} className="space-y-4">
-            <input type="hidden" name="id" value={p.id} />
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Campo nombre="nombre" etiqueta="Nombre en la tienda" valor={p.nombre} />
-              <Campo nombre="marca" etiqueta="Marca" valor={p.marca} />
-              <div className="space-y-1">
-                <Label htmlFor="categoria_id">Categoría</Label>
-                <select
-                  id="categoria_id"
-                  name="categoria_id"
-                  defaultValue={p.categoria_id ?? ""}
-                  className="h-9 w-full rounded-md border px-2 text-sm"
-                >
-                  <option value="">Sin categoría</option>
-                  {(categorias ?? []).map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nombre}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <Campo
-                nombre="orden"
-                etiqueta="Orden"
-                valor={p.orden}
-                ayuda="Número menor = aparece primero en las listas."
-              />
-            </div>
+      <Editable
+        titulo="Datos y textos"
+        accion={guardarDatos}
+        vista={
+          <Datos>
+            <Dato etiqueta="Nombre en la tienda">{p.nombre}</Dato>
+            <Dato etiqueta="Marca">{p.marca}</Dato>
+            <Dato etiqueta="Categoría">{p.categorias?.nombre}</Dato>
+            <Dato etiqueta="Orden">{String(p.orden)}</Dato>
+            <Dato etiqueta="Resumen" ancho>
+              {p.resumen}
+            </Dato>
+            <Dato etiqueta="Descripción" ancho>
+              {p.descripcion}
+            </Dato>
+            <Dato etiqueta="Qué trae la caja" ancho>
+              <Lineas items={p.incluye?.split("\n").filter(Boolean)} />
+            </Dato>
+            <Dato etiqueta="Dirección de la página">{`/producto/${p.slug}`}</Dato>
+            <Dato etiqueta="Título para Google">{p.meta_titulo || `${p.nombre} precio en El Salvador (automático)`}</Dato>
+            <Dato etiqueta="Descripción para Google" ancho>
+              {p.meta_descripcion || "Automática"}
+            </Dato>
+          </Datos>
+        }
+      >
+        <input type="hidden" name="id" value={p.id} />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Campo nombre="nombre" etiqueta="Nombre en la tienda" valor={p.nombre} />
+          <Campo nombre="marca" etiqueta="Marca" valor={p.marca} />
+          <div className="space-y-1">
+            <Label htmlFor="categoria_id">Categoría</Label>
+            <select id="categoria_id" name="categoria_id" defaultValue={p.categoria_id ?? ""} className="h-9 w-full rounded-md border px-2 text-sm">
+              <option value="">Sin categoría</option>
+              {(categorias ?? []).map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+          <Campo nombre="orden" etiqueta="Orden" valor={p.orden} ayuda="Número menor = aparece primero en las listas." />
+        </div>
+        <Campo
+          nombre="resumen"
+          etiqueta="Resumen (una línea bajo el nombre)"
+          valor={p.resumen}
+          placeholder='Ej. "5G, pantalla AMOLED de 120 Hz y cámara de 50 MP"'
+        />
+        <Campo
+          nombre="descripcion"
+          etiqueta="Descripción: cómo le ayuda al cliente"
+          valor={p.descripcion}
+          largo
+          filas={7}
+          ayuda="Separá los párrafos con una línea en blanco. Hablá de beneficios (le dura el día, fotos nítidas), no solo de números."
+        />
+        <Campo nombre="incluye" etiqueta="Qué trae la caja (una cosa por línea)" valor={p.incluye} largo filas={4} />
+        <details className="rounded-md border p-3">
+          <summary className="cursor-pointer text-sm font-medium">Google y dirección de la página (opcional)</summary>
+          <div className="mt-3 space-y-3">
             <Campo
-              nombre="resumen"
-              etiqueta="Resumen (una línea bajo el nombre)"
-              valor={p.resumen}
-              placeholder='Ej. "5G, pantalla AMOLED de 120 Hz y cámara de 50 MP"'
+              nombre="slug"
+              etiqueta="Dirección"
+              valor={p.slug}
+              ayuda={`La página queda en /producto/${p.slug}. Si la cambiás después de publicar, los enlaces viejos dejan de funcionar.`}
             />
+            <Campo nombre="meta_titulo" etiqueta="Título para Google" valor={p.meta_titulo} ayuda={`Si lo dejás vacío se usa "${p.nombre} precio en El Salvador".`} />
             <Campo
-              nombre="descripcion"
-              etiqueta="Descripción: cómo le ayuda al cliente"
-              valor={p.descripcion}
+              nombre="meta_descripcion"
+              etiqueta="Descripción para Google"
+              valor={p.meta_descripcion}
               largo
-              filas={7}
-              ayuda="Separá los párrafos con una línea en blanco. Hablá de beneficios (le dura el día, fotos nítidas), no solo de números."
+              filas={2}
+              ayuda="Unas 150 letras. Se arma sola si la dejás vacía."
             />
-            <Campo
-              nombre="incluye"
-              etiqueta="Qué trae la caja (una cosa por línea)"
-              valor={p.incluye}
-              largo
-              filas={4}
-            />
-            <details className="rounded-md border p-3">
-              <summary className="cursor-pointer text-sm font-medium">Google y dirección de la página (opcional)</summary>
-              <div className="mt-3 space-y-3">
-                <Campo
-                  nombre="slug"
-                  etiqueta="Dirección"
-                  valor={p.slug}
-                  ayuda={`La página queda en /producto/${p.slug}. Si la cambiás después de publicar, los enlaces viejos dejan de funcionar.`}
-                />
-                <Campo
-                  nombre="meta_titulo"
-                  etiqueta="Título para Google"
-                  valor={p.meta_titulo}
-                  ayuda={`Si lo dejás vacío se usa "${p.nombre} precio en El Salvador".`}
-                />
-                <Campo
-                  nombre="meta_descripcion"
-                  etiqueta="Descripción para Google"
-                  valor={p.meta_descripcion}
-                  largo
-                  filas={2}
-                  ayuda="Unas 150 letras. Se arma sola si la dejás vacía."
-                />
-              </div>
-            </details>
-            <BotonGuardar />
-          </FormularioAccion>
-        </CardContent>
-      </Card>
+          </div>
+        </details>
+      </Editable>
 
       {/* Características */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Características</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <FormularioAccion key={JSON.stringify(p.caracteristicas)} accion={guardarCaracteristicas} className="space-y-4">
-            <input type="hidden" name="id" value={p.id} />
-            {claves.length ? (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {claves.map((k) => (
-                  <div key={k} className="space-y-1">
-                    <Label htmlFor={`c-${k}`}>{NOMBRE_CARACTERISTICA[k] ?? k.replace(/_/g, " ")}</Label>
-                    <Input id={`c-${k}`} name={`c_${k}`} defaultValue={p.caracteristicas?.[k] ?? ""} placeholder={EJEMPLOS[k]} />
-                  </div>
-                ))}
+      <Editable
+        titulo="Características"
+        accion={guardarCaracteristicas}
+        vista={
+          conValor.length ? (
+            <Datos>
+              {conValor.map((k) => (
+                <Dato key={k} etiqueta={NOMBRE_CARACTERISTICA[k] ?? k.replace(/_/g, " ")}>
+                  {p.caracteristicas[k]}
+                </Dato>
+              ))}
+            </Datos>
+          ) : (
+            <p className="text-sm text-muted-foreground">Todavía no tiene características.</p>
+          )
+        }
+      >
+        <input type="hidden" name="id" value={p.id} />
+        {claves.length ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {claves.map((k) => (
+              <div key={k} className="space-y-1">
+                <Label htmlFor={`c-${k}`}>{NOMBRE_CARACTERISTICA[k] ?? k.replace(/_/g, " ")}</Label>
+                <Input id={`c-${k}`} name={`c_${k}`} defaultValue={p.caracteristicas?.[k] ?? ""} placeholder={EJEMPLOS[k]} />
               </div>
-            ) : null}
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Campo nombre="nueva_clave" etiqueta="Otra característica (nombre)" valor="" placeholder="Ej. Lector de huella" />
-              <Campo nombre="nuevo_valor" etiqueta="Valor" valor="" placeholder="Ej. En el botón lateral" />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Dejá vacío lo que no aplique: no se muestra. La memoria (RAM y almacenamiento) va en cada variante.
-            </p>
-            <BotonGuardar />
-          </FormularioAccion>
-        </CardContent>
-      </Card>
+            ))}
+          </div>
+        ) : null}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Campo nombre="nueva_clave" etiqueta="Otra característica (nombre)" valor="" placeholder="Ej. Lector de huella" />
+          <Campo nombre="nuevo_valor" etiqueta="Valor" valor="" placeholder="Ej. En el botón lateral" />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Dejá vacío lo que no aplique: no se muestra. La memoria (RAM y almacenamiento) va en cada variante.
+        </p>
+      </Editable>
 
       {/* Variantes */}
       <Card>
@@ -347,95 +377,128 @@ async function Editor({ params }: { params: PageProps<"/admin/catalogo/[id]">["p
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            El precio se cambia en{" "}
-            <Link href={`/admin/precios?q=${encodeURIComponent(p.nombre)}`} className="text-primary underline">
-              Precios
-            </Link>{" "}
-            (guarda el historial). Aquí: color, unidades propias en bodega y si se muestra.
+            {esAdmin ? (
+              <>
+                El precio se cambia en{" "}
+                <Link href={`/admin/precios?q=${encodeURIComponent(p.nombre)}`} className="text-primary underline">
+                  Precios
+                </Link>{" "}
+                (guarda el historial). Aquí: color, unidades propias en bodega y si se muestra.
+              </>
+            ) : (
+              "Aquí cambiás el color, las unidades propias en bodega y si se muestra. El precio lo pone un administrador."
+            )}
           </p>
           {variantes.map((v) => (
-            <FormularioAccion key={`${v.id}-${v.color}-${v.stock}-${v.activo}`} accion={guardarVariante} className="grid grid-cols-2 items-end gap-2 rounded-md border p-3 sm:grid-cols-[1.4fr_1fr_0.6fr_0.6fr_auto_auto]">
+            <FilaEditable
+              key={v.id}
+              accion={guardarVariante}
+              vista={
+                <div className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-[1.4fr_1fr_1fr_1fr]">
+                  <p className="font-medium">{v.nombre}</p>
+                  <p>
+                    <span className="text-muted-foreground">Precio </span>
+                    {usd(Number(v.precio))}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">En bodega </span>
+                    {v.stock}
+                  </p>
+                  <p className={v.activo ? "" : "text-muted-foreground"}>{v.activo ? "Se muestra" : "No se muestra"}</p>
+                </div>
+              }
+            >
               <input type="hidden" name="id" value={p.id} />
               <input type="hidden" name="varianteId" value={v.id} />
-              <div className="col-span-2 sm:col-span-1">
-                <p className="text-sm font-medium">{v.nombre}</p>
-                <p className="text-xs text-muted-foreground">Precio: {usd(Number(v.precio))}</p>
+              <p className="text-sm font-medium">
+                {v.nombre} <span className="font-normal text-muted-foreground">· Precio {usd(Number(v.precio))}</span>
+              </p>
+              <div className="grid grid-cols-2 items-end gap-3 sm:grid-cols-3">
+                <div className="space-y-1">
+                  <Label htmlFor={`color-${v.id}`} className="text-xs">
+                    Color
+                  </Label>
+                  <Input id={`color-${v.id}`} name="color" defaultValue={v.color ?? ""} />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor={`stock-${v.id}`} className="text-xs">
+                    En bodega
+                  </Label>
+                  <Input id={`stock-${v.id}`} name="stock" type="number" min="0" defaultValue={v.stock} />
+                </div>
+                <label className="flex h-9 items-center gap-2 text-sm">
+                  <input type="checkbox" name="activo" defaultChecked={v.activo} className="size-4 accent-[var(--marca)]" />
+                  Mostrar
+                </label>
               </div>
-              <div className="space-y-1">
-                <Label htmlFor={`color-${v.id}`} className="text-xs">
-                  Color
-                </Label>
-                <Input id={`color-${v.id}`} name="color" defaultValue={v.color ?? ""} />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor={`stock-${v.id}`} className="text-xs">
-                  En bodega
-                </Label>
-                <Input id={`stock-${v.id}`} name="stock" type="number" min="0" defaultValue={v.stock} />
-              </div>
-              <label className="flex h-9 items-center gap-2 text-sm">
-                <input type="checkbox" name="activo" defaultChecked={v.activo} className="size-4 accent-[var(--marca)]" />
-                Mostrar
-              </label>
-              <span />
-              <BotonGuardar size="sm" variant="outline">
-                Guardar
-              </BotonGuardar>
-            </FormularioAccion>
+            </FilaEditable>
           ))}
         </CardContent>
       </Card>
 
       {/* Preguntas frecuentes */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Preguntas frecuentes</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <FormularioAccion key={JSON.stringify(p.faq).length + "-" + p.faq.length} accion={guardarFaq} className="space-y-4">
-            <input type="hidden" name="id" value={p.id} />
-            <p className="text-sm text-muted-foreground">
-              Respondé aquí lo que más te preguntan por WhatsApp de este producto. Para quitar una pregunta, borrá sus dos
-              campos. “¿Puedo pagar al recibir?” y “¿Es nuevo y original?” ya se agregan solas.
-            </p>
-            {faq.map((f, i) => (
-              <div key={i} className="grid gap-2 rounded-md border p-3">
-                <Input name={`pregunta_${i}`} defaultValue={f.pregunta} placeholder={`Pregunta ${i + 1}`} aria-label={`Pregunta ${i + 1}`} />
-                <Textarea name={`respuesta_${i}`} defaultValue={f.respuesta} rows={2} placeholder="Respuesta" aria-label={`Respuesta ${i + 1}`} />
-              </div>
-            ))}
-            <BotonGuardar />
-          </FormularioAccion>
-        </CardContent>
-      </Card>
+      <Editable
+        titulo="Preguntas frecuentes"
+        accion={guardarFaq}
+        vista={
+          p.faq.length ? (
+            <dl className="space-y-3 text-sm">
+              {p.faq.map((f, i) => (
+                <div key={i}>
+                  <dt className="font-medium">{f.pregunta}</dt>
+                  <dd className="text-muted-foreground">{f.respuesta}</dd>
+                </div>
+              ))}
+            </dl>
+          ) : (
+            <p className="text-sm text-muted-foreground">Sin preguntas propias. “¿Puedo pagar al recibir?” y “¿Es nuevo y original?” se agregan solas.</p>
+          )
+        }
+      >
+        <input type="hidden" name="id" value={p.id} />
+        <p className="text-sm text-muted-foreground">
+          Respondé aquí lo que más te preguntan por WhatsApp de este producto. Para quitar una pregunta, borrá sus dos campos.
+          “¿Puedo pagar al recibir?” y “¿Es nuevo y original?” ya se agregan solas.
+        </p>
+        {faq.map((f, i) => (
+          <div key={i} className="grid gap-2 rounded-md border p-3">
+            <Input name={`pregunta_${i}`} defaultValue={f.pregunta} placeholder={`Pregunta ${i + 1}`} aria-label={`Pregunta ${i + 1}`} />
+            <Textarea name={`respuesta_${i}`} defaultValue={f.respuesta} rows={2} placeholder="Respuesta" aria-label={`Respuesta ${i + 1}`} />
+          </div>
+        ))}
+      </Editable>
 
       {/* Colecciones */}
+      <Editable
+        titulo="Colecciones"
+        accion={guardarColecciones}
+        vista={
+          <p className="text-sm">
+            {(colecciones ?? []).filter((c) => enColeccion.has(c.id)).map((c) => c.nombre).join(", ") || (
+              <span className="text-muted-foreground">En ninguna colección.</span>
+            )}
+          </p>
+        }
+      >
+        <input type="hidden" name="id" value={p.id} />
+        <div className="flex flex-wrap gap-4">
+          {(colecciones ?? []).map((c) => (
+            <label key={c.id} className="flex items-center gap-2 text-sm">
+              <input type="checkbox" name="coleccion" value={c.id} defaultChecked={enColeccion.has(c.id)} className="size-4 accent-[var(--marca)]" />
+              {c.nombre}
+            </label>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground">“Los más pedidos” y “Recién llegado” aparecen en la página de inicio con su etiqueta.</p>
+      </Editable>
+
+      {/* Historial */}
       <Card>
         <CardHeader>
-          <CardTitle>Colecciones</CardTitle>
+          <CardTitle>Historial de cambios</CardTitle>
         </CardHeader>
         <CardContent>
-          <FormularioAccion key={[...enColeccion].sort().join()} accion={guardarColecciones} className="space-y-3">
-            <input type="hidden" name="id" value={p.id} />
-            <div className="flex flex-wrap gap-4">
-              {(colecciones ?? []).map((c) => (
-                <label key={c.id} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    name="coleccion"
-                    value={c.id}
-                    defaultChecked={enColeccion.has(c.id)}
-                    className="size-4 accent-[var(--marca)]"
-                  />
-                  {c.nombre}
-                </label>
-              ))}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              “Los más pedidos” y “Recién llegado” aparecen en la página de inicio con su etiqueta.
-            </p>
-            <BotonGuardar />
-          </FormularioAccion>
+          <ListaHistorial entradas={entradas} />
         </CardContent>
       </Card>
     </div>

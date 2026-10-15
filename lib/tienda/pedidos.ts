@@ -124,7 +124,7 @@ export async function crearPedido(
   if (datos.cupon && cot.cuponError) {
     return { ok: false, mensaje: cot.cuponError, campos: { cupon: cot.cuponError } };
   }
-  // Efectivo y transferencia: 6% menos sobre los productos; además un cupón o puntos.
+  // Efectivo y transferencia: el % de Configuración menos sobre los productos; además un cupón o puntos.
   const total = cot.total;
   if (Math.abs(total - datos.totalVisto) > 0.009) {
     return { ok: false, mensaje: "El total cambió mientras comprabas. Revisalo y confirmá de nuevo.", resumen };
@@ -148,8 +148,13 @@ export async function crearPedido(
     return { ok: false, mensaje: "Ya recibimos varios pedidos con ese teléfono. Escribinos por WhatsApp y lo revisamos." };
   }
 
-  // Cliente: uno por correo (así se enlaza después con su cuenta de Google)
-  const { data: existente } = await sb.from("clientes").select("id").eq("correo", datos.correo).maybeSingle();
+  // Cliente: uno por correo (así se enlaza después con su cuenta de Google). Si no hay, el que ya
+  // compró por WhatsApp o en persona con ese teléfono y sin correo (pedido manual) se vuelve el mismo cliente.
+  const { data: porCorreo } = await sb.from("clientes").select("id").eq("correo", datos.correo).maybeSingle();
+  const { data: porTelefono } = porCorreo
+    ? { data: null }
+    : await sb.from("clientes").select("id").eq("telefono", datos.telefono).is("correo", null).order("created_at").limit(1).maybeSingle();
+  const existente = porCorreo ?? porTelefono;
   const direccion = {
     zona: datos.zona,
     departamento: datos.zona === OTRA_ZONA ? datos.departamento : null,
@@ -164,6 +169,7 @@ export async function crearPedido(
     await sb
       .from("clientes")
       .update({
+        ...(porCorreo ? {} : { correo: datos.correo }),
         nombre: datos.nombre,
         telefono: datos.telefono,
         direccion,

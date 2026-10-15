@@ -21,6 +21,7 @@ type Pedido = {
   meta_enviado_en: string | null;
   cliente_id: string | null;
   entrega: { nombre?: string; telefono?: string; correo?: string; municipio?: string | null } | null;
+  canal?: string | null;
   atribucion: { fbp?: string | null; fbc?: string | null; ip?: string | null; agente?: string | null } | null;
   lineas_pedido: { variante_id: string | null; cantidad: number; precio_unitario: number }[];
 };
@@ -32,7 +33,7 @@ export async function enviarCompraMeta(pedidoId: string, sitio: string): Promise
   const sb = createServiceClient();
   const { data } = await sb
     .from("pedidos")
-    .select("id, numero, total, created_at, pagado_en, meta_enviado_en, cliente_id, entrega, atribucion, lineas_pedido(variante_id, cantidad, precio_unitario)")
+    .select("id, numero, total, created_at, pagado_en, meta_enviado_en, cliente_id, canal, entrega, atribucion, lineas_pedido(variante_id, cantidad, precio_unitario)")
     .eq("id", pedidoId)
     .single();
   const p = data as unknown as Pedido | null;
@@ -46,8 +47,10 @@ export async function enviarCompraMeta(pedidoId: string, sitio: string): Promise
     // Meta acepta eventos de hasta 7 días: si el pago llega después, se usa la hora del pago
     event_time: Math.floor(new Date(p.pagado_en).getTime() / 1000),
     event_id: `pedido-${p.numero}`,
-    action_source: "website",
-    event_source_url: `${sitio}/checkout`,
+    // Pedidos manuales (WhatsApp, redes, en persona) no pasaron por el sitio
+    ...(!p.canal || p.canal === "web"
+      ? { action_source: "website", event_source_url: `${sitio}/checkout` }
+      : { action_source: p.canal === "en_persona" ? "physical_store" : p.canal === "llamada" ? "phone_call" : p.canal === "otro" ? "other" : "chat" }),
     user_data: {
       em: sha(p.entrega?.correo) ? [sha(p.entrega?.correo)] : undefined,
       ph: p.entrega?.telefono ? [sha(`503${p.entrega.telefono.replace(/\D/g, "")}`)] : undefined,

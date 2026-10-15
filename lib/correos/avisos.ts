@@ -91,6 +91,8 @@ async function cargar(pedidoId: string, sitio: string) {
 }
 
 async function enviarYAnotar(p: Pedido, para: string, nombre: string, correo: Correo, etiqueta: string, quien: "cliente" | "equipo") {
+  // Pedidos manuales sin correo del cliente: no hay a quién escribirle
+  if (!para) return { enviado: false as const, motivo: "sin correo" };
   const r = await enviarCorreo({ para, nombrePara: nombre, asunto: correo.asunto, html: correo.html, texto: correo.texto, etiqueta });
   await createServiceClient()
     .from("pedido_eventos")
@@ -104,10 +106,12 @@ async function enviarYAnotar(p: Pedido, para: string, nombre: string, correo: Co
   return r;
 }
 
-export async function avisarPedidoNuevo(pedidoId: string, sitio: string) {
+export async function avisarPedidoNuevo(pedidoId: string, sitio: string, opciones: { avisarEquipo?: boolean } = {}) {
   const x = await cargar(pedidoId, sitio);
   if (!x) return;
   await enviarYAnotar(x.p, x.p.entrega.correo, x.p.entrega.nombre, correoPedidoRecibido(x.datos), "pedido-recibido", "cliente");
+  // Pedidos manuales: los creó el equipo, no hace falta avisarle
+  if (opciones.avisarEquipo === false) return;
   const cfg = await configCorreo();
   if (cfg.avisos_a) {
     await enviarYAnotar(

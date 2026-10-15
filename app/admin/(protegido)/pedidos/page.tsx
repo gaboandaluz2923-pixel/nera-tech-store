@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { esperandoPago, porFacturar, type PedidoBase } from "@/lib/admin/pedidos";
+import { CANAL, esperandoPago, porFacturar, type PedidoBase } from "@/lib/admin/pedidos";
 import { createClient } from "@/lib/supabase/server";
 import { ESTADO_PEDIDO, FORMA_PAGO, fechaHora, usd2 } from "@/lib/tienda/formato";
 
@@ -9,6 +9,7 @@ type Fila = PedidoBase & {
   numero: number;
   total: number;
   created_at: string;
+  canal: string;
   entrega: { nombre: string; municipio: string; telefono: string };
 };
 
@@ -27,7 +28,7 @@ async function Contenido({ searchParams }: { searchParams: Promise<{ ver?: strin
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("pedidos")
-    .select("id, numero, estado, forma_pago, total, created_at, entrega, pagado_en, confirmado_en, entregado_en, factura_estado")
+    .select("id, numero, estado, forma_pago, total, created_at, canal, entrega, pagado_en, confirmado_en, entregado_en, factura_estado")
     .order("created_at", { ascending: false })
     .limit(500);
   if (error) throw error;
@@ -91,6 +92,7 @@ async function Contenido({ searchParams }: { searchParams: Promise<{ ver?: strin
                     <span className="block font-medium">{p.entrega?.nombre}</span>
                     <span className="block text-xs text-muted-foreground">
                       {fechaHora(p.created_at)} · {p.entrega?.municipio} · {FORMA_PAGO[p.forma_pago]}
+                      {p.canal && p.canal !== "web" ? ` · ${CANAL[p.canal] ?? p.canal}` : ""}
                     </span>
                   </span>
                   <span className="flex flex-wrap items-center gap-1.5">
@@ -122,9 +124,20 @@ async function Contenido({ searchParams }: { searchParams: Promise<{ ver?: strin
 export default function Pedidos(props: PageProps<"/admin/pedidos">) {
   return (
     <div className="max-w-5xl space-y-4">
-      <div>
-        <h1 className="text-xl font-semibold">Pedidos</h1>
-        <p className="text-sm text-muted-foreground">Los pedidos de la tienda en línea. Tocá uno para confirmarlo, cobrarlo, enviarlo y facturarlo.</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold">Pedidos</h1>
+          <p className="text-sm text-muted-foreground">
+            Todos los pedidos: de la tienda en línea y los que entran por WhatsApp, redes o en persona. Tocá uno para confirmarlo,
+            cobrarlo, enviarlo y facturarlo.
+          </p>
+        </div>
+        <Link
+          href="/admin/pedidos/nuevo"
+          className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+        >
+          + Nuevo pedido
+        </Link>
       </div>
       <Suspense fallback={<p className="text-sm text-muted-foreground">Cargando…</p>}>
         <Contenido searchParams={props.searchParams as Promise<{ ver?: string; q?: string }>} />

@@ -66,3 +66,15 @@ export function porFacturar(p: PedidoBase, ahora = new Date()) {
 
 export const esperandoPago = (p: PedidoBase) =>
   !p.pagado_en && p.forma_pago !== "contra_entrega" && p.estado !== "cancelado" && p.estado !== "devuelto";
+
+/** Por dónde entró el pedido (columna canal, migración 0008). */
+export const CANAL: Record<string, string> = {
+  web: "Tienda en línea",
+  whatsapp: "WhatsApp",
+  instagram: "Instagram",
+  facebook: "Facebook / Marketplace",
+  tiktok: "TikTok",
+  llamada: "Llamada",
+  en_persona: "En persona",
+  otro: "Otro",
+};

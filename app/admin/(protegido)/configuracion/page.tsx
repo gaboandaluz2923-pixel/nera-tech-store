@@ -1,5 +1,7 @@
 import { Suspense } from "react";
+import { Editable } from "@/components/admin/editable";
 import { BotonGuardar, FormularioAccion } from "@/components/admin/formulario-accion";
+import { Dato, Datos, Lineas, siNo } from "@/components/admin/vista";
 import {
   Card,
   CardContent,
@@ -11,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { createClient } from "@/lib/supabase/server";
+import { leerPorcentajeSinTarjeta, usd2 } from "@/lib/tienda/formato";
 import { correoDePrueba, guardarConfiguracion, probarWompi } from "./actions";
 
 // Datos del negocio que usa la tienda (se editan aquí) y estado de las variables de entorno
@@ -60,31 +63,24 @@ function Seccion({
   clave,
   titulo,
   descripcion,
-  valor,
+  vista,
   children,
 }: {
   clave: string;
   titulo: string;
   descripcion: string;
-  valor: unknown;
+  vista: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{titulo}</CardTitle>
-        <CardDescription>{descripcion}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <FormularioAccion key={JSON.stringify(valor)} accion={guardarConfiguracion} className="space-y-3">
-          <input type="hidden" name="clave" value={clave} />
-          {children}
-          <BotonGuardar />
-        </FormularioAccion>
-      </CardContent>
-    </Card>
+    <Editable titulo={titulo} descripcion={descripcion} accion={guardarConfiguracion} vista={vista}>
+      <input type="hidden" name="clave" value={clave} />
+      {children}
+    </Editable>
   );
 }
+
+const dinero = (v: unknown) => (v === null || v === undefined || v === "" ? null : usd2(Number(v)));
 
 async function DatosNegocio() {
   const supabase = await createClient();
@@ -95,11 +91,17 @@ async function DatosNegocio() {
   const t = c.tasa_cero ?? {};
   const n = c.negocio ?? {};
   const g = c.garantia_texto ?? {};
+  const pct = leerPorcentajeSinTarjeta(c.descuento_sin_tarjeta);
   // Contra entrega: formato viejo (lista) o nuevo ({ municipios, todo_el_pais, maximo })
   const ce = Array.isArray(c.municipios_contra_entrega)
     ? { municipios: c.municipios_contra_entrega, todo_el_pais: false, maximo: null }
     : (c.municipios_contra_entrega ?? { municipios: [], todo_el_pais: false, maximo: null });
   const numero = String(w.numero ?? "");
+  const cuentas: { banco: string; tipo: string; numero: string; titular: string }[] = Array.isArray(c.cuentas_bancarias)
+    ? c.cuentas_bancarias
+    : [];
+  const puntos = c.puntos ?? {};
+  const regalo = c.regalo_cumple ?? {};
 
   return (
     <>
@@ -107,14 +109,38 @@ async function DatosNegocio() {
         clave="whatsapp"
         titulo="WhatsApp"
         descripcion="A este número llegan todos los botones de WhatsApp de la tienda, con el pedido ya escrito."
-        valor={w}
+        vista={
+          <Datos>
+            <Dato etiqueta="Número">{numero ? `+${numero.slice(0, 3)} ${numero.slice(3, 7)} ${numero.slice(7)}` : null}</Dato>
+          </Datos>
+        }
       >
         <Campo
           nombre="numero"
           etiqueta="Número"
           valor={numero.startsWith("503") ? numero.slice(3) : numero}
           placeholder="7123 4567"
-          ayuda={numero ? `Guardado como +${numero}.` : "Todavía no hay número: los botones abren WhatsApp sin destinatario."}
+          ayuda="8 dígitos, con o sin 503."
+        />
+      </Seccion>
+
+      <Seccion
+        clave="descuento_sin_tarjeta"
+        titulo="Descuento sin tarjeta"
+        descripcion="El precio publicado es el de tarjeta y tasa 0%. Al pagar en efectivo contra entrega o por transferencia se descuenta este % sobre los productos (no sobre el envío)."
+        vista={
+          <Datos>
+            <Dato etiqueta="Descuento">{`${pct}%`}</Dato>
+            <Dato etiqueta="Ejemplo">{`Un producto de $100 queda en ${usd2(100 - pct)} pagando en efectivo o por transferencia.`}</Dato>
+          </Datos>
+        }
+      >
+        <Campo
+          nombre="porcentaje"
+          etiqueta="Descuento (%)"
+          valor={pct}
+          tipo="number"
+          ayuda="Ej. 6, 8 o 9. Se ve en la tienda al instante: fichas, checkout y Envíos y pagos. Los pedidos ya hechos no cambian."
         />
       </Seccion>
 
@@ -122,7 +148,14 @@ async function DatosNegocio() {
         clave="correo"
         titulo="Correos"
         descripcion="Desde dónde salen los correos de pedidos (Brevo) y a dónde te avisamos de cada pedido nuevo."
-        valor={c.correo}
+        vista={
+          <Datos>
+            <Dato etiqueta="Sale desde">{c.correo?.remitente ?? "pedidos@neratechsv.com"}</Dato>
+            <Dato etiqueta="Nombre que ve el cliente">{c.correo?.nombre ?? "Nera Tech"}</Dato>
+            <Dato etiqueta="Las respuestas llegan a">{c.correo?.responder_a}</Dato>
+            <Dato etiqueta="Avisos de pedidos nuevos a">{c.correo?.avisos_a}</Dato>
+          </Datos>
+        }
       >
         <div className="grid gap-3 sm:grid-cols-2">
           <Campo nombre="remitente" etiqueta="Sale desde" valor={c.correo?.remitente ?? "pedidos@neratechsv.com"} tipo="email" ayuda="Tiene que ser de tu dominio autenticado en Brevo." />
@@ -143,7 +176,13 @@ async function DatosNegocio() {
         clave="envio"
         titulo="Envío"
         descripcion="Se muestra en cada ficha junto al precio."
-        valor={e}
+        vista={
+          <Datos>
+            <Dato etiqueta="Costo de envío">{dinero(e.costo)}</Dato>
+            <Dato etiqueta="Envío gratis desde">{e.gratis_desde ? dinero(e.gratis_desde) : "Sin envío gratis"}</Dato>
+            <Dato etiqueta="Gratis si incluye un accesorio">{siNo(e.gratis_con_accesorio)}</Dato>
+          </Datos>
+        }
       >
         <div className="grid gap-3 sm:grid-cols-2">
           <Campo nombre="costo" etiqueta="Costo de envío (USD)" valor={e.costo} />
@@ -159,7 +198,15 @@ async function DatosNegocio() {
         clave="municipios_contra_entrega"
         titulo="Contra entrega"
         descripcion="Dónde y hasta qué monto se puede pagar en efectivo al recibir. Se muestra en fichas, inicio, checkout y Envíos y pagos."
-        valor={ce}
+        vista={
+          <Datos>
+            <Dato etiqueta="Dónde">{ce.todo_el_pais ? "En todo el país" : "Solo en los municipios de la lista"}</Dato>
+            <Dato etiqueta="Monto máximo del pedido">{ce.maximo ? dinero(ce.maximo) : "Sin tope"}</Dato>
+            <Dato etiqueta="Municipios que aparecen primero" ancho>
+              {(ce.municipios ?? []).join(", ")}
+            </Dato>
+          </Datos>
+        }
       >
         <label className="flex items-center gap-2 text-sm font-medium">
           <input type="checkbox" name="todo_el_pais" defaultChecked={Boolean(ce.todo_el_pais)} className="size-4 accent-[var(--marca)]" />
@@ -181,7 +228,17 @@ async function DatosNegocio() {
         />
       </Seccion>
 
-      <Seccion clave="tasa_cero" titulo="Tasa 0%" descripcion="Se usa para calcular la cuota que ve el cliente." valor={t}>
+      <Seccion
+        clave="tasa_cero"
+        titulo="Tasa 0%"
+        descripcion="Se usa para calcular la cuota que ve el cliente."
+        vista={
+          <Datos>
+            <Dato etiqueta="Hasta cuántos meses">{t.meses ? `${t.meses} meses` : null}</Dato>
+            <Dato etiqueta="Con qué tarjetas">{t.banco}</Dato>
+          </Datos>
+        }
+      >
         <div className="grid gap-3 sm:grid-cols-2">
           <Campo nombre="meses" etiqueta="Hasta cuántos meses" valor={t.meses} tipo="number" />
           <Campo nombre="banco" etiqueta="Con qué tarjetas (opcional)" valor={t.banco} placeholder="Ej. tarjetas de crédito Banco Agrícola" />
@@ -192,14 +249,27 @@ async function DatosNegocio() {
         clave="cuentas_bancarias"
         titulo="Cuentas para transferencia"
         descripcion="Se muestran solo en la página del pedido de quien eligió pagar por transferencia."
-        valor={c.cuentas_bancarias}
+        vista={
+          cuentas.length ? (
+            <ul className="space-y-2 text-sm">
+              {cuentas.map((k, i) => (
+                <li key={i} className="rounded-md border p-2">
+                  <p className="font-medium">{k.banco}</p>
+                  <p className="text-muted-foreground">
+                    {[k.tipo, k.numero, k.titular].filter(Boolean).join(" · ")}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-amber-800">Todavía no hay cuentas: quien elige transferencia no ve a dónde pagar.</p>
+          )
+        }
       >
         <Campo
           nombre="cuentas"
           etiqueta="Una cuenta por línea: Banco | Tipo | Número | Titular"
-          valor={(Array.isArray(c.cuentas_bancarias) ? c.cuentas_bancarias : [])
-            .map((k: { banco: string; tipo: string; numero: string; titular: string }) => [k.banco, k.tipo, k.numero, k.titular].join(" | "))
-            .join("\n")}
+          valor={cuentas.map((k) => [k.banco, k.tipo, k.numero, k.titular].join(" | ")).join("\n")}
           largo
           filas={3}
           placeholder="Banco Agrícola | Cuenta de ahorro | 3000000000 | Nera Tech S.A. de C.V."
@@ -210,38 +280,51 @@ async function DatosNegocio() {
         clave="puntos"
         titulo="Puntos Nera"
         descripcion="Programa de lealtad: se ganan cuando el pedido queda entregado y pagado, y se usan al pagar con la sesión de Google abierta."
-        valor={c.puntos}
+        vista={
+          <Datos>
+            <Dato etiqueta="Programa">{puntos.activo ? "Activo" : "Apagado"}</Dato>
+            <Dato etiqueta="1 punto por cada">{dinero(puntos.dolares_por_punto ?? 10)}</Dato>
+            <Dato etiqueta="Cada punto vale">{dinero(puntos.valor_punto ?? 0.1)}</Dato>
+            <Dato etiqueta="Vencen a los">{`${puntos.vence_meses ?? 12} meses`}</Dato>
+            <Dato etiqueta="Mínimo para usarlos">{`${puntos.minimo_canje ?? 0} puntos`}</Dato>
+            <Dato etiqueta="El cliente recupera">
+              {`${(((Number(puntos.valor_punto ?? 0.1) || 0) / (Number(puntos.dolares_por_punto ?? 10) || 10)) * 100).toFixed(1)}% de lo que compra`}
+            </Dato>
+          </Datos>
+        }
       >
         <label className="flex items-center gap-2 text-sm font-medium">
-          <input type="checkbox" name="activo" defaultChecked={Boolean(c.puntos?.activo)} className="size-4 accent-[var(--marca)]" />
+          <input type="checkbox" name="activo" defaultChecked={Boolean(puntos.activo)} className="size-4 accent-[var(--marca)]" />
           Programa activo
         </label>
         <div className="grid gap-3 sm:grid-cols-2">
-          <Campo nombre="dolares_por_punto" etiqueta="1 punto por cada (USD)" valor={c.puntos?.dolares_por_punto ?? 10} ayuda="Sobre lo que pagó por los productos (sin envío)." />
-          <Campo nombre="valor_punto" etiqueta="Cada punto vale (USD)" valor={c.puntos?.valor_punto ?? 0.1} />
-          <Campo nombre="vence_meses" etiqueta="Los puntos vencen a los (meses)" valor={c.puntos?.vence_meses ?? 12} tipo="number" />
-          <Campo nombre="minimo_canje" etiqueta="Mínimo de puntos para usarlos" valor={c.puntos?.minimo_canje ?? 0} tipo="number" ayuda="0 = desde el primer punto." />
+          <Campo nombre="dolares_por_punto" etiqueta="1 punto por cada (USD)" valor={puntos.dolares_por_punto ?? 10} ayuda="Sobre lo que pagó por los productos (sin envío)." />
+          <Campo nombre="valor_punto" etiqueta="Cada punto vale (USD)" valor={puntos.valor_punto ?? 0.1} />
+          <Campo nombre="vence_meses" etiqueta="Los puntos vencen a los (meses)" valor={puntos.vence_meses ?? 12} tipo="number" />
+          <Campo nombre="minimo_canje" etiqueta="Mínimo de puntos para usarlos" valor={puntos.minimo_canje ?? 0} tipo="number" ayuda="0 = desde el primer punto." />
         </div>
-        <p className="text-xs text-muted-foreground">
-          Con los valores de ahora el cliente recupera{" "}
-          {(((Number(c.puntos?.valor_punto ?? 0.1) || 0) / (Number(c.puntos?.dolares_por_punto ?? 10) || 10)) * 100).toFixed(1)}% de lo que
-          compra. Ningún canje deja un pedido bajo costo.
-        </p>
+        <p className="text-xs text-muted-foreground">Ningún canje deja un pedido bajo costo.</p>
       </Seccion>
 
       <Seccion
         clave="regalo_cumple"
         titulo="Regalo de cumpleaños"
         descripcion="Cupón personal que se crea solo en el mes de cumpleaños del cliente (si lo guardó en Mi cuenta). Le llega por correo si acepta publicidad y siempre lo ve en Mi cuenta."
-        valor={c.regalo_cumple}
+        vista={
+          <Datos>
+            <Dato etiqueta="Regalo">{regalo.activo ? "Activo" : "Apagado"}</Dato>
+            <Dato etiqueta="Monto">{dinero(regalo.monto ?? 5)}</Dato>
+            <Dato etiqueta="Compra mínima para usarlo">{dinero(regalo.minimo ?? 20)}</Dato>
+          </Datos>
+        }
       >
         <label className="flex items-center gap-2 text-sm font-medium">
-          <input type="checkbox" name="activo" defaultChecked={Boolean(c.regalo_cumple?.activo)} className="size-4 accent-[var(--marca)]" />
+          <input type="checkbox" name="activo" defaultChecked={Boolean(regalo.activo)} className="size-4 accent-[var(--marca)]" />
           Regalo activo
         </label>
         <div className="grid gap-3 sm:grid-cols-2">
-          <Campo nombre="monto" etiqueta="Monto del regalo (USD)" valor={c.regalo_cumple?.monto ?? 5} />
-          <Campo nombre="minimo" etiqueta="Compra mínima para usarlo (USD)" valor={c.regalo_cumple?.minimo ?? 20} />
+          <Campo nombre="monto" etiqueta="Monto del regalo (USD)" valor={regalo.monto ?? 5} />
+          <Campo nombre="minimo" etiqueta="Compra mínima para usarlo (USD)" valor={regalo.minimo ?? 20} />
         </div>
       </Seccion>
 
@@ -249,7 +332,14 @@ async function DatosNegocio() {
         clave="negocio"
         titulo="Datos para el pie de página"
         descripcion="NIT y dirección dan confianza: aparecen al final de todas las páginas."
-        valor={n}
+        vista={
+          <Datos>
+            <Dato etiqueta="Nombre comercial">{n.nombre}</Dato>
+            <Dato etiqueta="NIT">{n.nit}</Dato>
+            <Dato etiqueta="Dirección">{n.direccion}</Dato>
+            <Dato etiqueta="Correo de contacto">{n.correo}</Dato>
+          </Datos>
+        }
       >
         <div className="grid gap-3 sm:grid-cols-2">
           <Campo nombre="nombre" etiqueta="Nombre comercial" valor={n.nombre} />
@@ -263,7 +353,27 @@ async function DatosNegocio() {
         clave="garantia_texto"
         titulo="Garantía"
         descripcion="Texto de la página Garantía y del recuadro de garantía en cada ficha."
-        valor={g}
+        vista={
+          <Datos>
+            <Dato etiqueta="Meses de garantía">{g.plazo_meses ? `${g.plazo_meses} meses` : null}</Dato>
+            <Dato etiqueta="Días para cambio inmediato">{g.cambio_inmediato_dias ? `${g.cambio_inmediato_dias} días` : "Sin cambio inmediato"}</Dato>
+            <Dato etiqueta="Resumen" ancho>
+              {g.resumen}
+            </Dato>
+            <Dato etiqueta="Qué cubre">
+              <Lineas items={g.cubre} />
+            </Dato>
+            <Dato etiqueta="Qué no cubre">
+              <Lineas items={g.no_cubre} />
+            </Dato>
+            <Dato etiqueta="Cómo reclamarla" ancho>
+              <Lineas items={g.como_reclamar} />
+            </Dato>
+            <Dato etiqueta="Nota destacada" ancho>
+              {g.nota}
+            </Dato>
+          </Datos>
+        }
       >
         <div className="grid gap-3 sm:grid-cols-2">
           <Campo nombre="plazo_meses" etiqueta="Meses de garantía" valor={g.plazo_meses} tipo="number" />
@@ -291,7 +401,7 @@ export default function Configuracion() {
       <div>
         <h1 className="text-2xl font-semibold">Configuración</h1>
         <p className="text-muted-foreground">
-          Datos del negocio que ve el cliente. Cada sección se guarda por separado y se ve en la tienda al instante.
+          Datos del negocio que ve el cliente. Tocá Editar en una sección, cambiá lo que necesités y Guardar: se ve en la tienda al instante.
         </p>
       </div>
       <Suspense fallback={<p className="text-sm text-muted-foreground">Cargando…</p>}>

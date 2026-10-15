@@ -14,6 +14,7 @@ import { marcarPagado } from "@/lib/tienda/pedidos";
 // Acciones de la sección Pedidos. Todas verifican que quien las usa sea del equipo.
 
 const texto = (v: FormDataEntryValue | null) => String(v ?? "").trim();
+const soloTelefono = (v: FormDataEntryValue | null) => texto(v).replace(/\D/g, "").replace(/^503(?=\d{8}$)/, "");
 const ok = (mensaje: string): EstadoAccion => ({ ok: true, mensaje, vez: Date.now() });
 const falla = (mensaje: string): EstadoAccion => ({ ok: false, mensaje, vez: Date.now() });
 
@@ -201,6 +202,53 @@ export async function agregarNota(_prev: EstadoAccion, form: FormData): Promise<
   await supabase.from("pedido_eventos").insert({ pedido_id: id, estado_anterior: p.estado, estado_nuevo: p.estado, nota, usuario });
   refrescar(id);
   return ok("Nota agregada");
+}
+
+/** Corrige los datos de entrega de un pedido (nombre, teléfonos, municipio, dirección, referencia). */
+export async function guardarEntrega(_prev: EstadoAccion, form: FormData): Promise<EstadoAccion> {
+  const id = texto(form.get("id"));
+  const nombre = texto(form.get("nombre")).slice(0, 120);
+  const telefono = soloTelefono(form.get("telefono"));
+  const alterno = soloTelefono(form.get("telefono_alterno"));
+  if (!nombre) return falla("Escribí el nombre.");
+  if (!/^[267]\d{7}$/.test(telefono)) return falla("El teléfono debe tener 8 dígitos (ej. 7123 4567).");
+  if (alterno && !/^[267]\d{7}$/.test(alterno)) return falla("El teléfono alterno debe tener 8 dígitos.");
+  const { supabase, usuario } = await equipo();
+  const { data: p } = await supabase.from("pedidos").select("estado, entrega").eq("id", id).single();
+  if (!p) return falla("No se encontró el pedido.");
+  const antes = (p.entrega ?? {}) as Record<string, unknown>;
+  const despues = {
+    ...antes,
+    nombre,
+    telefono,
+    telefono_alterno: alterno || null,
+    municipio: texto(form.get("municipio")).slice(0, 80) || antes.municipio,
+    direccion: texto(form.get("direccion")).slice(0, 300),
+    referencia: texto(form.get("referencia")).slice(0, 300) || null,
+  };
+  const cambiados = ["nombre", "telefono", "telefono_alterno", "municipio", "direccion", "referencia"].filter(
+    (k) => (antes[k] ?? null) !== ((despues as Record<string, unknown>)[k] ?? null)
+  );
+  if (!cambiados.length) return ok("Sin cambios");
+  const { error } = await supabase.from("pedidos").update({ entrega: despues }).eq("id", id);
+  if (error) return falla(`No se pudo guardar: ${error.message}`);
+  const NOMBRES: Record<string, string> = {
+    nombre: "nombre",
+    telefono: "teléfono",
+    telefono_alterno: "teléfono alterno",
+    municipio: "municipio",
+    direccion: "dirección",
+    referencia: "referencia",
+  };
+  await supabase.from("pedido_eventos").insert({
+    pedido_id: id,
+    estado_anterior: p.estado,
+    estado_nuevo: p.estado,
+    nota: `Datos de entrega corregidos: ${cambiados.map((k) => NOMBRES[k]).join(", ")}`,
+    usuario,
+  });
+  refrescar(id);
+  return ok("Datos de entrega guardados");
 }
 
 /** Enlace manual: el pedido pasa al cliente con ese correo (se crea si no existe). */

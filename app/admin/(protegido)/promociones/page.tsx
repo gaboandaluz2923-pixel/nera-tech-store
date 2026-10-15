@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { FilaEditable } from "@/components/admin/editable";
 import { BotonGuardar, FormularioAccion } from "@/components/admin/formulario-accion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -127,7 +128,8 @@ async function Contenido() {
           ) : (
             <p className="text-sm text-muted-foreground">Todavía no hay ofertas.</p>
           )}
-          <FormularioAccion accion={crearOferta} className="grid gap-3 rounded-lg bg-muted/40 p-3 sm:grid-cols-[2fr_1fr_1fr_auto] sm:items-end">
+          <FilaEditable accion={crearOferta} className="rounded-lg bg-muted/40 p-3" textoEditar="+ Nueva oferta" textoGuardar="Crear y poner precios">
+            <div className="grid gap-3 sm:grid-cols-[2fr_1fr_1fr]">
             <div className="space-y-1">
               <Label htmlFor="of-nombre">Nueva oferta</Label>
               <Input id="of-nombre" name="nombre" placeholder="Ej. Quincena de octubre" />
@@ -140,9 +142,9 @@ async function Contenido() {
               <Label htmlFor="of-fin">Termina</Label>
               <Input id="of-fin" name="fin" type="datetime-local" />
             </div>
-            <BotonGuardar>Crear y poner precios</BotonGuardar>
-          </FormularioAccion>
-          <p className="text-xs text-muted-foreground">Si dejás &quot;Empieza&quot; vacío, empieza en cuanto la actives. Horas de El Salvador.</p>
+            </div>
+            <p className="text-xs text-muted-foreground">Si dejás &quot;Empieza&quot; vacío, empieza en cuanto la actives. Horas de El Salvador.</p>
+          </FilaEditable>
         </CardContent>
       </Card>
 
@@ -162,30 +164,40 @@ async function Contenido() {
                 const valor = c.bundle_items.reduce((s, i) => s + Number(i.variantes?.precio ?? 0) * i.cantidad, 0);
                 return (
                   <li key={c.id} className="p-3">
-                    <FormularioAccion key={`${c.descuento}-${c.activo}`} accion={guardarCombo} className="flex flex-wrap items-end gap-3">
+                    <FilaEditable
+                      accion={guardarCombo}
+                      className=""
+                      vista={
+                        <div>
+                          <p className="font-medium">
+                            {c.nombre}
+                            {!c.activo ? <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">apagado</span> : null}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {c.productos?.nombre} +{" "}
+                            {c.bundle_items
+                              .map((i) => `${i.cantidad > 1 ? `${i.cantidad} × ` : ""}${[i.variantes?.productos?.nombre, i.variantes?.color].filter(Boolean).join(" ")}`)
+                              .join(" + ")}
+                          </p>
+                          <p className="text-sm">
+                            Ahorro <strong>{usd2(Number(c.descuento))}</strong>
+                            <span className="text-xs text-muted-foreground"> · accesorios a precio normal: {usd2(valor)}</span>
+                          </p>
+                        </div>
+                      }
+                    >
                       <input type="hidden" name="id" value={c.id} />
-                      <div className="min-w-48 flex-1">
-                        <p className="font-medium">
-                          {c.nombre}
-                          {!c.activo ? <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">apagado</span> : null}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {c.productos?.nombre} +{" "}
-                          {c.bundle_items
-                            .map((i) => `${i.cantidad > 1 ? `${i.cantidad} × ` : ""}${[i.variantes?.productos?.nombre, i.variantes?.color].filter(Boolean).join(" ")}`)
-                            .join(" + ")}
-                        </p>
-                        <p className="text-xs text-muted-foreground">Accesorios a precio normal: {usd2(valor)}</p>
+                      <p className="font-medium">{c.nombre}</p>
+                      <div className="flex flex-wrap items-end gap-3">
+                        <div className="w-28 space-y-1">
+                          <Label htmlFor={`cb-${c.id}`}>Ahorro ($)</Label>
+                          <Input id={`cb-${c.id}`} name="descuento" inputMode="decimal" defaultValue={Number(c.descuento).toFixed(2)} />
+                        </div>
+                        <label className="flex h-9 items-center gap-2 text-sm">
+                          <input type="checkbox" name="activo" defaultChecked={c.activo} className="size-4" /> Activo
+                        </label>
                       </div>
-                      <div className="w-28 space-y-1">
-                        <Label htmlFor={`cb-${c.id}`}>Ahorro ($)</Label>
-                        <Input id={`cb-${c.id}`} name="descuento" inputMode="decimal" defaultValue={Number(c.descuento).toFixed(2)} />
-                      </div>
-                      <label className="flex h-9 items-center gap-2 text-sm">
-                        <input type="checkbox" name="activo" defaultChecked={c.activo} className="size-4" /> Activo
-                      </label>
-                      <BotonGuardar variant="outline">Guardar</BotonGuardar>
-                    </FormularioAccion>
+                    </FilaEditable>
                   </li>
                 );
               })}
@@ -193,7 +205,7 @@ async function Contenido() {
           ) : (
             <p className="text-sm text-muted-foreground">Todavía no hay combos.</p>
           )}
-          <FormularioAccion accion={crearCombo} className="space-y-3 rounded-lg bg-muted/40 p-3">
+          <FilaEditable accion={crearCombo} className="rounded-lg bg-muted/40 p-3" textoEditar="+ Nuevo combo" textoGuardar="Crear combo">
             <p className="text-sm font-semibold">Nuevo combo</p>
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="space-y-1">
@@ -236,8 +248,7 @@ async function Contenido() {
                 </div>
               ))}
             </div>
-            <BotonGuardar>Crear combo</BotonGuardar>
-          </FormularioAccion>
+          </FilaEditable>
         </CardContent>
       </Card>
 
@@ -301,7 +312,7 @@ async function Contenido() {
           ) : (
             <p className="text-sm text-muted-foreground">Todavía no hay cupones.</p>
           )}
-          <FormularioAccion accion={crearCupon} className="space-y-3 rounded-lg bg-muted/40 p-3">
+          <FilaEditable accion={crearCupon} className="rounded-lg bg-muted/40 p-3" textoEditar="+ Nuevo cupón" textoGuardar="Crear cupón">
             <p className="text-sm font-semibold">Nuevo cupón</p>
             <div className="grid gap-3 sm:grid-cols-4">
               <div className="space-y-1">
@@ -353,8 +364,7 @@ async function Contenido() {
               </div>
             </div>
             <p className="text-xs text-muted-foreground">Usos por cliente: 0 = sin límite. Fechas vacías = vale desde ya y no vence.</p>
-            <BotonGuardar>Crear cupón</BotonGuardar>
-          </FormularioAccion>
+          </FilaEditable>
         </CardContent>
       </Card>
     </div>
