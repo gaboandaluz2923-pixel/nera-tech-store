@@ -66,6 +66,7 @@ Registro corto de decisiones técnicas y de negocio, con fecha, para no volver a
 | 2026-10-15 | Garantía según la carta de Nera Tech: 12 meses, sin cambio inmediato (antes el texto base decía 7 días), no transferible ni válida para reventa; se reclama con factura, DUI y equipo | La carta es la política oficial |
 | 2026-10-15 | Pie de página: "San Salvador, El Salvador · NIT 0623-090426-116-2", sin dirección exacta | Indicación de Gabriel |
 | 2026-10-15 | Velocidad: CSS en línea (`experimental.inlineCss`), foto LCP con `fetchPriority="high"` + `loading="eager"` (en Next 16 `priority` está obsoleto) y la barra de confianza dentro del contenido que carga después; checkout con alto mínimo | LCP móvil: inicio 2.4→0.9 s, ficha 2.3→2.1 s, celulares 2.4 s, checkout 2.4 s; CLS de fichas y celulares 0.10→0 / 0.03 |
+| 2026-10-15 | Fichas y fotos de 82 productos ocultos cargadas con `supabase/contenido/fichas-2026-10-15.sql` (generado con `--sin-publicar`: no cambia el estado). Specs y fotos solo de páginas oficiales; 201 fotos en `public/productos/<slug>/` procesadas con `scripts/procesar-foto.py` | Angel solo sube las fotos de 9 productos sin foto oficial encontrada. Nada se publica sin precio aprobado por Gabriel |
 
 ## Fase actual
 Fase 1 — Proveedores, listas y mejor precio: terminada.
