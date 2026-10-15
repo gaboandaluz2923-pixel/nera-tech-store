@@ -2,9 +2,10 @@
 // 1) Refresca la sesión de Supabase (cookies) para que no caduque a mitad de uso.
 // 2) Panel: sin sesión → /admin/login. Con sesión pero sin estar en la lista de equipo
 //    (por ejemplo un cliente que entró con Google) → también al login, con un aviso.
+// 3) Secciones de administrador (proveedores, precios, configuración…): un operador vuelve al inicio.
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { esDelEquipo } from "@/lib/supabase/equipo";
+import { esSoloSuperAdmin, rolDelEquipo } from "@/lib/supabase/equipo";
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -46,7 +47,8 @@ export async function proxy(request: NextRequest) {
   if (!pathname.startsWith("/admin")) return response; // páginas del cliente: solo refrescar la sesión
 
   const esLogin = pathname.startsWith("/admin/login");
-  const esEquipo = user ? await esDelEquipo(supabase) : false;
+  const rol = user ? await rolDelEquipo(supabase) : null;
+  const esEquipo = rol !== null;
 
   if (!esEquipo && !esLogin) {
     const url = request.nextUrl.clone();
@@ -54,6 +56,14 @@ export async function proxy(request: NextRequest) {
     url.search = "";
     url.searchParams.set("volver", pathname);
     if (user) url.searchParams.set("aviso", "sin-acceso");
+    return NextResponse.redirect(url);
+  }
+
+  if (rol === "operador" && esSoloSuperAdmin(pathname)) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/admin";
+    url.search = "";
+    url.searchParams.set("aviso", "solo-admin");
     return NextResponse.redirect(url);
   }
 

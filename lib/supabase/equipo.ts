@@ -1,16 +1,44 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+export type Rol = "super_admin" | "operador";
+
+/** Secciones que solo ve un super admin (el operador ve Inicio, Catálogo, Pedidos y Clientes). */
+export const SOLO_SUPER_ADMIN = [
+  "/admin/proveedores",
+  "/admin/listas",
+  "/admin/precios",
+  "/admin/promociones",
+  "/admin/correos",
+  "/admin/analitica",
+  "/admin/configuracion",
+  "/admin/equipo",
+];
+
+export const esSoloSuperAdmin = (ruta: string) =>
+  SOLO_SUPER_ADMIN.some((s) => ruta === s || ruta.startsWith(`${s}/`));
+
+const falta = (e: { code?: string; message?: string }, nombre: string) =>
+  e.code === "PGRST202" || new RegExp(nombre).test(e.message ?? "");
+
 /**
- * ¿La sesión actual es del equipo? (función es_equipo de la migración 0004)
- * Mientras la migración 0004 no se haya corrido, la función no existe y se deja pasar a
- * cualquier usuario con sesión (como antes), para no dejar a Gabriel fuera de su panel.
+ * Rol de la sesión actual en el equipo (funciones de las migraciones 0004 y 0008), o null si no es del equipo.
+ * Mientras la 0008 no se haya corrido no existe mi_rol(): quien sea del equipo cuenta como super admin (como antes).
+ * Mientras la 0004 tampoco, se deja pasar a cualquier usuario con sesión, para no dejar a Gabriel fuera de su panel.
  */
-export async function esDelEquipo(supabase: SupabaseClient): Promise<boolean> {
-  const { data, error } = await supabase.rpc("es_equipo");
-  if (error) {
-    const faltaFuncion = error.code === "PGRST202" || /es_equipo/.test(error.message ?? "");
-    if (faltaFuncion) console.warn("Falta correr la migración 0004 (es_equipo).");
-    return faltaFuncion;
+export async function rolDelEquipo(supabase: SupabaseClient): Promise<Rol | null> {
+  const { data, error } = await supabase.rpc("mi_rol");
+  if (!error) return data === "super_admin" || data === "operador" ? data : null;
+  if (!falta(error, "mi_rol")) return null;
+  const r = await supabase.rpc("es_equipo");
+  if (r.error) {
+    const sinFuncion = falta(r.error, "es_equipo");
+    if (sinFuncion) console.warn("Falta correr la migración 0004 (es_equipo).");
+    return sinFuncion ? "super_admin" : null;
   }
-  return Boolean(data);
+  return r.data ? "super_admin" : null;
+}
+
+/** ¿La sesión actual es del equipo? */
+export async function esDelEquipo(supabase: SupabaseClient): Promise<boolean> {
+  return (await rolDelEquipo(supabase)) !== null;
 }

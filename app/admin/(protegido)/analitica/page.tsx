@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { BotonGuardar, FormularioAccion } from "@/components/admin/formulario-accion";
+import { FilaEditable } from "@/components/admin/editable";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { datosAnalitica, type FilaSemana } from "@/lib/admin/analitica";
-import { createClient } from "@/lib/supabase/server";
+import { superAdmin } from "@/lib/admin/sesion";
+import { createServiceClient } from "@/lib/supabase/server";
 import { usd2 } from "@/lib/tienda/formato";
 import { guardarGasto } from "./actions";
 
@@ -32,8 +33,9 @@ const th = "p-2 text-right font-medium";
 const td = "p-2 text-right tabular-nums";
 
 async function Contenido() {
-  const supabase = await createClient();
-  const d = await datosAnalitica(supabase, 8);
+  // El costo de cada venta no se ve con la sesión del panel: se lee desde el servidor, solo para super admin
+  await superAdmin();
+  const d = await datosAnalitica(createServiceClient(), 8);
   const [esta, pasada] = d.semanas;
   const hayDatos = d.semanas.some((s) => s.sesiones || s.pedidos);
 
@@ -163,7 +165,8 @@ async function Contenido() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <FormularioAccion accion={guardarGasto} className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr_1fr_auto] sm:items-end">
+          <FilaEditable accion={guardarGasto} className="rounded-lg bg-muted/40 p-3" textoEditar="+ Anotar gasto de una semana" textoGuardar="Guardar gasto">
+            <div className="grid gap-3 sm:grid-cols-4 sm:items-end">
             <div className="space-y-1">
               <Label htmlFor="gp-semana">Un día de esa semana</Label>
               <Input id="gp-semana" name="semana" type="date" />
@@ -185,12 +188,12 @@ async function Contenido() {
               <Label htmlFor="gp-conv">Conversaciones (opcional)</Label>
               <Input id="gp-conv" name="conversaciones" inputMode="numeric" placeholder="Chats de WhatsApp" />
             </div>
-            <BotonGuardar>Guardar gasto</BotonGuardar>
-            <div className="space-y-1 sm:col-span-5">
+            <div className="space-y-1 sm:col-span-4">
               <Label htmlFor="gp-notas">Nota (opcional)</Label>
               <Input id="gp-notas" name="notas" placeholder="Ej. campaña Galaxy A17" />
             </div>
-          </FormularioAccion>
+            </div>
+          </FilaEditable>
           {d.gastos.length ? (
             <ul className="divide-y rounded-lg border text-sm">
               {d.gastos.map((g) => (

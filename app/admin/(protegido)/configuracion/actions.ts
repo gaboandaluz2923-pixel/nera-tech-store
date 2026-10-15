@@ -2,8 +2,9 @@
 
 import { revalidatePath, updateTag } from "next/cache";
 import type { EstadoAccion } from "@/components/admin/formulario-accion";
-import { equipo } from "@/lib/admin/sesion";
+import { superAdmin } from "@/lib/admin/sesion";
 import { ETIQUETA_CATALOGO } from "@/lib/tienda/datos";
+import { DESCUENTO_SIN_TARJETA } from "@/lib/tienda/formato";
 import { ErrorWompi, datosNegocio, tokenWompi } from "@/lib/wompi";
 import { configCorreo, enviarCorreo } from "@/lib/correo";
 
@@ -48,6 +49,14 @@ export async function guardarConfiguracion(_prev: EstadoAccion, form: FormData):
       const maximo = texto(form.get("maximo")) ? numero(form.get("maximo")) : null;
       if (maximo !== null && !(maximo > 0)) return falla("Revisá el monto máximo de contra entrega.");
       valor = { municipios: lista, todo_el_pais: form.get("todo_el_pais") === "on", maximo };
+      break;
+    }
+    case "descuento_sin_tarjeta": {
+      const porcentaje = numero(form.get("porcentaje"));
+      if (!(porcentaje >= 0 && porcentaje <= DESCUENTO_SIN_TARJETA.maximo)) {
+        return falla(`El descuento debe estar entre 0 y ${DESCUENTO_SIN_TARJETA.maximo}%.`);
+      }
+      valor = { porcentaje: Math.round(porcentaje * 100) / 100 };
       break;
     }
     case "tasa_cero": {
@@ -125,9 +134,10 @@ export async function guardarConfiguracion(_prev: EstadoAccion, form: FormData):
       return falla("No se reconoce qué se quiere guardar.");
   }
 
-  const { supabase } = await equipo();
-  // upsert: crea la clave si todavía no existe (las nuevas quedan privadas)
-  const { error } = await supabase.from("configuracion").upsert({ clave, valor }, { onConflict: "clave" });
+  const { supabase } = await superAdmin();
+  // upsert: crea la clave si todavía no existe (las nuevas quedan privadas, menos las que lee la tienda)
+  const publica = clave === "descuento_sin_tarjeta" ? { publica: true } : {};
+  const { error } = await supabase.from("configuracion").upsert({ clave, valor, ...publica }, { onConflict: "clave" });
   if (error) return falla(`No se pudo guardar: ${error.message}`);
   revalidatePath("/admin/configuracion");
   updateTag(ETIQUETA_CATALOGO);
@@ -136,7 +146,7 @@ export async function guardarConfiguracion(_prev: EstadoAccion, form: FormData):
 
 /** Pide un token a Wompi con las claves de Vercel para confirmar que funcionan (no muestra las claves). */
 export async function probarWompi(): Promise<EstadoAccion> {
-  await equipo();
+  await superAdmin();
   try {
     await tokenWompi();
     const negocio = await datosNegocio().catch(() => null);
@@ -154,7 +164,7 @@ export async function probarWompi(): Promise<EstadoAccion> {
 
 /** Manda un correo de prueba al correo de avisos (o al de quien está en el panel). */
 export async function correoDePrueba(): Promise<EstadoAccion> {
-  const { usuario } = await equipo();
+  const { usuario } = await superAdmin();
   const cfg = await configCorreo();
   const para = cfg.avisos_a || (usuario.includes("@") ? usuario : "");
   if (!para) return falla("Guardá primero el correo para avisos de pedidos.");

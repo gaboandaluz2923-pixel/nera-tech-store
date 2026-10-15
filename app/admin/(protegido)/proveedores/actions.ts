@@ -1,18 +1,19 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { equipo } from "@/lib/admin/sesion";
+import type { EstadoAccion } from "@/components/admin/formulario-accion";
+import { superAdmin } from "@/lib/admin/sesion";
 
 const num = (v: FormDataEntryValue | null) => {
   const n = Number(String(v ?? "").replace(/[$,\s]/g, ""));
   return Number.isFinite(n) && n >= 0 ? n : 0;
 };
 
-export async function guardarProveedor(formData: FormData) {
-  const { supabase } = await equipo();
+export async function guardarProveedor(_prev: EstadoAccion, formData: FormData): Promise<EstadoAccion> {
+  const { supabase } = await superAdmin();
   const id = String(formData.get("id") ?? "");
   const nombre = String(formData.get("nombre") ?? "").trim();
-  if (!nombre) return;
+  if (!nombre) return { ok: false, mensaje: "Escribí el nombre del proveedor.", vez: Date.now() };
   const datos = {
     nombre,
     tipo: formData.get("tipo") === "importacion" ? "importacion" : "local",
@@ -31,7 +32,8 @@ export async function guardarProveedor(formData: FormData) {
   const { error } = id
     ? await supabase.from("proveedores").update(datos).eq("id", id)
     : await supabase.from("proveedores").insert(datos);
-  if (error) throw error;
+  if (error) return { ok: false, mensaje: `No se pudo guardar: ${error.message}`, vez: Date.now() };
   revalidatePath("/admin/proveedores");
   revalidatePath("/admin/precios");
+  return { ok: true, mensaje: id ? "Proveedor guardado" : "Proveedor agregado", vez: Date.now() };
 }

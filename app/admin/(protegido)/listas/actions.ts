@@ -3,7 +3,7 @@
 import { revalidatePath, updateTag } from "next/cache";
 import { avisarStockDespues } from "@/lib/tienda/regalos";
 import { ETIQUETA_CATALOGO } from "@/lib/tienda/datos";
-import { equipo } from "@/lib/admin/sesion";
+import { superAdmin } from "@/lib/admin/sesion";
 import {
   asociarLineaEn,
   crearEnCatalogoEn,
@@ -29,7 +29,7 @@ export async function importarLista(entrada: unknown): Promise<ResultadoImportac
   const parsed = esquemaImportacion.safeParse(entrada);
   if (!parsed.success) return { ok: false, error: "Los datos de la lista no son válidos." };
   try {
-    const { supabase } = await equipo();
+    const { supabase } = await superAdmin();
     const r = await importarListaEn(supabase, parsed.data);
     refrescar();
     return { ok: true, ...r };
@@ -45,7 +45,7 @@ export async function importarLista(entrada: unknown): Promise<ResultadoImportac
 export async function crearEnCatalogo(formData: FormData) {
   const ids = formData.getAll("ids").map(String).filter(Boolean);
   if (ids.length === 0) return;
-  const { supabase } = await equipo();
+  const { supabase } = await superAdmin();
   await crearEnCatalogoEn(supabase, ids);
   refrescar();
 }
@@ -55,7 +55,7 @@ export async function asociarLinea(formData: FormData) {
   const lineaId = String(formData.get("lineaId") ?? "");
   const varianteId = String(formData.get("varianteId") ?? "");
   if (!lineaId || !varianteId) return;
-  const { supabase } = await equipo();
+  const { supabase } = await superAdmin();
   await asociarLineaEn(supabase, lineaId, varianteId);
   refrescar();
 }
@@ -64,7 +64,7 @@ export async function asociarLinea(formData: FormData) {
 export async function ignorarLineas(formData: FormData) {
   const ids = formData.getAll("ids").map(String).filter(Boolean);
   if (ids.length === 0) return;
-  const { supabase } = await equipo();
+  const { supabase } = await superAdmin();
   await ignorarLineasEn(supabase, ids);
   refrescar();
 }

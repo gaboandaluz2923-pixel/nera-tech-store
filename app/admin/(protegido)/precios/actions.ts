@@ -2,7 +2,7 @@
 
 import { revalidatePath, updateTag } from "next/cache";
 import { ETIQUETA_CATALOGO } from "@/lib/tienda/datos";
-import { equipo } from "@/lib/admin/sesion";
+import { superAdmin } from "@/lib/admin/sesion";
 import type { EstadoAccion } from "@/components/admin/formulario-accion";
 
 /** Fija el precio de venta de una configuración (todas sus variantes de color) y guarda el historial. */
@@ -14,7 +14,7 @@ export async function fijarPrecio(formData: FormData) {
   const razon = String(formData.get("razon") ?? "manual");
   if (!productoId || !Number.isFinite(precio) || precio < 0) return;
 
-  const { supabase, usuario } = await equipo();
+  const { supabase, usuario } = await superAdmin();
   let q = supabase.from("variantes").select("id, precio").eq("producto_id", productoId);
   q = ram === "" ? q.is("ram_gb", null) : q.eq("ram_gb", Number(ram));
   q = alm === "" ? q.is("almacenamiento_gb", null) : q.eq("almacenamiento_gb", Number(alm));
@@ -60,7 +60,7 @@ export async function anotarPrecioObservado(_prev: EstadoAccion, form: FormData)
   if (!productoId) return { ok: false, mensaje: "Falta el producto.", vez: Date.now() };
   if (!(precio > 0)) return { ok: false, mensaje: "Escribí el precio que viste.", vez: Date.now() };
   if (fuente.length < 2) return { ok: false, mensaje: "Escribí dónde lo viste (ej. Tienda X, Marketplace).", vez: Date.now() };
-  const { supabase, usuario } = await equipo();
+  const { supabase, usuario } = await superAdmin();
   const { error } = await supabase.from("precios_observados").insert({
     producto_id: productoId,
     ram_gb: ram === "" ? null : Number(ram),

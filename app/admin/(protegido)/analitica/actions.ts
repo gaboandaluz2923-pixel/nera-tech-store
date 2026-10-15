@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import type { EstadoAccion } from "@/components/admin/formulario-accion";
 import { lunesSV } from "@/lib/admin/analitica";
-import { equipo } from "@/lib/admin/sesion";
+import { superAdmin } from "@/lib/admin/sesion";
 
 const texto = (v: FormDataEntryValue | null) => String(v ?? "").trim();
 const falla = (mensaje: string): EstadoAccion => ({ ok: false, mensaje, vez: Date.now() });
@@ -19,7 +19,7 @@ export async function guardarGasto(_prev: EstadoAccion, form: FormData): Promise
   if (!["meta", "google", "tiktok", "otro"].includes(canal)) return falla("Elegí el canal.");
   if (conv && !(Number(conv) >= 0)) return falla("Revisá el número de conversaciones.");
   const semana = lunesSV(new Date(`${fecha}T12:00:00Z`));
-  const { supabase } = await equipo();
+  const { supabase } = await superAdmin();
   const { error } = await supabase.from("gasto_pauta").upsert(
     {
       semana,

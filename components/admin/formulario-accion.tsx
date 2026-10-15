@@ -16,16 +16,20 @@ export function FormularioAccion({
   accion,
   children,
   className,
+  alGuardar,
 }: {
   accion: Accion;
   children: React.ReactNode;
   className?: string;
+  /** Se llama cuando la acción salió bien (por ejemplo, para volver de "Editar" a la vista) */
+  alGuardar?: (r: EstadoAccion) => void;
 }) {
   const [, despachar, pendiente] = useActionState(async (prev: EstadoAccion, form: FormData) => {
     const r = await accion(prev, form);
     if (r) {
       if (r.ok) toast.success(r.mensaje);
       else toast.error(r.mensaje);
+      if (r.ok) alGuardar?.(r);
     }
     return r;
   }, null);

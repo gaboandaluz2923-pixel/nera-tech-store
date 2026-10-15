@@ -3,7 +3,7 @@
 import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import type { EstadoAccion } from "@/components/admin/formulario-accion";
-import { equipo } from "@/lib/admin/sesion";
+import { superAdmin } from "@/lib/admin/sesion";
 import { normalizarCodigo } from "@/lib/tienda/beneficios";
 import { ETIQUETA_CATALOGO } from "@/lib/tienda/datos";
 
@@ -47,7 +47,7 @@ function leerOferta(form: FormData) {
 export async function crearOferta(_prev: EstadoAccion, form: FormData): Promise<EstadoAccion> {
   const d = leerOferta(form);
   if ("error" in d) return falla(d.error!);
-  const { supabase } = await equipo();
+  const { supabase } = await superAdmin();
   const { data, error } = await supabase
     .from("promociones")
     .insert({ tipo: "descuento_fecha", nombre: d.nombre, inicio: d.inicio, fin: d.fin, activa: false })
@@ -62,7 +62,7 @@ export async function guardarOferta(_prev: EstadoAccion, form: FormData): Promis
   const id = texto(form.get("id"));
   const d = leerOferta(form);
   if ("error" in d) return falla(d.error!);
-  const { supabase } = await equipo();
+  const { supabase } = await superAdmin();
 
   // Precios: un campo por variante; vacío = no entra en la oferta
   const precios: { promocion_id: string; variante_id: string; precio: number }[] = [];
@@ -114,7 +114,7 @@ export async function crearCombo(_prev: EstadoAccion, form: FormData): Promise<E
   if (!items.length) return falla("Elegí al menos un accesorio.");
   if (new Set(items.map((i) => i.variante_id)).size !== items.length) return falla("Hay un accesorio repetido.");
   if (!(ahorro !== null && ahorro > 0)) return falla("Escribí cuánto ahorra el cliente con el combo (en dólares).");
-  const { supabase } = await equipo();
+  const { supabase } = await superAdmin();
   const { data: precios } = await supabase.from("variantes").select("id, precio, producto_id").in("id", items.map((i) => i.variante_id));
   if ((precios ?? []).some((v) => v.producto_id === principal)) return falla("El producto principal no puede ser también accesorio del combo.");
   const valor = items.reduce((s, i) => s + Number(precios?.find((v) => v.id === i.variante_id)?.precio ?? 0) * i.cantidad, 0);
@@ -139,7 +139,7 @@ export async function guardarCombo(_prev: EstadoAccion, form: FormData): Promise
   const ahorro = numero(form.get("descuento"));
   const activo = form.get("activo") === "on";
   if (!(ahorro !== null && ahorro > 0)) return falla("El ahorro debe ser mayor que cero.");
-  const { supabase } = await equipo();
+  const { supabase } = await superAdmin();
   const { error } = await supabase.from("bundles").update({ descuento: Math.round(ahorro * 100) / 100, activo }).eq("id", id);
   if (error) return falla(`No se pudo guardar: ${error.message}`);
   refrescar();
@@ -168,7 +168,7 @@ export async function crearCupon(_prev: EstadoAccion, form: FormData): Promise<E
   for (const [n, v] of [["mínimo", minimo], ["tope", tope], ["usos", usosMax], ["usos por cliente", porCliente]] as const) {
     if (v !== null && !(v >= 0)) return falla(`Revisá el campo ${n}.`);
   }
-  const { supabase } = await equipo();
+  const { supabase } = await superAdmin();
   const { error } = await supabase.from("cupones").insert({
     codigo,
     tipo,
@@ -192,7 +192,7 @@ export async function crearCupon(_prev: EstadoAccion, form: FormData): Promise<E
 export async function cambiarCupon(_prev: EstadoAccion, form: FormData): Promise<EstadoAccion> {
   const id = texto(form.get("id"));
   const activo = texto(form.get("activo")) === "1";
-  const { supabase } = await equipo();
+  const { supabase } = await superAdmin();
   const { error } = await supabase.from("cupones").update({ activo }).eq("id", id);
   if (error) return falla(`No se pudo guardar: ${error.message}`);
   refrescar(false);

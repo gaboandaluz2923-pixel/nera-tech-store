@@ -2,13 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import type { EstadoAccion } from "@/components/admin/formulario-accion";
-import { equipo } from "@/lib/admin/sesion";
+import { superAdmin } from "@/lib/admin/sesion";
 import { sitioActual } from "@/lib/sitio";
 import { revisionDiaria } from "@/lib/tienda/regalos";
 
 /** Corre ya la misma revisión que hace Vercel cada mañana. */
 export async function revisarAhora(): Promise<EstadoAccion> {
-  await equipo();
+  await superAdmin();
   const r = await revisionDiaria(await sitioActual());
   revalidatePath("/admin/correos");
   const partes = [
