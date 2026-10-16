@@ -77,6 +77,10 @@ export function ListadoFiltrable({
     return [...lista].sort((a, b) => peso[a.disponibilidad] - peso[b.disponibilidad]);
   }, [productos, marca, presupuesto, almacenamiento, solo5g, ocultarAgotados, orden]);
 
+  const [masAbierto, setMasAbierto] = useState(false);
+  const hayMas = (conMemoria && almacenamientos.length > 1) || hay5g || hayAgotados;
+  const secundarios = (almacenamiento !== null ? 1 : 0) + (solo5g ? 1 : 0) + (ocultarAgotados ? 1 : 0);
+
   const hayFiltros = marca || presupuesto || almacenamiento !== null || solo5g || ocultarAgotados;
   const limpiar = () => {
     setMarca(null);
@@ -89,29 +93,43 @@ export function ListadoFiltrable({
   return (
     <div>
       <div className="space-y-2" role="group" aria-label="Filtros">
-        {marcas.length > 1 ? (
-          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
-            <Chip activo={!marca} onClick={() => setMarca(null)}>
-              Todas
-            </Chip>
-            {marcas.map((m) => (
-              <Chip key={m} activo={marca === m} onClick={() => setMarca(marca === m ? null : m)}>
-                {m}
+        {/* Una sola fila: marca y precio. En el teléfono se desliza de lado; en la computadora se acomoda */}
+        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
+          {marcas.length > 1 ? (
+            <>
+              <Chip activo={!marca} onClick={() => setMarca(null)}>
+                Todas
               </Chip>
-            ))}
-          </div>
-        ) : null}
-        {presupuestos.length > 1 ? (
-          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
-            {presupuestos.map((r) => (
-              <Chip key={r.id} activo={presupuesto === r.id} onClick={() => setPresupuesto(presupuesto === r.id ? null : r.id)}>
-                {r.texto}
+              {marcas.map((m) => (
+                <Chip key={m} activo={marca === m} onClick={() => setMarca(marca === m ? null : m)}>
+                  {m}
+                </Chip>
+              ))}
+            </>
+          ) : null}
+          {marcas.length > 1 && presupuestos.length > 1 ? <span className="my-1 w-px shrink-0 bg-border" aria-hidden /> : null}
+          {presupuestos.length > 1
+            ? presupuestos.map((r) => (
+                <Chip key={r.id} activo={presupuesto === r.id} onClick={() => setPresupuesto(presupuesto === r.id ? null : r.id)}>
+                  {r.texto}
+                </Chip>
+              ))
+            : null}
+          {hayMas ? (
+            <span className="sm:hidden">
+              <Chip activo={masAbierto || secundarios > 0} onClick={() => setMasAbierto(!masAbierto)}>
+                {masAbierto ? "Menos filtros" : `Más filtros${secundarios ? ` (${secundarios})` : ""}`}
               </Chip>
-            ))}
-          </div>
-        ) : null}
-        {(conMemoria && almacenamientos.length > 1) || hay5g || hayAgotados ? (
-          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+            </span>
+          ) : null}
+        </div>
+        {/* Memoria, 5G y disponibles: en el teléfono detrás de "Más filtros" */}
+        {hayMas ? (
+          <div
+            className={`-mx-4 gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex sm:flex-wrap sm:overflow-visible sm:px-0 ${
+              masAbierto ? "flex" : "hidden"
+            }`}
+          >
             {conMemoria && almacenamientos.length > 1
               ? almacenamientos.map((a) => (
                   <Chip
