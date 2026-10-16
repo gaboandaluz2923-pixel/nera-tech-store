@@ -565,3 +565,23 @@ aparece la línea **Publicidad**. Antes de mandarle ofertas por WhatsApp, revis�
 - **Velocidad**: medida en PageSpeed Insights (pagespeed.web.dev, Celulares). Meta: que "Largest Contentful
   Paint" quede bajo 2.5 s en inicio, una categoría, una ficha y el checkout. Volvé a medir después de cambios
   grandes (fotos nuevas pesadas, scripts nuevos).
+
+## Finanzas (solo administradores)
+Menú **Finanzas**. Arriba elegís el mes (← →) y la vista:
+- **Resultados e indicadores**: el estado de resultados del mes. Ventas entregadas ese mes (con IVA), menos el IVA,
+  menos lo que costó cada producto vendido (el costo de su lote o del proveedor), menos envío y cobro (lo anotado en
+  Gastos; si no hay, se estima con $1.75 por pedido + 2.5%), la pauta de Analítica y los gastos por categoría. Al final:
+  la utilidad antes del impuesto sobre la renta. Al lado, los indicadores, cada uno con su explicación: ticket promedio,
+  margen bruto, de contribución y neto, punto de equilibrio, clientes nuevos y que repiten, recompra, costo por
+  cliente nuevo, valor de un cliente, retorno de la pauta, días de inventario, ciclo de caja y lo que hay por cobrar y
+  por pagar. En rojo lo que conviene revisar.
+- **Flujo de caja**: 6 meses de lo que entró (pedidos cobrados) y salió (compras y gastos pagados y pauta), con el saldo.
+  Abajo, **Saldo inicial de caja y bancos**: cuánto había en una fecha (Editar). Desde esa fecha se calcula el saldo.
+- **Gastos**: **+ Nuevo gasto** con fecha, categoría, documento (crédito fiscal, factura, recibo o sin documento), qué
+  es, a quién, monto (sin IVA si es crédito fiscal), IVA (vacío = 13%), número, NIT, forma de pago, si ya se pagó y si es
+  **fijo** (se repite cada mes: alquiler, sueldos, internet…). **Copiar fijos del mes anterior** los repite en el mes que
+  estás viendo, sin pagar, para que solo ajustés montos. Con crédito fiscal el gasto cuenta sin IVA (el IVA se recupera).
+- **IVA del mes**: IVA de las ventas (débito), IVA de compras y gastos con crédito fiscal (crédito) y lo que tocaría
+  pagar o el remanente. Debajo, el **libro de ventas** y el **libro de compras** del mes con **Descargar CSV** para tu
+  contador. Es un estimado para revisar con él antes de declarar.
+Las compras al proveedor salen de Inventario y la pauta de Analítica: no se anotan otra vez en Gastos.

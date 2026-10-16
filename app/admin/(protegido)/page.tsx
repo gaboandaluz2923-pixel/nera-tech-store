@@ -21,6 +21,7 @@ const FASES = [
   { n: 6, nombre: "Dominio, Google, Meta, velocidad y lanzamiento" },
   { n: 7, nombre: "Equipo, pedidos manuales y clientes" },
   { n: 8, nombre: "Inventario, compras, IMEI y Open Box" },
+  { n: 9, nombre: "Finanzas: resultados, flujo de caja, gastos, IVA e indicadores" },
 ];
 
 type Fila = { id: string; numero: number; total: number; estado: string; canal: string | null; created_at: string; entrega: { nombre?: string } | null };

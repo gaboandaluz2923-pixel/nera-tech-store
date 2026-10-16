@@ -64,6 +64,7 @@ promociones, bundles, bundle_items, cupones, clientes, pedidos, lineas_pedido, p
 pedido_eventos, suscriptores, eventos, gasto_pauta, configuracion, skus_ignorados, equipo (con rol),
 historial (quién cambió qué), cliente_notas; vista clientes_resumen. Fase 8: compras, compra_lineas, lotes (FIFO),
 movimientos_inventario (kardex), unidades (IMEI / serie / código Nera, condición y estado); funciones `inv_*`.
+Fase 9: gastos (y `configuracion.finanzas` con el saldo inicial); cálculos en `lib/admin/finanzas.ts`.
 
 Emparejamiento de listas: `lib/listas/normalizar.ts` (descripción → marca|modelo|ram|almacenamiento|color),
 `lib/listas/columnas.ts` (lectura de CSV/pegado y detección de columnas), `lib/admin/importar.ts` (núcleo de
@@ -102,7 +103,7 @@ Reglas de negocio:
 /app              rutas públicas (/, /celulares, /accesorios, /producto/[slug], /carrito, /checkout, /guias)
 /app/admin        panel: /login (público) y (protegido)/… (proveedores, listas, precios, catalogo,
                   pedidos (+ nuevo: pedido manual), clientes (+ importar: Excel y Brevo), inventario
-                  (compras, variante/[id] kardex), garantia, promociones, correos, analitica,
+                  (compras, variante/[id] kardex), garantia, promociones (+ campana), correos, analitica, finanzas,
                   configuracion, equipo, contrasena)
 /app/api          webhooks (wompi, brevo), endpoints internos
 /components/ui    shadcn (no editar a mano; regenerar con la CLI)

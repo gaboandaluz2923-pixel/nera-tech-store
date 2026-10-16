@@ -245,6 +245,13 @@ vista `clientes_resumen` (pedidos, total comprado, última compra y canales por 
   `inv_recibir_compra`, `inv_anular_compra`; internas: `inv_entrada`, `inv_salida` (FIFO), `inv_recalcular`,
   `inv_lotes_a`, `inv_crear_unidades`, `inv_costo_linea`, `imei_valido`.
 
+### Fase 9: finanzas
+- **gastos**: fecha, categoria (`alquiler` | `sueldos` | `publicidad` | `envios` | `comisiones` | `servicios` |
+  `software` | `honorarios` | `impuestos` | `transporte` | `empaque` | `garantias` | `otros`), descripcion,
+  beneficiario, documento (`ccf` | `factura` | `recibo` | `sin`), numero, nit, monto (sin IVA), iva, total (= monto +
+  iva), fijo, forma_pago, pagado_en, notas, creado_por. Solo super admin.
+- `configuracion` clave `finanzas`: { saldo_inicial, saldo_fecha } (privada).
+
 ## Seguridad (RLS)
 - **anon** (visitantes): SELECT en categorias, productos (estado ≠ oculto), variantes (activo), imagenes, colecciones, coleccion_producto, promociones (activa y vigente), bundles, bundle_items, y la vista `configuracion_publica`.
 - **authenticated** (equipo, entra por /admin): el **super admin** todo en todas las tablas. El **operador**

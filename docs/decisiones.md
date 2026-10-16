@@ -92,6 +92,8 @@ Registro corto de decisiones técnicas y de negocio, con fecha, para no volver a
 | 2026-10-15 | Open Box: ficha aparte en la categoría Open Box (`productos.condicion`, `producto_base_id`, `condicion_detalle`), sin claves de proveedor, con aviso "caja abierta, no sellado de fábrica", su condición por escrito y enlace al modelo nuevo; si no tiene fotos o características usa las del modelo nuevo; para Google es `UsedCondition` | Pedido de Gabriel. Una unidad devuelta abierta se pasa a Open Box conservando su costo |
 | 2026-10-15 | Ninguna oferta ni precio especial por debajo del costo sin confirmarlo: se compara con el costo de lo que hay en bodega (el lote más caro con existencia) o, si no hay, con el del proveedor | Pedido de Gabriel: cuidado con las promociones |
 | 2026-10-15 | Clientes del Excel (pestaña ORDENES) al CRM con la etiqueta "cliente anterior": uno por teléfono o correo y una nota por compra (qué, cuánto, cómo pagó, marca [Excel #N] para no repetir); no se crean pedidos (no inflan las ventas). Lista "Clientes Nera Tech" en Brevo con quienes tienen correo y aceptan publicidad; CSV para WhatsApp | Pedido de Gabriel: lo más importante son los correos y teléfonos para campañas |
+| 2026-10-15 | Fase 9 Finanzas: una venta cuenta el mes en que se entrega; IVA = total × 13/113; costo de lo vendido = costo guardado en cada línea; envío y cobro = lo anotado en Gastos o, si no hay, el estimado de Analítica; gastos con crédito fiscal cuentan sin IVA. Flujo de caja por fechas reales de cobro y pago desde un saldo inicial | Criterios simples y explicados en pantalla; el IVA y los libros son un estimado para el contador |
+| 2026-10-15 | Campañas de correo: el panel arma el correo con productos, precios y etiquetas reales («En bodega», «Oferta hasta…») y lo deja como borrador en Brevo; agendar y enviar se hace en Brevo | Nada sale a los clientes sin que Gabriel lo revise |
 
 ## Fase actual
 Fase 1 — Proveedores, listas y mejor precio: terminada.
@@ -110,4 +112,6 @@ descuento sin tarjeta editable, Editar → Guardar en todo el panel, Mi cuenta c
 fotos gratis: terminada (15 oct 2026).
 Fase 8 — Inventario por lotes, compras al proveedor (PDF/JSON o a mano, crédito y cuentas por pagar), IMEI y serie por
 unidad, garantía, Open Box, bodega primero en la tienda, ofertas sin pérdida, clientes del Excel y lista de Brevo:
-en curso (15 oct 2026). Requiere la migración 0009.
+terminada (15 oct 2026).
+Fase 9 — Finanzas (resultados, indicadores, flujo de caja, gastos, IVA y libros en CSV) y campañas de correo desde el
+panel: en curso (15 oct 2026). Requiere la migración 0010.

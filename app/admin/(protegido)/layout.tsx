@@ -28,11 +28,12 @@ const SECCIONES: { nombre: string; href: string; fase: number }[] = [
   { nombre: "Promociones", href: "/admin/promociones", fase: 4 },
   { nombre: "Correos", href: "/admin/correos", fase: 4 },
   { nombre: "Analítica", href: "/admin/analitica", fase: 5 },
+  { nombre: "Finanzas", href: "/admin/finanzas", fase: 9 },
   { nombre: "Equipo", href: "/admin/equipo", fase: 7 },
   { nombre: "Configuración", href: "/admin/configuracion", fase: 0 },
 ];
 
-const FASE_ACTUAL = 8;
+const FASE_ACTUAL = 9;
 
 const NOMBRE_ROL = { super_admin: "Administrador", operador: "Operador" } as const;
 
