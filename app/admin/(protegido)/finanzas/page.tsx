@@ -32,6 +32,7 @@ const VISTAS = { resumen: "Resultados e indicadores", flujo: "Flujo de caja", ga
 type Vista = keyof typeof VISTAS;
 type Params = { mes?: string; vista?: string };
 const SELECT = "h-9 w-full rounded-md border bg-background px-2 text-sm";
+const mayuscula = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 
 function Fila({ etiqueta, valor, fuerte, negativo, nota }: { etiqueta: string; valor: number; fuerte?: boolean; negativo?: boolean; nota?: string }) {
   return (
@@ -136,7 +137,7 @@ async function Flujo({ mes }: { mes: string }) {
             <tbody className="divide-y">
               {filas.map((f) => (
                 <tr key={f.mes} className={f.mes === mes ? "font-medium" : ""}>
-                  <td className="py-2 capitalize">{nombreMes(f.mes)}</td>
+                  <td className="py-2">{mayuscula(nombreMes(f.mes))}</td>
                   <td className="py-2 text-right">{usd2(f.cobrado)}</td>
                   <td className="py-2 text-right">−{usd2(f.compras)}</td>
                   <td className="py-2 text-right">−{usd2(f.gastos)}</td>
@@ -449,7 +450,7 @@ async function Contenido({ searchParams }: { searchParams: Promise<Params> }) {
         <Link href={enlace({ mes: anterior }) as "/admin/finanzas"} className="rounded-md border px-3 py-1.5 text-sm hover:bg-muted">
           ←
         </Link>
-        <span className="min-w-36 text-center font-medium capitalize">{nombreMes(mes)}</span>
+        <span className="min-w-36 text-center font-medium">{mayuscula(nombreMes(mes))}</span>
         <Link href={enlace({ mes: siguiente }) as "/admin/finanzas"} className="rounded-md border px-3 py-1.5 text-sm hover:bg-muted">
           →
         </Link>
