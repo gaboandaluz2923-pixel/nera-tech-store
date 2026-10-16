@@ -126,3 +126,7 @@ Fase 10 — Facturación electrónica propia (factura, crédito fiscal, nota de 
 correo con PDF y JSON, pruebas de Hacienda con un botón): construida y probada contra un simulador (15 oct 2026).
 Requiere la migración 0011. Siguiente: Gabriel envía la solicitud del ambiente de pruebas, carga el certificado y las
 claves en Vercel y se corren las pruebas; después, producción.
+Campañas con envío gratis (15 oct 2026) — «Octubre Naranja» hasta el 15 de noviembre: banner en el inicio con el
+Infinix GT 50 Pro (10 en bodega) y envío gratis en todo pedido que lleve un producto de la campaña. Los precios del arte
+son los de efectivo; el precio publicado (tarjeta) = efectivo ÷ 0.94. No se muestran precios «regulares» tachados
+inventados. Al terminar, el envío vuelve a $5 y los precios quedan como estén (se cambian en Precios). Migración 0012.

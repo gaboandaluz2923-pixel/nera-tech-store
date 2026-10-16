@@ -218,6 +218,7 @@ async function Ficha({ params }: { params: PageProps<"/producto/[slug]">["params
               mesesTasaCero={c.tasaCero.meses}
               costoEnvio={c.envio.costo}
               envioGratisDesde={c.envio.gratis_desde}
+              campana={p.campana ? { nombre: p.campana.nombre, fin: p.campana.fin } : null}
               descuentoSinTarjeta={c.descuentoSinTarjeta}
             />
           </div>

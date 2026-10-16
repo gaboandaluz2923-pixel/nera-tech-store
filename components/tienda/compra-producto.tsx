@@ -35,6 +35,8 @@ type Props = {
   mesesTasaCero: number;
   costoEnvio: number;
   envioGratisDesde: number | null;
+  /** Campaña vigente con envío gratis para este producto (ej. Octubre Naranja) */
+  campana?: { nombre: string; fin: string | null } | null;
   /** % de descuento al pagar en efectivo o transferencia (Configuración) */
   descuentoSinTarjeta: number;
 };
@@ -83,7 +85,12 @@ function vigente(v: VarianteTienda, ahora: number): VarianteTienda {
 
 export function CompraProducto(props: Props) {
   const ahora = useSyncExternalStore(sinCambios, minutoActual, () => 0);
-  const p = { ...props, variantes: props.variantes.map((v) => vigente(v, ahora)) };
+  const p = {
+    ...props,
+    variantes: props.variantes.map((v) => vigente(v, ahora)),
+    // La campaña deja de mostrarse al terminar aunque la página siga abierta
+    campana: props.campana && (!props.campana.fin || !ahora || new Date(props.campana.fin).getTime() > ahora) ? props.campana : null,
+  };
   // Arranca en la opción más barata que está en bodega (si no hay, la disponible más barata),
   // en negro si existe (es el color de las fotos).
   const [elegidaBase, setElegida] = useState<VarianteTienda>(() => {
@@ -204,7 +211,7 @@ export function CompraProducto(props: Props) {
     abrirCarrito();
   };
   const envioGratis =
-    p.envioGratisDesde !== null && elegida.precio >= p.envioGratisDesde;
+    Boolean(p.campana) || (p.envioGratisDesde !== null && elegida.precio >= p.envioGratisDesde);
 
   return (
     <div className="space-y-5">
@@ -247,9 +254,19 @@ export function CompraProducto(props: Props) {
             <strong>{usd2(precioConDescuento(elegida.precio, p.descuentoSinTarjeta))}</strong>
           </span>
         </p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {envioGratis ? "Envío gratis" : `Envío ${usd(p.costoEnvio)}`}
-        </p>
+        {p.campana ? (
+          <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+            <span className="rounded-md bg-marca px-2 py-0.5 font-semibold text-white">Envío gratis · {p.campana.nombre}</span>
+            {p.campana.fin ? (
+              <span className="inline-flex items-center gap-1 text-muted-foreground">
+                <Clock className="size-3.5" aria-hidden />
+                {finDeOferta(p.campana.fin, ahora ? new Date(ahora) : null)}
+              </span>
+            ) : null}
+          </p>
+        ) : (
+          <p className="mt-1 text-sm text-muted-foreground">{envioGratis ? "Envío gratis" : `Envío ${usd(p.costoEnvio)}`}</p>
+        )}
       </div>
 
       {/* Opciones */}

@@ -481,7 +481,7 @@ arman y agendan en Brevo (botón **Abrir Brevo**); aquí solo se ven.
 4. **Ver cómo queda** muestra el correo. **Crear borrador en Brevo** lo deja en Brevo → Campañas como borrador para
    la lista «Clientes Nera Tech», con enlaces medidos (utm). Ahí te mandás una prueba y lo agendás; el panel nunca
    lo envía solo. Luego aparece aquí en **Agendadas**.
-Menú **Promociones**. Tiene tres recuadros. Nada se borra: las ofertas, combos y cupones se apagan.
+Menú **Promociones**. Tiene cuatro recuadros. Nada se borra: las ofertas, combos y cupones se apagan.
 
 **1. Ofertas con fecha** (precio rebajado por unos días)
 1. Escribí el nombre (lo ve el cliente, ej. "Quincena de octubre"), cuándo empieza (vacío = ya) y cuándo
@@ -510,6 +510,25 @@ Código (3 a 20 letras, números o guiones; se guarda en mayúsculas), tipo (% d
 gratis), valor, **máximo a descontar** (para los de %), compra mínima, usos en total, usos por cliente (0 = sin
 límite), fechas y **solo accesorios**. La tabla muestra cuántas veces se usó (no cuentan los pedidos
 cancelados) y el botón **Apagar/Activar**.
+
+**4. Campañas con envío gratis** (ej. «Octubre Naranja»)
+Una campaña tiene nombre, fechas y una lista de productos: **todo pedido que lleve al menos uno no paga envío**.
+1. En el recuadro **Campañas con envío gratis** tocá **+ Nueva campaña**, escribí el nombre y tocá **Crear**.
+2. Se abre el editor (pantalla con dos recuadros):
+   - *Datos de la campaña*: nombre (lo ve el cliente), empieza, termina (horas de El Salvador), una frase opcional
+     para el banner, la foto del banner con fondo transparente (opcional; si queda vacía se usa la foto principal
+     del producto sobre una tarjeta blanca), **Mostrar el banner en el inicio** y **Campaña activa**.
+   - *Productos con envío gratis*: lista de productos publicados con precio, su categoría, «desde $X» y cuántos hay
+     en bodega. Marcá la casilla de los que entran y elegí uno como **Destacado** (el que sale en grande; conviene
+     el que tiene más unidades en bodega).
+3. Tocá **Guardar campaña** (abajo, siempre visible).
+En la tienda: el inicio cambia el encabezado por un banner oscuro con el arco naranja, el producto destacado, su
+precio en efectivo en grande con el asterisco y la letra pequeña «*Pagando en efectivo o transferencia. Con tarjeta
+$X o 12 cuotas de $Y tasa 0%», cuántos hay en bodega, cuándo termina y los botones **Comprar ahora** y **Pedilo por
+WhatsApp**. Debajo, «Más de {campaña}» con los demás productos. Las tarjetas y fichas dicen «Envío gratis · {campaña}»
+y el carrito y el pago muestran «Envío: Gratis · {campaña}». **La campaña no cambia precios**: los precios se cambian
+en Precios (u Ofertas con fecha). Al terminar la fecha el banner se quita solo y el envío vuelve a cobrarse; los
+precios quedan como estén.
 
 **Reglas que aplica la tienda sola**
 - El 6% de efectivo o transferencia siempre se suma; además el cliente usa **un** beneficio: un cupón **o**

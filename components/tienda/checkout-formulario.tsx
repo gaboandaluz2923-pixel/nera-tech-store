@@ -785,7 +785,7 @@ export function CheckoutFormulario(p: Props) {
                 <dt>Envío</dt>
                 <dd>
                   {resumen.envio === 0 ? (
-                    <span className="font-medium text-green-700">Gratis</span>
+                    <span className="font-medium text-green-700">Gratis{resumen.campanaEnvio ? ` · ${resumen.campanaEnvio}` : ""}</span>
                   ) : (
                     usd2(resumen.envio)
                   )}

@@ -225,7 +225,13 @@ export function CarritoHoja({ accesorios }: { accesorios: ProductoResumen[] }) {
                   ))}
                   <div className="flex justify-between">
                     <dt>Envío</dt>
-                    <dd>{resumen.envio === 0 ? <span className="font-medium text-green-700">Gratis</span> : usd2(resumen.envio)}</dd>
+                    <dd>
+                      {resumen.envio === 0 ? (
+                        <span className="font-medium text-green-700">Gratis{resumen.campanaEnvio ? ` · ${resumen.campanaEnvio}` : ""}</span>
+                      ) : (
+                        usd2(resumen.envio)
+                      )}
+                    </dd>
                   </div>
                   {resumen.faltaParaEnvioGratis !== null && resumen.faltaParaEnvioGratis > 0 ? (
                     <p className="text-xs text-muted-foreground">Te faltan {usd2(resumen.faltaParaEnvioGratis)} para envío gratis.</p>

@@ -61,7 +61,13 @@ export type ProductoResumen = {
   publicadoEn: string | null;
   /** Variante que se agrega con un toque desde "Completá tu equipo" (la disponible más barata, en negro si hay) */
   varianteDestacada: string | null;
+  /** Campaña vigente con envío gratis en la que está (ej. "Octubre Naranja") */
+  campana: CampanaTienda | null;
+  /** Unidades propias en bodega (suma de las variantes) */
+  unidadesEnBodega: number;
 };
+
+export type CampanaTienda = { id: string; nombre: string; fin: string | null; envioGratis: true };
 
 export type ProductoDetalle = ProductoResumen & {
   descripcion: string | null;
@@ -141,6 +147,7 @@ type FilaProducto = {
     almacenamiento_gb: number | null;
     precio: number;
     activo: boolean;
+    stock: number | null;
   }[];
   coleccion_producto: { colecciones: { slug: string } | null }[];
 };
@@ -149,21 +156,31 @@ const SELECT_PRODUCTO = `id, slug, nombre, marca, modelo, resumen, descripcion, 
   estado, condicion, producto_base_id, condicion_detalle, orden, meta_titulo, meta_descripcion, publicado_en, updated_at,
   categorias(slug, nombre),
   imagenes(url, alt, orden, principal),
-  variantes(id, nombre, color, ram_gb, almacenamiento_gb, precio, activo),
+  variantes(id, nombre, color, ram_gb, almacenamiento_gb, precio, activo, stock),
   coleccion_producto(colecciones(slug))`;
 
 /**
  * Lee el catálogo. Si la base no responde (o falta una migración), devuelve una lista vacía
  * en vez de romper el sitio, y ese resultado vacío solo se guarda unos minutos.
  */
-type Leido = { ok: boolean; lista: ProductoDetalle[]; segundosHastaCambio: number | null };
+type Leido = { ok: boolean; lista: ProductoDetalle[]; segundosHastaCambio: number | null; campanas: CampanaLeida[] };
+
+/** Campaña vigente con sus productos en orden (para el banner del inicio) */
+export type CampanaLeida = CampanaTienda & {
+  texto: string | null;
+  banner: boolean;
+  destacado: string | null;
+  /** Foto del banner con fondo transparente (si no, la foto principal del producto) */
+  imagen: string | null;
+  productos: string[];
+};
 
 async function leerCatalogo(): Promise<Leido> {
   try {
     return { ok: true, ...(await leerCatalogoODaError()) };
   } catch (e) {
     console.error("No se pudo leer el catálogo:", e);
-    return { ok: false, lista: [], segundosHastaCambio: null };
+    return { ok: false, lista: [], segundosHastaCambio: null, campanas: [] };
   }
 }
 
@@ -178,6 +195,17 @@ const vida = ({ ok, segundosHastaCambio: s }: Leido) => {
 };
 
 type FilaOferta = { variante_id: string; precio: number; promociones: { nombre: string; fin: string | null } | null };
+type FilaCampana = {
+  producto_id: string;
+  orden: number;
+  promociones: {
+    id: string;
+    nombre: string;
+    fin: string | null;
+    tipo: string;
+    config: { destacado?: string; banner?: boolean; texto?: string; imagen?: string } | null;
+  } | null;
+};
 type FilaComboCat = {
   id: string;
   nombre: string;
@@ -198,7 +226,7 @@ type FilaComboCat = {
 
 async function leerCatalogoODaError(): Promise<Omit<Leido, "ok">> {
   const sb = clientePublico();
-  const [{ data: productos, error }, { data: disp, error: e2 }, ofertasR, proximaR, combosR] = await Promise.all([
+  const [{ data: productos, error }, { data: disp, error: e2 }, ofertasR, proximaR, combosR, campanasR] = await Promise.all([
     sb.from("productos").select(SELECT_PRODUCTO).neq("estado", "oculto").limit(1000),
     sb.from("disponibilidad_publica").select("variante_id, en_bodega, con_proveedor").limit(5000),
     // Ofertas vigentes (la base solo deja ver las activas y dentro de sus fechas)
@@ -211,12 +239,15 @@ async function leerCatalogoODaError(): Promise<Omit<Leido, "ok">> {
       )
       .gt("descuento", 0)
       .limit(500),
+    // Campañas con envío gratis vigentes (la base solo deja ver las activas y dentro de sus fechas)
+    sb.from("promocion_productos").select("producto_id, orden, promociones(id, nombre, fin, tipo, config)").limit(2000),
   ]);
   if (error) throw error;
   if (e2) throw e2;
   // Si falta la migración de la fase 4, la tienda sigue funcionando sin ofertas ni combos
   if (ofertasR.error) console.error("Ofertas:", ofertasR.error.message);
   if (combosR.error) console.error("Combos:", combosR.error.message);
+  if (campanasR.error) console.error("Campañas:", campanasR.error.message);
 
   const ahora = Date.now();
   const ofertaPorVariante = new Map<string, { precio: number; nombre: string; fin: string | null }>();
@@ -228,6 +259,29 @@ async function leerCatalogoODaError(): Promise<Omit<Leido, "ok">> {
     if (!previa || Number(o.precio) < previa.precio) {
       ofertaPorVariante.set(o.variante_id, { precio: Number(o.precio), nombre: o.promociones.nombre, fin: o.promociones.fin });
     }
+  }
+  // Campañas: una por producto (la que termina primero) y la lista completa para el banner
+  const campanaPorProducto = new Map<string, CampanaTienda>();
+  const campanas = new Map<string, CampanaLeida>();
+  for (const f of ((campanasR.data ?? []) as unknown as FilaCampana[]).sort((a, b) => a.orden - b.orden)) {
+    const c = f.promociones;
+    if (!c || c.tipo !== "envio_gratis") continue;
+    if (c.fin) proximoCambio = Math.min(proximoCambio, new Date(c.fin).getTime());
+    const base: CampanaTienda = { id: c.id, nombre: c.nombre, fin: c.fin, envioGratis: true };
+    const previa = campanaPorProducto.get(f.producto_id);
+    if (!previa || (c.fin && (!previa.fin || c.fin < previa.fin))) campanaPorProducto.set(f.producto_id, base);
+    const x =
+      campanas.get(c.id) ??
+      {
+        ...base,
+        texto: c.config?.texto?.trim() || null,
+        banner: c.config?.banner !== false,
+        destacado: c.config?.destacado ?? null,
+        imagen: c.config?.imagen?.trim() || null,
+        productos: [],
+      };
+    x.productos.push(f.producto_id);
+    campanas.set(c.id, x);
   }
   const segundosHastaCambio = Number.isFinite(proximoCambio) ? Math.max(0, Math.ceil((proximoCambio - ahora) / 1000)) : null;
 
@@ -302,6 +356,8 @@ async function leerCatalogoODaError(): Promise<Omit<Leido, "ok">> {
       orden: p.orden,
       publicadoEn: p.publicado_en,
       varianteDestacada: destacada?.id ?? null,
+      campana: campanaPorProducto.get(p.id) ?? null,
+      unidadesEnBodega: p.variantes.filter((v) => v.activo && Number(v.precio) > 0).reduce((s, v) => s + Math.max(0, Number(v.stock) || 0), 0),
       descripcion: p.descripcion,
       caracteristicas: p.caracteristicas ?? {},
       incluye: p.incluye,
@@ -342,6 +398,7 @@ async function leerCatalogoODaError(): Promise<Omit<Leido, "ok">> {
         ORDEN_DISP[a.disponibilidad] - ORDEN_DISP[b.disponibilidad] || a.orden - b.orden || a.nombre.localeCompare(b.nombre)
     ),
     segundosHastaCambio,
+    campanas: [...campanas.values()],
   };
 }
 
@@ -411,7 +468,32 @@ const aResumen = (p: ProductoDetalle): ProductoResumen => ({
   orden: p.orden,
   publicadoEn: p.publicadoEn,
   varianteDestacada: p.varianteDestacada,
+  campana: p.campana,
+  unidadesEnBodega: p.unidadesEnBodega,
 });
+
+/**
+ * Campaña para el banner del inicio: la vigente con banner, su producto destacado (con variantes, para el
+ * precio en efectivo) y el resto de sus productos publicados. Null si no hay ninguna.
+ */
+export async function campanaDestacada(): Promise<{
+  campana: CampanaLeida;
+  destacado: ProductoDetalle;
+  otros: ProductoResumen[];
+} | null> {
+  "use cache";
+  cacheTag(ETIQUETA_CATALOGO);
+  const leido = await leerCatalogo();
+  vida(leido);
+  const porId = new Map(leido.lista.map((p) => [p.id, p]));
+  for (const c of leido.campanas.filter((x) => x.banner).sort((a, b) => (a.fin ?? "9").localeCompare(b.fin ?? "9"))) {
+    const disponibles = c.productos.map((id) => porId.get(id)).filter((p): p is ProductoDetalle => Boolean(p) && p!.disponibilidad !== "agotado");
+    const destacado = (c.destacado ? disponibles.find((p) => p.id === c.destacado) : null) ?? disponibles[0];
+    if (!destacado) continue;
+    return { campana: c, destacado, otros: disponibles.filter((p) => p.id !== destacado.id).map(aResumen) };
+  }
+  return null;
+}
 
 export async function catalogo(): Promise<ProductoResumen[]> {
   "use cache";

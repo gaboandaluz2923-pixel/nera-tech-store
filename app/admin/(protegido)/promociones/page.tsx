@@ -9,7 +9,7 @@ import { superAdmin } from "@/lib/admin/sesion";
 import { campanasBrevo } from "@/lib/brevo-campanas";
 import { createClient } from "@/lib/supabase/server";
 import { fechaHora, usd2 } from "@/lib/tienda/formato";
-import { cambiarCupon, crearCombo, crearCupon, crearOferta, guardarCombo } from "./actions";
+import { cambiarCupon, crearCampanaEnvio, crearCombo, crearCupon, crearOferta, guardarCombo } from "./actions";
 import { estadoOferta } from "./util";
 
 // Promociones: campañas de correo de Brevo, ofertas con fecha, combos "Completá tu equipo" y cupones.
@@ -63,7 +63,7 @@ const describirCupon = (c: Cupon) =>
 
 async function Contenido() {
   const supabase = await createClient();
-  const [ofertasR, combosR, cuponesR, usosR, productosR, cumpleR] = await Promise.all([
+  const [ofertasR, combosR, cuponesR, usosR, productosR, cumpleR, campanasR] = await Promise.all([
     supabase
       .from("promociones")
       .select("id, nombre, inicio, fin, activa, promocion_precios(variante_id)")
@@ -81,7 +81,16 @@ async function Contenido() {
     supabase.from("pedidos").select("cupon_id").not("cupon_id", "is", null).not("estado", "in", "(cancelado,devuelto)").limit(5000),
     supabase.from("productos").select("id, nombre, estado, categorias(slug), variantes(id, color, precio, activo)").neq("estado", "oculto").order("nombre"),
     supabase.from("cupones").select("id", { count: "exact", head: true }).eq("origen", "cumple"),
+    supabase
+      .from("promociones")
+      .select("id, nombre, inicio, fin, activa, config, promocion_productos(producto_id)")
+      .eq("tipo", "envio_gratis")
+      .order("created_at", { ascending: false }),
   ]);
+  const campanas = (campanasR.data ?? []) as unknown as (Omit<Oferta, "promocion_precios"> & {
+    config: { banner?: boolean } | null;
+    promocion_productos: { producto_id: string }[];
+  })[];
   for (const r of [ofertasR, combosR, cuponesR, productosR]) if (r.error) throw r.error;
   const ofertas = (ofertasR.data ?? []) as unknown as Oferta[];
   const combos = (combosR.data ?? []) as unknown as Combo[];
@@ -100,6 +109,57 @@ async function Contenido() {
 
   return (
     <div className="space-y-6">
+      {/* CAMPAÑAS CON ENVÍO GRATIS */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Campañas con envío gratis</CardTitle>
+          <CardDescription>
+            Por fechas (ej. Octubre Naranja): los pedidos que llevan uno de sus productos no pagan envío, las fichas lo dicen y el inicio muestra
+            un banner con el producto destacado. Al terminar, todo vuelve solo a la normalidad.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {campanas.length ? (
+            <ul className="divide-y rounded-lg border">
+              {campanas.map((o) => {
+                const e = estadoOferta(o);
+                return (
+                  <li key={o.id}>
+                    <Link href={`/admin/promociones/envio-gratis/${o.id}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 p-3 hover:bg-muted/50">
+                      <span className="font-medium">{o.nombre}</span>
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${ESTADO_CLASE[e]}`}>{e}</span>
+                      <span className="text-sm text-muted-foreground">
+                        {o.inicio ? fechaHora(o.inicio) : "Desde ya"} → {o.fin ? fechaHora(o.fin) : "sin fin"} · {o.promocion_productos.length}{" "}
+                        {o.promocion_productos.length === 1 ? "producto" : "productos"}
+                        {o.config?.banner !== false ? " · con banner" : ""}
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground">Todavía no hay campañas.</p>
+          )}
+          <FilaEditable accion={crearCampanaEnvio} className="rounded-lg bg-muted/40 p-3" textoEditar="+ Nueva campaña" textoGuardar="Crear y elegir productos">
+            <div className="grid gap-3 sm:grid-cols-[2fr_1fr_1fr]">
+              <div className="space-y-1">
+                <Label htmlFor="ca-nombre">Nueva campaña</Label>
+                <Input id="ca-nombre" name="nombre" placeholder="Ej. Octubre Naranja" />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="ca-inicio">Empieza</Label>
+                <Input id="ca-inicio" name="inicio" type="datetime-local" />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="ca-fin">Termina</Label>
+                <Input id="ca-fin" name="fin" type="datetime-local" />
+              </div>
+            </div>
+          </FilaEditable>
+        </CardContent>
+      </Card>
+
       {/* OFERTAS */}
       <Card>
         <CardHeader>

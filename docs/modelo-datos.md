@@ -132,6 +132,14 @@ Colecciones con slug y nombre (mas-pedidos, recien-llegado, quincena); la tabla 
 
 Las ofertas con fecha usan `tipo = descuento_fecha` y sus precios van en `promocion_precios`.
 
+Las campañas con envío gratis usan `tipo = envio_gratis`, `config = { banner: bool, destacado: producto_id,
+texto: "frase", imagen: "/campanas/….webp" }` y sus productos van en `promocion_productos`.
+
+### promocion_productos (migración 0012)
+promocion_id, producto_id, orden (el destacado lleva −1). Un pedido con alguno de estos productos no paga envío
+mientras la campaña esté activa y vigente (`lib/tienda/calculo.ts`). La tienda (anon) solo ve las filas de campañas
+activas y dentro de sus fechas.
+
 ### promocion_precios (fase 4)
 promocion_id, variante_id, precio (precio de oferta). La tienda (anon) solo ve las filas de promociones activas
 y dentro de sus fechas. La vista `promociones_proximas` dice cuándo empieza la próxima (para refrescar la caché).
@@ -270,7 +278,7 @@ vista `clientes_resumen` (pedidos, total comprado, última compra y canales por 
   `DTE_API_USUARIO`, `DTE_API_CLAVE`.
 
 ## Seguridad (RLS)
-- **anon** (visitantes): SELECT en categorias, productos (estado ≠ oculto), variantes (activo), imagenes, colecciones, coleccion_producto, promociones (activa y vigente), bundles, bundle_items, y la vista `configuracion_publica`.
+- **anon** (visitantes): SELECT en categorias, productos (estado ≠ oculto), variantes (activo), imagenes, colecciones, coleccion_producto, promociones (activa y vigente), promocion_productos (campaña activa y vigente), bundles, bundle_items, y la vista `configuracion_publica`.
 - **authenticated** (equipo, entra por /admin): el **super admin** todo en todas las tablas. El **operador**
   (fase 7) lee categorías, colecciones, líneas de pedido (sin `costo_unitario`), pagos, historial, equipo, puntos
   y cupones; lee, crea y cambia productos, variantes (sin precio: trigger `proteger_precio`), imágenes,

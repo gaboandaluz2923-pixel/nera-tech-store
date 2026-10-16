@@ -223,3 +223,57 @@ export async function cambiarCupon(_prev: EstadoAccion, form: FormData): Promise
   refrescar(false);
   return ok(activo ? "Cupón activado." : "Cupón apagado: ya no se puede usar.");
 }
+
+// ---------------------------------------------------------------------------
+// Campañas con envío gratis (ej. "Octubre Naranja"): productos, banner del inicio y fechas
+// ---------------------------------------------------------------------------
+export async function crearCampanaEnvio(_prev: EstadoAccion, form: FormData): Promise<EstadoAccion> {
+  const d = leerOferta(form);
+  if ("error" in d) return falla(d.error!.replace("la oferta", "la campaña").replace("Quincena de octubre", "Octubre Naranja"));
+  const { supabase } = await superAdmin();
+  const { data, error } = await supabase
+    .from("promociones")
+    .insert({ tipo: "envio_gratis", nombre: d.nombre, inicio: d.inicio, fin: d.fin, activa: false, config: { banner: true } })
+    .select("id")
+    .single();
+  if (error) return falla(`No se pudo crear: ${error.message}`);
+  refrescar(false);
+  redirect(`/admin/promociones/envio-gratis/${data.id}`);
+}
+
+export async function guardarCampanaEnvio(_prev: EstadoAccion, form: FormData): Promise<EstadoAccion> {
+  const id = texto(form.get("id"));
+  const d = leerOferta(form);
+  if ("error" in d) return falla(d.error!.replace("la oferta", "la campaña"));
+  const { supabase } = await superAdmin();
+  // Productos en el orden en que se marcaron en la lista
+  const productos = form.getAll("producto").map(String).filter((x) => /^[0-9a-f-]{36}$/.test(x));
+  const destacado = texto(form.get("destacado"));
+  const activa = form.get("activa") === "on";
+  if (activa && !productos.length) return falla("Elegí al menos un producto antes de activarla.");
+  if (destacado && !productos.includes(destacado)) return falla("El producto destacado tiene que estar marcado en la lista.");
+  const config = {
+    banner: form.get("banner") === "on",
+    destacado: destacado || productos[0] || null,
+    texto: texto(form.get("texto")).slice(0, 160) || null,
+    imagen: texto(form.get("imagen")) || null,
+  };
+  if (config.imagen && !/^(\/[\w./-]+|https:\/\/[a-z0-9-]+\.supabase\.co\/storage\/v1\/object\/public\/\S+)$/.test(config.imagen)) {
+    return falla("La foto del banner tiene que estar en la tienda (/campanas/…) o subida a las fotos del catálogo.");
+  }
+  const { error } = await supabase.from("promociones").update({ nombre: d.nombre, inicio: d.inicio, fin: d.fin, activa, config }).eq("id", id);
+  if (error) return falla(`No se pudo guardar: ${error.message}`);
+  const { error: e1 } = await supabase.from("promocion_productos").delete().eq("promocion_id", id);
+  if (e1) return falla(`No se pudieron guardar los productos: ${e1.message}`);
+  if (productos.length) {
+    const filas = productos.map((producto_id, i) => ({ promocion_id: id, producto_id, orden: producto_id === config.destacado ? -1 : i }));
+    const { error: e2 } = await supabase.from("promocion_productos").insert(filas);
+    if (e2) return falla(`No se pudieron guardar los productos: ${e2.message}`);
+  }
+  refrescar();
+  return ok(
+    activa
+      ? `Campaña guardada y activa con ${productos.length} ${productos.length === 1 ? "producto" : "productos"} con envío gratis${config.banner ? " y banner en el inicio" : ""}.`
+      : "Campaña guardada (apagada, la tienda no la muestra)."
+  );
+}

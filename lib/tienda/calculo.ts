@@ -53,7 +53,10 @@ export type ResumenCarrito = {
   productos: number;
   combosSugeridos: ComboSugerido[];
   envio: number;
-  envioGratis: "monto" | "accesorio" | null;
+  /** Por qué no paga envío: monto mínimo, equipo + accesorio o una campaña (ej. Octubre Naranja) */
+  envioGratis: "monto" | "accesorio" | "campana" | null;
+  /** Nombre de la campaña que da el envío gratis */
+  campanaEnvio: string | null;
   faltaParaEnvioGratis: number | null;
   total: number;
 };
@@ -106,13 +109,14 @@ export async function calcularCarrito(entrada: unknown): Promise<ResumenCarrito>
     combosSugeridos: [],
     envio: 0,
     envioGratis: null,
+    campanaEnvio: null,
     faltaParaEnvioGratis: null,
     total: 0,
   };
   if (!ids.length) return vacio;
 
   const sb = clientePublico();
-  const [{ data, error }, { data: disp, error: e2 }, ofertas] = await Promise.all([
+  const [{ data, error }, { data: disp, error: e2 }, ofertas, campanas] = await Promise.all([
     sb
       .from("variantes")
       .select(
@@ -121,6 +125,7 @@ export async function calcularCarrito(entrada: unknown): Promise<ResumenCarrito>
       .in("id", ids),
     sb.from("disponibilidad_publica").select("variante_id, en_bodega, con_proveedor").in("variante_id", ids),
     preciosDeOferta(ids),
+    campanasEnvioGratis(),
   ]);
   if (error) throw error;
   if (e2) throw e2;
@@ -178,10 +183,14 @@ export async function calcularCarrito(entrada: unknown): Promise<ResumenCarrito>
   const hayEquipo = lineas.some((l) => CATEGORIAS_EQUIPO.has(l.categoria));
   const hayAccesorio = lineas.some((l) => !CATEGORIAS_EQUIPO.has(l.categoria));
   const { costo, gratis_desde, gratis_con_accesorio } = config.envio;
+  // Campaña con envío gratis: basta un producto de la campaña en el pedido
+  const campanaEnvio = lineas.map((l) => campanas.get(l.productoId)).find(Boolean) ?? null;
   const envioGratis: ResumenCarrito["envioGratis"] =
     !lineas.length
       ? null
-      : gratis_desde !== null && productos >= gratis_desde
+      : campanaEnvio
+        ? "campana"
+        : gratis_desde !== null && productos >= gratis_desde
         ? "monto"
         : gratis_con_accesorio && hayEquipo && hayAccesorio
           ? "accesorio"
@@ -198,9 +207,25 @@ export async function calcularCarrito(entrada: unknown): Promise<ResumenCarrito>
     combosSugeridos: sugeridos,
     envio,
     envioGratis,
+    campanaEnvio,
     faltaParaEnvioGratis: gratis_desde !== null && !envioGratis && lineas.length ? redondear(gratis_desde - productos) : null,
     total: redondear(productos + envio),
   };
+}
+
+/** Productos en campañas vigentes con envío gratis → nombre de la campaña. */
+export async function campanasEnvioGratis(): Promise<Map<string, string>> {
+  const mapa = new Map<string, string>();
+  // La base solo deja ver las campañas activas y dentro de sus fechas
+  const { data, error } = await clientePublico().from("promocion_productos").select("producto_id, promociones(nombre, tipo)").limit(2000);
+  if (error) {
+    console.error("No se pudieron leer las campañas:", error.message);
+    return mapa;
+  }
+  for (const f of (data ?? []) as unknown as { producto_id: string; promociones: { nombre: string; tipo: string } | null }[]) {
+    if (f.promociones?.tipo === "envio_gratis" && !mapa.has(f.producto_id)) mapa.set(f.producto_id, f.promociones.nombre);
+  }
+  return mapa;
 }
 
 /** Precio de oferta vigente por variante (el más bajo si hay varias ofertas). */

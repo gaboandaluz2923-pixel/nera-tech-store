@@ -60,7 +60,7 @@ sin jerga innecesaria, y decí qué comando correr y qué va a pasar antes de co
 ## Modelo de datos (resumen; el detalle está en /docs/modelo-datos.md)
 proveedores, listas_precios, lineas_lista, categorias, productos, variantes, imagenes,
 producto_proveedor, precios_venta, precios_observados, colecciones, coleccion_producto,
-promociones, bundles, bundle_items, cupones, clientes, pedidos, lineas_pedido, pagos,
+promociones, promocion_productos (campañas con envío gratis), bundles, bundle_items, cupones, clientes, pedidos, lineas_pedido, pagos,
 pedido_eventos, suscriptores, eventos, gasto_pauta, configuracion, skus_ignorados, equipo (con rol),
 historial (quién cambió qué), cliente_notas; vista clientes_resumen. Fase 8: compras, compra_lineas, lotes (FIFO),
 movimientos_inventario (kardex), unidades (IMEI / serie / código Nera, condición y estado); funciones `inv_*`.
@@ -106,7 +106,7 @@ Reglas de negocio:
 /app              rutas públicas (/, /celulares, /accesorios, /producto/[slug], /carrito, /checkout, /guias)
 /app/admin        panel: /login (público) y (protegido)/… (proveedores, listas, precios, catalogo,
                   pedidos (+ nuevo: pedido manual), clientes (+ importar: Excel y Brevo), inventario
-                  (compras, variante/[id] kardex), garantia, promociones (+ campana), correos, analitica, finanzas,
+                  (compras, variante/[id] kardex), garantia, promociones (+ campana, envio-gratis/[id]), correos, analitica, finanzas,
                   facturacion, configuracion, equipo, contrasena)
 /app/api          webhooks (wompi, brevo), endpoints internos, dte/[id]/[pdf|json] (descarga de facturas)
 /components/ui    shadcn (no editar a mano; regenerar con la CLI)

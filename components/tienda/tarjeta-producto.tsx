@@ -48,6 +48,10 @@ export function TarjetaProducto({
             <span className="absolute top-1.5 left-1.5 rounded-full bg-marca px-2 py-0.5 text-[11px] font-semibold text-white">
               Oferta −{usd(p.precioDesdeRegular - p.precioDesde)}
             </span>
+          ) : p.campana ? (
+            <span className="absolute top-1.5 left-1.5 rounded-full bg-marca px-2 py-0.5 text-[11px] font-semibold text-white">
+              Envío gratis
+            </span>
           ) : etiqueta ? (
             <span className="absolute top-1.5 left-1.5 rounded-full bg-marca px-2 py-0.5 text-[11px] font-semibold text-white">
               {etiqueta}
