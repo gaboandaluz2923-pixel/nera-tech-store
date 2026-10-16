@@ -312,7 +312,10 @@ En la lista de Pedidos y en el pedido se ve el canal y quién lo creó.
 ## Clientes
 Menú **Clientes**: todos los que compraron, por la tienda, a mano o antes de la tienda (etiqueta "cliente anterior"). Buscá por nombre, teléfono o correo;
 ordená por compra más reciente, por los que más compran o por los recién agregados; filtrá por etiqueta.
-Cada fila dice cuánto ha comprado en total, cuántos pedidos y por dónde compra.
+Cada fila dice cuánto ha comprado en total, cuántos pedidos y por dónde compra. Se muestran 25 por página
+(**Anterior / Siguiente** abajo). Filtros: contacto (con correo, sin correo, con teléfono), pedidos (con pedidos,
+sin pedidos, 2 o más), origen (tienda, panel, Excel, Google) y canal; elegí y tocá **Buscar**. **Quitar filtros**
+vuelve a la lista completa.
 En la ficha del cliente:
 - Arriba: total comprado, pedidos, compra promedio, última compra, Puntos Nera; botones **WhatsApp** y
   **+ Nuevo pedido** (ya con su teléfono).
@@ -345,8 +348,9 @@ unidades se mueven lento (más de 30 días en bodega sin ventas en 30 días).
 - **Facturas por pagar**: de la que vence primero a la última, con "Vence en 3 días", "Vence hoy" o "Vencida hace…".
   También salen en **Inicio** cuando faltan 3 días o menos.
 - **En bodega**: cada variante con sus unidades, días en bodega, última venta y costo; lo más viejo arriba (es lo que
-  conviene vender antes). Etiquetas: *Lento*, *Faltan N IMEI*, *Sin costo*, *Open Box*. Tocá una para ver su
-  detalle.
+  conviene vender antes), 25 por página. Filtros: Todo, Lento, Faltan IMEI / serie, Sin costo, Se vende con pérdida,
+  Open Box y usados (cada uno dice cuántos hay); además buscar por nombre, categoría y orden (más días, más
+  unidades, más valor, nombre). Tocá una para ver su detalle.
 
 **Detalle de una variante** (Inventario → tocá una fila):
 - Arriba: en bodega, valor al costo, precio, condición y cuántas unidades no tienen identificador.
@@ -463,6 +467,10 @@ cada **compra pagada** desde el servidor, para que los anuncios aprendan de vent
 aviso pequeño de cookies con el botón **Entendido**.
 
 ## Promociones
+
+**Campañas de correo (Brevo)**, arriba: las campañas **agendadas** con su fecha y hora, los **borradores** sin agendar
+y las 5 **últimas enviadas** con cuántos correos se entregaron y qué porcentaje abrió y dio clic. Las campañas se
+arman y agendan en Brevo (botón **Abrir Brevo**); aquí solo se ven.
 Menú **Promociones**. Tiene tres recuadros. Nada se borra: las ofertas, combos y cupones se apagan.
 
 **1. Ofertas con fecha** (precio rebajado por unos días)

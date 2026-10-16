@@ -5,6 +5,7 @@ import { CANAL } from "@/lib/admin/pedidos";
 import { rolActual } from "@/lib/admin/sesion";
 import { createClient } from "@/lib/supabase/server";
 import { fechaCorta, usd2 } from "@/lib/tienda/formato";
+import { POR_PAGINA, Paginacion, leerPagina } from "@/components/admin/paginacion";
 
 // Clientes (CRM): todos los que compraron por la tienda o por WhatsApp, redes y en persona.
 
@@ -25,17 +26,52 @@ const ORDENES = [
   { id: "recientes", texto: "Compra más reciente", columna: "ultima_compra" },
   { id: "mas-compran", texto: "Más compran", columna: "total_comprado" },
   { id: "nuevos", texto: "Recién agregados", columna: "created_at" },
+  { id: "nombre", texto: "Nombre (A–Z)", columna: "nombre" },
 ] as const;
 
-async function Lista({ searchParams }: { searchParams: Promise<{ q?: string; orden?: string; etiqueta?: string }> }) {
-  const { q = "", orden = "recientes", etiqueta = "" } = await searchParams;
-  const o = ORDENES.find((x) => x.id === orden) ?? ORDENES[0];
+const CONTACTO = {
+  "": "Cualquier contacto",
+  "con-correo": "Con correo",
+  "sin-correo": "Sin correo",
+  "con-telefono": "Con teléfono",
+} as const;
+
+const COMPRAS = {
+  "": "Con o sin pedidos",
+  "con-pedidos": "Con pedidos en el sistema",
+  "sin-pedidos": "Sin pedidos en el sistema",
+  "2-o-mas": "2 pedidos o más",
+} as const;
+
+const ORIGEN = {
+  "": "Cualquier origen",
+  web: "Compró en la tienda",
+  panel: "Creado en el panel",
+  historial: "Excel (cliente anterior)",
+  google: "Entró con Google",
+} as const;
+
+type Filtros = { q?: string; orden?: string; etiqueta?: string; contacto?: string; compras?: string; origen?: string; canal?: string; pagina?: string };
+
+const SELECT = "h-9 rounded-md border bg-background px-2 text-sm";
+
+async function Lista({ searchParams }: { searchParams: Promise<Filtros> }) {
+  const f = await searchParams;
+  const { q = "", etiqueta = "" } = f;
+  const o = ORDENES.find((x) => x.id === f.orden) ?? ORDENES[0];
+  const contacto = (f.contacto ?? "") in CONTACTO ? (f.contacto ?? "") : "";
+  const compras = (f.compras ?? "") in COMPRAS ? (f.compras ?? "") : "";
+  const origen = (f.origen ?? "") in ORIGEN ? (f.origen ?? "") : "";
+  const canal = f.canal && f.canal in CANAL ? f.canal : "";
+  const pagina = leerPagina(f.pagina);
   const supabase = await createClient();
+
   let consulta = supabase
     .from("clientes_resumen")
-    .select("id, nombre, telefono, correo, etiquetas, con_cuenta, pedidos, total_comprado, ultima_compra, canales")
-    .order(o.columna, { ascending: false, nullsFirst: false })
-    .limit(300);
+    .select("id, nombre, telefono, correo, etiquetas, con_cuenta, pedidos, total_comprado, ultima_compra, canales", { count: "exact" })
+    .order(o.columna, { ascending: o.id === "nombre", nullsFirst: false })
+    .order("id")
+    .range((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA - 1);
   // Sin comas ni paréntesis: no rompen el filtro
   const busca = q.replace(/[^\p{L}\p{N}@.\s-]/gu, "").trim();
   if (busca) {
@@ -45,22 +81,34 @@ async function Lista({ searchParams }: { searchParams: Promise<{ q?: string; ord
     );
   }
   if (etiqueta) consulta = consulta.contains("etiquetas", [etiqueta]);
-  const [{ data, error }, { data: todas }] = await Promise.all([
+  if (contacto === "con-correo") consulta = consulta.not("correo", "is", null);
+  if (contacto === "sin-correo") consulta = consulta.is("correo", null);
+  if (contacto === "con-telefono") consulta = consulta.not("telefono", "is", null);
+  if (compras === "con-pedidos") consulta = consulta.gt("pedidos", 0);
+  if (compras === "sin-pedidos") consulta = consulta.eq("pedidos", 0);
+  if (compras === "2-o-mas") consulta = consulta.gte("pedidos", 2);
+  if (origen) consulta = consulta.eq("origen", origen);
+  if (canal) consulta = consulta.contains("canales", [canal]);
+
+  const [{ data, error, count }, { data: todas }] = await Promise.all([
     consulta,
-    supabase.from("clientes").select("etiquetas").neq("etiquetas", "{}").limit(2000),
+    supabase.from("clientes").select("etiquetas").neq("etiquetas", "{}").limit(5000),
   ]);
   if (error) throw error;
   const clientes = (data ?? []) as Fila[];
   const etiquetas = [...new Set((todas ?? []).flatMap((c) => (c.etiquetas ?? []) as string[]))].sort();
+  const actuales: Record<string, string> = { q, orden: o.id, etiqueta, contacto, compras, origen, canal };
   const enlace = (cambio: Record<string, string>) => {
-    const p = new URLSearchParams({ ...(q ? { q } : {}), orden: o.id, ...(etiqueta ? { etiqueta } : {}), ...cambio });
+    const p = new URLSearchParams({ ...actuales, ...cambio });
     for (const [k, v] of [...p.entries()]) if (!v) p.delete(k);
     return `/admin/clientes?${p}`;
   };
+  const hayFiltros = Boolean(busca || etiqueta || contacto || compras || origen || canal);
 
   return (
     <div className="space-y-4">
-      <form action="/admin/clientes" className="flex flex-wrap gap-2">
+      {/* Buscar y filtrar: se aplica con el botón (o Enter en el buscador) */}
+      <form action="/admin/clientes" className="flex flex-wrap items-center gap-2">
         <input type="hidden" name="orden" value={o.id} />
         {etiqueta ? <input type="hidden" name="etiqueta" value={etiqueta} /> : null}
         <input
@@ -70,6 +118,43 @@ async function Lista({ searchParams }: { searchParams: Promise<{ q?: string; ord
           aria-label="Buscar cliente"
           className="h-9 w-72 max-w-full rounded-md border px-3 text-sm"
         />
+        <select name="contacto" defaultValue={contacto} aria-label="Contacto" className={SELECT}>
+          {Object.entries(CONTACTO).map(([k, v]) => (
+            <option key={k} value={k}>
+              {v}
+            </option>
+          ))}
+        </select>
+        <select name="compras" defaultValue={compras} aria-label="Pedidos" className={SELECT}>
+          {Object.entries(COMPRAS).map(([k, v]) => (
+            <option key={k} value={k}>
+              {v}
+            </option>
+          ))}
+        </select>
+        <select name="origen" defaultValue={origen} aria-label="Origen" className={SELECT}>
+          {Object.entries(ORIGEN).map(([k, v]) => (
+            <option key={k} value={k}>
+              {v}
+            </option>
+          ))}
+        </select>
+        <select name="canal" defaultValue={canal} aria-label="Canal" className={SELECT}>
+          <option value="">Cualquier canal</option>
+          {Object.entries(CANAL).map(([k, v]) => (
+            <option key={k} value={k}>
+              {v}
+            </option>
+          ))}
+        </select>
+        <button type="submit" className="h-9 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground">
+          Buscar
+        </button>
+        {hayFiltros ? (
+          <Link href={`/admin/clientes?orden=${o.id}`} className="text-sm text-muted-foreground underline">
+            Quitar filtros
+          </Link>
+        ) : null}
       </form>
       <nav className="flex flex-wrap gap-1" aria-label="Orden">
         {ORDENES.map((x) => (
@@ -135,7 +220,7 @@ async function Lista({ searchParams }: { searchParams: Promise<{ q?: string; ord
       ) : (
         <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">No hay clientes con esa búsqueda.</p>
       )}
-      {clientes.length === 300 ? <p className="text-xs text-muted-foreground">Se muestran los primeros 300. Usá el buscador para encontrar a alguien.</p> : null}
+      <Paginacion pagina={pagina} total={count ?? 0} enlace={(n) => enlace({ pagina: String(n) })} />
     </div>
   );
 }
@@ -166,7 +251,7 @@ export default function Clientes(props: PageProps<"/admin/clientes">) {
         </Suspense>
       </div>
       <Suspense fallback={<p className="text-sm text-muted-foreground">Cargando…</p>}>
-        <Lista searchParams={props.searchParams as Promise<{ q?: string; orden?: string; etiqueta?: string }>} />
+        <Lista searchParams={props.searchParams as Promise<Filtros>} />
       </Suspense>
     </div>
   );

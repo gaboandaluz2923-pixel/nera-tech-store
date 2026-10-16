@@ -5,12 +5,14 @@ import { BotonGuardar, FormularioAccion } from "@/components/admin/formulario-ac
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { superAdmin } from "@/lib/admin/sesion";
+import { campanasBrevo } from "@/lib/brevo-campanas";
 import { createClient } from "@/lib/supabase/server";
 import { fechaHora, usd2 } from "@/lib/tienda/formato";
 import { cambiarCupon, crearCombo, crearCupon, crearOferta, guardarCombo } from "./actions";
 import { estadoOferta } from "./util";
 
-// Promociones: ofertas con fecha, combos "Completá tu equipo" y cupones.
+// Promociones: campañas de correo de Brevo, ofertas con fecha, combos "Completá tu equipo" y cupones.
 
 type Oferta = { id: string; nombre: string; inicio: string | null; fin: string | null; activa: boolean; promocion_precios: { variante_id: string }[] };
 type Combo = {
@@ -371,6 +373,100 @@ async function Contenido() {
   );
 }
 
+const pct = (n: number | null, de: number | null) => (n !== null && de ? `${Math.round((n / de) * 100)}%` : "—");
+
+/** Campañas de correo en Brevo: agendadas, borradores y las últimas enviadas (solo lectura) */
+async function CampanasCorreo() {
+  await superAdmin();
+  let datos: Awaited<ReturnType<typeof campanasBrevo>> | null = null;
+  let error = "";
+  try {
+    datos = await campanasBrevo();
+  } catch (e) {
+    error = e instanceof Error ? e.message : "Brevo no respondió.";
+  }
+  return (
+    <Card>
+      <CardHeader className="flex items-start justify-between gap-3">
+        <div className="space-y-1">
+          <CardTitle>Campañas de correo (Brevo)</CardTitle>
+          <CardDescription>
+            Lo que está agendado para salir y cómo les fue a las últimas. Las campañas se arman y agendan en Brevo → Campañas.
+          </CardDescription>
+        </div>
+        <a
+          href="https://app.brevo.com/marketing-campaign/list"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="shrink-0 rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted"
+        >
+          Abrir Brevo
+        </a>
+      </CardHeader>
+      <CardContent className="space-y-4 text-sm">
+        {error ? <p className="text-red-700">No se pudieron leer las campañas: {error}</p> : null}
+        {datos ? (
+          <>
+            <div className="space-y-2">
+              <p className="font-medium">Agendadas</p>
+              {datos.agendadas.length ? (
+                <ul className="divide-y rounded-lg border">
+                  {datos.agendadas.map((c) => (
+                    <li key={c.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 p-3">
+                      <span className="min-w-48 flex-1">
+                        <span className="block font-medium">{c.nombre}</span>
+                        <span className="block text-xs text-muted-foreground">{c.asunto}</span>
+                      </span>
+                      <span className="font-medium">{c.agendadaPara ? fechaHora(c.agendadaPara) : "Sin fecha"}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-muted-foreground">No hay campañas agendadas.</p>
+              )}
+            </div>
+            {datos.borradores.length ? (
+              <div className="space-y-2">
+                <p className="font-medium">Borradores (sin agendar)</p>
+                <ul className="divide-y rounded-lg border">
+                  {datos.borradores.map((c) => (
+                    <li key={c.id} className="p-3">
+                      <span className="block font-medium">{c.nombre}</span>
+                      <span className="block text-xs text-muted-foreground">{c.asunto || "Sin asunto"}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            <div className="space-y-2">
+              <p className="font-medium">Últimas enviadas</p>
+              {datos.enviadas.length ? (
+                <ul className="divide-y rounded-lg border">
+                  {datos.enviadas.map((c) => (
+                    <li key={c.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 p-3">
+                      <span className="min-w-48 flex-1">
+                        <span className="block font-medium">{c.nombre}</span>
+                        <span className="block text-xs text-muted-foreground">
+                          {c.enviadaEl ? fechaHora(c.enviadaEl) : ""} · {c.asunto}
+                        </span>
+                      </span>
+                      <span className="text-xs tabular-nums">
+                        {c.entregados ?? "—"} entregados · abrieron {pct(c.abiertos, c.entregados)} · clic {pct(c.clics, c.entregados)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-muted-foreground">Todavía no se ha enviado ninguna campaña.</p>
+              )}
+            </div>
+          </>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function Promociones() {
   return (
     <div className="space-y-4">
@@ -378,6 +474,9 @@ export default function Promociones() {
         <h1 className="text-xl font-semibold">Promociones</h1>
         <p className="text-sm text-muted-foreground">Ofertas, combos y cupones. Los Puntos Nera y el regalo de cumpleaños se ajustan en Configuración.</p>
       </div>
+      <Suspense fallback={<p className="text-sm text-muted-foreground">Cargando campañas de correo…</p>}>
+        <CampanasCorreo />
+      </Suspense>
       <Suspense fallback={<p className="text-sm text-muted-foreground">Cargando…</p>}>
         <Contenido />
       </Suspense>

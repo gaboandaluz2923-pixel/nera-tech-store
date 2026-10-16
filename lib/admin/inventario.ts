@@ -12,6 +12,7 @@ export type FilaInventario = {
   productoId: string;
   producto: string;
   variante: string;
+  categoria: string;
   condicion: Condicion;
   tipoId: TipoIdentificador;
   enBodega: number;
@@ -38,7 +39,11 @@ type FilaLote = {
     nombre: string;
     precio: number;
     producto_id: string;
-    productos: { nombre: string; condicion: Condicion | null; categorias: { identificador: TipoIdentificador | null } | null } | null;
+    productos: {
+      nombre: string;
+      condicion: Condicion | null;
+      categorias: { nombre: string; identificador: TipoIdentificador | null } | null;
+    } | null;
   } | null;
 };
 
@@ -50,7 +55,7 @@ export async function leerInventario(supabase: SupabaseClient): Promise<FilaInve
     supabase
       .from("lotes")
       .select(
-        "variante_id, cantidad, costo_unitario, fecha, created_at, variantes(nombre, precio, producto_id, productos(nombre, condicion, categorias(identificador)))"
+        "variante_id, cantidad, costo_unitario, fecha, created_at, variantes(nombre, precio, producto_id, productos(nombre, condicion, categorias(nombre, identificador)))"
       )
       .gt("cantidad", 0)
       .order("fecha")
@@ -82,6 +87,7 @@ export async function leerInventario(supabase: SupabaseClient): Promise<FilaInve
         productoId: v?.producto_id ?? "",
         producto: v?.productos?.nombre ?? "—",
         variante: v?.nombre ?? "",
+        categoria: v?.productos?.categorias?.nombre ?? "Sin categoría",
         condicion,
         tipoId: v?.productos?.categorias?.identificador ?? (condicion === "nuevo" ? "serie" : "imei"),
         enBodega: 0,
