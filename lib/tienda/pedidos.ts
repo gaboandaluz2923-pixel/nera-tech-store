@@ -11,6 +11,7 @@ import type { ResumenCarrito } from "@/lib/tienda/calculo";
 import { configTienda } from "@/lib/tienda/datos";
 import { motivoSinContraEntrega } from "@/lib/tienda/formato";
 import { crearEnlacePago, ErrorWompi } from "@/lib/wompi";
+import { emitirSiCorresponde } from "@/lib/dte/emitir";
 
 // Pedidos de la tienda: se crean y se actualizan SOLO desde el servidor (clave de servicio).
 
@@ -422,6 +423,8 @@ export async function marcarPagado(p: {
   after(() => enviarCompraMeta(p.pedidoId, sitioMeta).catch((e) => console.error("enviarCompraMeta", e)));
   // Puntos Nera: se ganan cuando el pedido está entregado y pagado
   if (pedido.estado === "entregado") await otorgarPuntos(p.pedidoId).catch((e) => console.error("otorgarPuntos", e));
+  // Factura electrónica automática (si está encendida y el pedido ya se puede facturar)
+  after(() => emitirSiCorresponde(p.pedidoId).catch((e) => console.error("emitirSiCorresponde", e)));
   return true;
 }
 

@@ -585,3 +585,50 @@ Menú **Finanzas**. Arriba elegís el mes (← →) y la vista:
   pagar o el remanente. Debajo, el **libro de ventas** y el **libro de compras** del mes con **Descargar CSV** para tu
   contador. Es un estimado para revisar con él antes de declarar.
 Las compras al proveedor salen de Inventario y la pauta de Analítica: no se anotan otra vez en Gastos.
+
+## Facturación electrónica propia (fase 10, solo administradores)
+Menú **Facturación**. La tienda arma, firma y envía a Hacienda sus propias facturas (01), créditos fiscales (03) y
+notas de crédito (05), con el Sistema de Transmisión de la Normativa 2.0. Mientras **Cómo se emite** esté apagado,
+todo sigue como antes (factura de otro sistema anotada a mano en el pedido).
+
+Lo que se ve en la pantalla, de arriba abajo:
+- **Conexión con Hacienda**: si las claves están en Vercel (punto verde) y en qué ambiente: **PRUEBAS** (sin valor
+  legal) o **PRODUCCIÓN**. **Probar conexión con Hacienda** revisa el certificado, su contraseña y el usuario de la API.
+  Ojo: 3 intentos con contraseña equivocada bloquean el usuario de la API en Hacienda.
+- **Datos del emisor** (Editar): razón social, NIT, NRC, actividad económica (escribí el código o una palabra y elegí de
+  la lista), dirección con departamento, municipio (división nueva) y distrito (el municipio de antes), teléfono, correo,
+  código del establecimiento y punto de venta que asignó Hacienda (ej. M001 y P001) y la persona responsable (va en las
+  anulaciones y contingencias). Si falta algo, sale en amarillo.
+- **Cómo se emite** (Editar): **Facturación propia encendida** muestra en cada pedido los botones para emitir.
+  **Emitir sola** emite la factura cuando el pedido queda pagado y confirmado (contra entrega: al marcarlo entregado);
+  solo funciona con claves de producción. El crédito fiscal sale solo si el cliente ya tiene datos fiscales completos.
+- **Pendientes** (aparece solo si hay): documentos en contingencia (Hacienda no respondió) con el botón **Reportar y
+  enviar contingencia**, y rechazados para corregir. La revisión diaria de las 7:00 a. m. también los reporta sola.
+- **Documentos emitidos**: buscar por número de control, código o cliente y filtrar por tipo y estado. Cada documento
+  tiene **Ver PDF**, **Descargar JSON** (con la firma y el sello) y **Consultar en Hacienda**. En **Acciones**:
+  **Enviar / Reenviar** por correo, **Corregir y reenviar** (rechazados), **Descartar** (rechazado que no se va a
+  corregir), **Nota de crédito** (en créditos fiscales: cuántas unidades se devuelven de cada línea) y **Anular ante
+  Hacienda** (motivo, documento que lo reemplaza si es corrección, explicación y la casilla de confirmación).
+- **Pruebas para Hacienda** (solo con claves de pruebas): el botón **Hacer las pruebas** envía en tandas las pruebas
+  mínimas (90 facturas, 75 créditos fiscales, 50 notas de crédito, 5 anulaciones y 5 contingencias) con productos del
+  catálogo, sin tocar pedidos ni clientes. Se puede **Detener** y seguir otro día; el avance queda guardado.
+  **Cliente de prueba para créditos fiscales**: a nombre de quién salen (si se deja vacío, de Nera Tech).
+
+En el **detalle del pedido**, tarjeta **Factura electrónica** (con la facturación propia encendida):
+- **Emitir factura** o **Emitir crédito fiscal** (según lo que pidió el cliente; el otro botón al lado por si cambió de
+  idea). El documento se firma, se envía y, cuando Hacienda lo recibe, le llega al cliente por correo con el PDF y el
+  JSON. Lo mismo queda para descargar en "Ver mi pedido" del cliente.
+- **Datos fiscales del cliente** (Editar): NIT, NRC, razón social, actividad, dirección con códigos y si es gran
+  contribuyente (retiene 1%). Se guardan en el cliente para la próxima compra. Arranca con lo que escribió en el checkout.
+- A la factura de consumidor final no se le pide DUI ni correo al cliente: la ley lo prohíbe en compras menores a
+  $25,000.
+- Todos los descuentos del pedido (combos, efectivo o transferencia, cupón, puntos) van como descuento en los productos;
+  el envío va como servicio; el IMEI o la serie que salió va en la descripción.
+- **¿La emitiste en otro sistema?**: abre lo de antes (anotar número y subir PDF).
+
+Si Hacienda **rechaza** un documento, el motivo sale en rojo. Corregí lo que diga (por ejemplo, la dirección del cliente
+en Datos fiscales) y tocá **Corregir y reenviar**: sale con el mismo número. Si Hacienda **no responde**, el documento
+queda en **contingencia**: se le entrega al cliente sin sello y se reporta cuando Hacienda vuelva (botón de Pendientes o
+la revisión diaria). Para **anular**: factura, hasta 3 meses; crédito fiscal y nota de crédito, lo antes posible. Para
+corregir, primero emití el documento correcto y después anulá el malo eligiendo el correcto como reemplazo. Un crédito
+fiscal con nota de crédito no se anula hasta anular la nota.

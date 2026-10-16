@@ -252,6 +252,23 @@ vista `clientes_resumen` (pedidos, total comprado, última compra y canales por 
   iva), fijo, forma_pago, pagado_en, notas, creado_por. Solo super admin.
 - `configuracion` clave `finanzas`: { saldo_inicial, saldo_fecha } (privada).
 
+### Fase 10: facturación electrónica (DTE)
+- **dte_documentos**: ambiente (`00` pruebas | `01` producción), tipo_dte (`01` factura | `03` crédito fiscal | `05`
+  nota de crédito), version, codigo_generacion (UUID en mayúsculas, único), numero_control (único por ambiente y año),
+  fec_emi, hor_emi, tipo_modelo y tipo_operacion (2 = contingencia), pedido_id, relacionado_id (nota → crédito
+  fiscal), receptor_nombre, receptor_documento, receptor_correo, total, iva, json (el documento), firma (JWS),
+  estado (`pendiente` | `procesado` | `rechazado` | `contingencia` | `invalidado` | `descartado`), sello_recibido,
+  fh_procesamiento, mensaje, observaciones, respuesta (de Hacienda), intentos, contingencia_id, prueba,
+  correo_enviado_en, creado_por. Un pedido tiene una sola factura o crédito fiscal vigente por ambiente.
+- **dte_eventos**: invalidaciones y contingencias (tipo, json, firma, estado, sello, documento_id, reemplazo_id, prueba).
+- **dte_correlativos** (una serie por ambiente y año) con la función `dte_siguiente_numero`; **dte_sesion** (token de
+  la API de Hacienda, solo el servidor).
+- `clientes.datos_fiscales`: NIT, NRC, nombre, actividad (CAT-019), dirección con códigos (CAT-012/013/008), teléfono,
+  correo y si retiene 1%.
+- `configuracion` clave `dte` (privada): activo, automatica, emisor (datos del emisor) y receptorPrueba.
+- Certificado y claves de la API solo en Vercel: `DTE_AMBIENTE`, `DTE_CERTIFICADO`, `DTE_CLAVE_PRIVADA`,
+  `DTE_API_USUARIO`, `DTE_API_CLAVE`.
+
 ## Seguridad (RLS)
 - **anon** (visitantes): SELECT en categorias, productos (estado ≠ oculto), variantes (activo), imagenes, colecciones, coleccion_producto, promociones (activa y vigente), bundles, bundle_items, y la vista `configuracion_publica`.
 - **authenticated** (equipo, entra por /admin): el **super admin** todo en todas las tablas. El **operador**
@@ -262,4 +279,6 @@ vista `clientes_resumen` (pedidos, total comprado, última compra y canales por 
   servidor). Los clientes con Google no ven nada del panel.
   Fase 8: compras, compra_lineas, lotes y movimientos_inventario (tienen costos) solo el super admin; unidades las
   lee también el operador (para garantía y entregas); los cambios de inventario pasan por las funciones `inv_*`.
+  Fase 10: dte_documentos los lee el equipo; dte_eventos y dte_correlativos solo el super admin; dte_sesion nadie
+  con sesión. Todo se escribe desde el servidor.
 - **service_role** (solo el servidor de Next.js): escribe pedidos, pagos, clientes, eventos y suscriptores desde Server Actions. El navegador nunca escribe directo.

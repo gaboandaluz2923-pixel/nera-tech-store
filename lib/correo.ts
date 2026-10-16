@@ -31,6 +31,8 @@ export async function enviarCorreo(c: {
   etiqueta: string;
   /** Encabezados extra (ej. List-Unsubscribe en correos de publicidad) */
   encabezados?: Record<string, string>;
+  /** Archivos adjuntos (ej. la factura electrónica en PDF y JSON) */
+  adjuntos?: { nombre: string; contenido: Uint8Array | string }[];
 }): Promise<ResultadoCorreo> {
   const clave = process.env.BREVO_API_KEY?.trim();
   if (!clave) return { enviado: false, motivo: "Falta BREVO_API_KEY en Vercel" };
@@ -49,6 +51,9 @@ export async function enviarCorreo(c: {
         textContent: c.texto,
         tags: [c.etiqueta],
         ...(c.encabezados ? { headers: c.encabezados } : {}),
+        ...(c.adjuntos?.length
+          ? { attachment: c.adjuntos.map((a) => ({ name: a.nombre, content: Buffer.from(a.contenido).toString("base64") })) }
+          : {}),
       }),
       cache: "no-store",
     });

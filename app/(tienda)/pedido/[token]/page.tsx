@@ -87,6 +87,15 @@ async function Detalle({ params, searchParams }: PageProps<"/pedido/[token]">) {
     numero: string;
     titular: string;
   }[];
+  // Factura electrónica propia (fase 10): PDF y JSON con el enlace secreto del pedido
+  const { data: dtes } = await sb
+    .from("dte_documentos")
+    .select("id, tipo_dte, numero_control, estado")
+    .eq("pedido_id", p.id)
+    .eq("prueba", false)
+    .eq("ambiente", "01")
+    .in("estado", ["procesado", "contingencia", "invalidado"])
+    .order("created_at", { ascending: false });
   const factura =
     p.factura_estado === "emitida" && p.factura_archivo
       ? (await sb.storage.from("facturas").createSignedUrl(p.factura_archivo, 3600, { download: `factura-pedido-${p.numero}.pdf` })).data?.signedUrl
@@ -337,7 +346,26 @@ async function Detalle({ params, searchParams }: PageProps<"/pedido/[token]">) {
               : "Consumidor final."}{" "}
             Te llega a {p.entrega.correo}.
           </p>
-          {factura ? (
+          {dtes?.length ? (
+            <ul className="mt-3 space-y-2">
+              {dtes.map((d) => (
+                <li key={d.id}>
+                  <p className="font-medium">
+                    {d.tipo_dte === "03" ? "Crédito fiscal" : d.tipo_dte === "05" ? "Nota de crédito" : "Factura"} {d.numero_control}
+                    {d.estado === "invalidado" ? <span className="ml-1 text-xs font-normal text-muted-foreground">(anulada)</span> : null}
+                  </p>
+                  <p className="flex flex-wrap gap-4">
+                    <a href={`/api/dte/${d.id}/pdf?t=${p.token}`} className="flex items-center gap-1.5 font-medium text-primary hover:underline">
+                      <FileText className="size-4" aria-hidden /> PDF
+                    </a>
+                    <a href={`/api/dte/${d.id}/json?t=${p.token}`} className="font-medium text-primary hover:underline">
+                      Archivo JSON
+                    </a>
+                  </p>
+                </li>
+              ))}
+            </ul>
+          ) : factura ? (
             <a href={factura} className="mt-3 flex items-center gap-2 font-medium text-primary hover:underline">
               <FileText className="size-4" aria-hidden />
               Descargar factura{p.factura_numero ? ` (${p.factura_numero})` : ""}
@@ -345,7 +373,7 @@ async function Detalle({ params, searchParams }: PageProps<"/pedido/[token]">) {
           ) : (
             <p className="mt-2 text-xs text-muted-foreground">
               {p.forma_pago === "contra_entrega"
-                ? "Se emite el día siguiente a la entrega."
+                ? "Te la enviamos después de la entrega."
                 : "Se emite cuando confirmamos el pedido y el pago."}
             </p>
           )}

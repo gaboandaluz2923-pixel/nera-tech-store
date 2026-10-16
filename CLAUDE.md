@@ -65,6 +65,9 @@ pedido_eventos, suscriptores, eventos, gasto_pauta, configuracion, skus_ignorado
 historial (quién cambió qué), cliente_notas; vista clientes_resumen. Fase 8: compras, compra_lineas, lotes (FIFO),
 movimientos_inventario (kardex), unidades (IMEI / serie / código Nera, condición y estado); funciones `inv_*`.
 Fase 9: gastos (y `configuracion.finanzas` con el saldo inicial); cálculos en `lib/admin/finanzas.ts`.
+Fase 10: dte_documentos, dte_eventos, dte_correlativos, dte_sesion, `clientes.datos_fiscales`, `configuracion.dte`;
+facturación electrónica en `lib/dte/` (armar, validar contra los esquemas oficiales de `lib/dte/esquemas/`, firma JWS
+RS512, API de Hacienda, PDF con QR, emitir/anular/contingencia, pruebas de Hacienda). Una sola serie de números de control.
 
 Emparejamiento de listas: `lib/listas/normalizar.ts` (descripción → marca|modelo|ram|almacenamiento|color),
 `lib/listas/columnas.ts` (lectura de CSV/pegado y detección de columnas), `lib/admin/importar.ts` (núcleo de
@@ -104,8 +107,8 @@ Reglas de negocio:
 /app/admin        panel: /login (público) y (protegido)/… (proveedores, listas, precios, catalogo,
                   pedidos (+ nuevo: pedido manual), clientes (+ importar: Excel y Brevo), inventario
                   (compras, variante/[id] kardex), garantia, promociones (+ campana), correos, analitica, finanzas,
-                  configuracion, equipo, contrasena)
-/app/api          webhooks (wompi, brevo), endpoints internos
+                  facturacion, configuracion, equipo, contrasena)
+/app/api          webhooks (wompi, brevo), endpoints internos, dte/[id]/[pdf|json] (descarga de facturas)
 /components/ui    shadcn (no editar a mano; regenerar con la CLI)
 /components/tienda, /components/admin   componentes propios
 /lib              supabase/, analytics, wompi, brevo, pricing (motor de sugerencia), whatsapp

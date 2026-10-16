@@ -10,6 +10,7 @@ import { equipo } from "@/lib/admin/sesion";
 import { ETIQUETA_CATALOGO } from "@/lib/tienda/datos";
 import { otorgarPuntos, revertirPuntos } from "@/lib/tienda/beneficios";
 import { marcarPagado } from "@/lib/tienda/pedidos";
+import { emitirSiCorresponde } from "@/lib/dte/emitir";
 
 // Acciones de la sección Pedidos. Todas verifican que quien las usa sea del equipo.
 
@@ -101,8 +102,15 @@ export async function cambiarEstadoPedido(_prev: EstadoAccion, form: FormData): 
     after(() => avisarEstado(id, nuevo, sitio).catch((e) => console.error("avisarEstado", e)));
   }
 
+  // Factura electrónica automática al confirmar (ya pagado) o al entregar. Contra entrega sin cobrar:
+  // la dispara marcarPagado de abajo, una sola vez.
+  const cobraAhora = nuevo === "entregado" && p.forma_pago === "contra_entrega" && !p.pagado_en;
+  if ((nuevo === "confirmado" || nuevo === "entregado") && !cobraAhora) {
+    after(() => emitirSiCorresponde(id).catch((e) => console.error("emitirSiCorresponde", e)));
+  }
+
   // Contra entrega: entregado = cobrado
-  if (nuevo === "entregado" && p.forma_pago === "contra_entrega" && !p.pagado_en) {
+  if (cobraAhora) {
     await marcarPagado({
       pedidoId: id,
       metodo: "contra_entrega",

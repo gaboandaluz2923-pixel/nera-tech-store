@@ -14,6 +14,8 @@ import { CANAL, SIGUIENTES, esperandoPago, porFacturar, type EstadoPedido, type 
 import { nombresEquipo, quien } from "@/lib/admin/historial";
 import { asignarUnidad } from "../../inventario/actions";
 import { createClient } from "@/lib/supabase/server";
+import { FacturaPedido, facturacionPropiaActiva } from "@/components/admin/factura-pedido";
+import { rolActual } from "@/lib/admin/sesion";
 import { ESTADO_PEDIDO, FORMA_PAGO, fechaHora, usd2 } from "@/lib/tienda/formato";
 import { enlaceWhatsAppA } from "@/lib/whatsapp";
 import {
@@ -124,6 +126,7 @@ async function Detalle({ params }: { params: PageProps<"/admin/pedidos/[id]">["p
   const waCliente = (m: string) => enlaceWhatsAppA(tel, m);
   const eventos = [...p.pedido_eventos].sort((a, b) => b.created_at.localeCompare(a.created_at));
   const facturar = porFacturar(p);
+  const [dtePropio, { rol }] = await Promise.all([facturacionPropiaActiva(), rolActual()]);
   const { count: pedidosCliente } = p.cliente_id
     ? await supabase
         .from("pedidos")
@@ -286,10 +289,17 @@ async function Detalle({ params }: { params: PageProps<"/admin/pedidos/[id]">["p
                   : facturar
                     ? "Toca emitirla"
                     : p.forma_pago === "contra_entrega"
-                      ? "Se emite el día siguiente a la entrega"
+                      ? dtePropio
+                        ? "Se emite al entregar y cobrar"
+                        : "Se emite el día siguiente a la entrega"
                       : "Se emite cuando esté confirmado y pagado"}
             </Dato>
           </dl>
+          {dtePropio ? <FacturaPedido p={p} admin={rol === "super_admin"} /> : null}
+          {dtePropio ? (
+            <details className="rounded-md border p-3">
+              <summary className="cursor-pointer text-sm text-muted-foreground">¿La emitiste en otro sistema? Anotala aquí</summary>
+              <div className="mt-3 space-y-3">
           {facturaUrl ? (
             <a href={facturaUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-medium text-primary hover:underline">
               <FileText className="size-4" /> Ver PDF subido
@@ -318,6 +328,40 @@ async function Detalle({ params }: { params: PageProps<"/admin/pedidos/[id]">["p
               </div>
             </FilaEditable>
           </div>
+              </div>
+            </details>
+          ) : (
+            <>
+          {facturaUrl ? (
+            <a href={facturaUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-medium text-primary hover:underline">
+              <FileText className="size-4" /> Ver PDF subido
+            </a>
+          ) : null}
+          <div className="border-t pt-3">
+            <FilaEditable
+              accion={guardarFactura}
+              className=""
+              vista={
+                <p className="text-sm text-muted-foreground">
+                  {p.factura_estado === "emitida" ? "Para corregir el número o subir otro PDF, tocá Editar." : "Cuando la emitás, tocá Editar y cargá el código y el PDF."}
+                </p>
+              }
+            >
+              <input type="hidden" name="id" value={p.id} />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <Label htmlFor="factura-numero">Código de generación o número de control</Label>
+                  <Input id="factura-numero" name="factura_numero" defaultValue={p.factura_numero ?? ""} />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="factura-pdf">PDF de la factura</Label>
+                  <Input id="factura-pdf" name="archivo" type="file" accept="application/pdf,.pdf" />
+                </div>
+              </div>
+            </FilaEditable>
+          </div>
+            </>
+          )}
           <div className="flex flex-wrap gap-2">
             {p.factura_estado === "emitida" ? (
               <a

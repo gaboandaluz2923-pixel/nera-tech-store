@@ -31,6 +31,7 @@ const VARIABLES: { nombre: string; para: string; publica: boolean }[] = [
   { nombre: "NEXT_PUBLIC_GA4_ID", para: "Google Analytics (fase 5)", publica: true },
   { nombre: "NEXT_PUBLIC_META_PIXEL_ID", para: "Meta Pixel (fase 5)", publica: true },
   { nombre: "META_CONVERSIONS_TOKEN", para: "API de conversiones de Meta (fase 5)", publica: false },
+  { nombre: "DTE_CERTIFICADO", para: "Facturación electrónica (fase 10): ver Facturación", publica: false },
 ];
 
 type Valores = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any

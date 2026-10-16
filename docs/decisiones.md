@@ -94,6 +94,13 @@ Registro corto de decisiones técnicas y de negocio, con fecha, para no volver a
 | 2026-10-15 | Clientes del Excel (pestaña ORDENES) al CRM con la etiqueta "cliente anterior": uno por teléfono o correo y una nota por compra (qué, cuánto, cómo pagó, marca [Excel #N] para no repetir); no se crean pedidos (no inflan las ventas). Lista "Clientes Nera Tech" en Brevo con quienes tienen correo y aceptan publicidad; CSV para WhatsApp | Pedido de Gabriel: lo más importante son los correos y teléfonos para campañas |
 | 2026-10-15 | Fase 9 Finanzas: una venta cuenta el mes en que se entrega; IVA = total × 13/113; costo de lo vendido = costo guardado en cada línea; envío y cobro = lo anotado en Gastos o, si no hay, el estimado de Analítica; gastos con crédito fiscal cuentan sin IVA. Flujo de caja por fechas reales de cobro y pago desde un saldo inicial | Criterios simples y explicados en pantalla; el IVA y los libros son un estimado para el contador |
 | 2026-10-15 | Campañas de correo: el panel arma el correo con productos, precios y etiquetas reales («En bodega», «Oferta hasta…») y lo deja como borrador en Brevo; agendar y enviar se hace en Brevo | Nada sale a los clientes sin que Gabriel lo revise |
+| 2026-10-15 | Fase 10: facturación electrónica propia con el Sistema de Transmisión (Normativa 2.0): Factura v2, Crédito fiscal v4, Nota de crédito v4, Invalidación v3 y Contingencia v4. Se firma en el servidor (JWS RS512 con el certificado de Hacienda en Vercel), sin el firmador Java/Docker; cada documento se revisa contra el esquema oficial antes de gastar número | Gabriel quiere dejar Factura Llama; los mismos datos de pedidos, inventario e IMEI alimentan la factura |
+| 2026-10-15 | Una sola serie de números de control para todos los tipos de documento y año (regla 7.1.2 de la normativa: no se permite una serie por tipo sin resolución); establecimiento y punto de venta en el número (M001P001) | Lo exige la Normativa 2.0 |
+| 2026-10-15 | Descuentos del pedido como descuento por ítem repartido en centavos entre los productos; envío como servicio (tipo 2, unidad 99); IMEI o serie en la descripción; IVA del crédito fiscal ajustado dentro del centavo de holgura para que el total sea lo que el cliente pagó | El documento cuadra exacto con el cobro |
+| 2026-10-15 | Factura de consumidor final sin DUI ni correo obligatorios (aviso de la DGII del 5-sep-2024); el nombre, teléfono y correo del pedido van si los hay | No se puede condicionar la venta a dar documentos |
+| 2026-10-15 | Política de reintentos (8 s, consulta y 2 reintentos) y, si Hacienda no responde, contingencia: mismo número y código con modelo diferido; evento y envío desde Facturación o la revisión diaria | Manual tecnológico 2.0 sección 3 |
+| 2026-10-15 | Devoluciones de consumidor final: anulación (tipo 2, rescindir). El Evento de Retorno (devolución parcial de una factura) queda para después | Pocas devoluciones parciales; Hacienda pide pruebas aparte para ese evento |
+| 2026-10-15 | Emisión automática solo con claves de producción; las pruebas de Hacienda con un botón en tandas, marcadas como prueba | Nada de pruebas llega a clientes reales |
 
 ## Fase actual
 Fase 1 — Proveedores, listas y mejor precio: terminada.
@@ -114,4 +121,8 @@ Fase 8 — Inventario por lotes, compras al proveedor (PDF/JSON o a mano, crédi
 unidad, garantía, Open Box, bodega primero en la tienda, ofertas sin pérdida, clientes del Excel y lista de Brevo:
 terminada (15 oct 2026).
 Fase 9 — Finanzas (resultados, indicadores, flujo de caja, gastos, IVA y libros en CSV) y campañas de correo desde el
-panel: en curso (15 oct 2026). Requiere la migración 0010.
+panel: terminada (15 oct 2026). Migración 0010 corrida.
+Fase 10 — Facturación electrónica propia (factura, crédito fiscal, nota de crédito, anulación, contingencia, PDF con QR,
+correo con PDF y JSON, pruebas de Hacienda con un botón): construida y probada contra un simulador (15 oct 2026).
+Requiere la migración 0011. Siguiente: Gabriel envía la solicitud del ambiente de pruebas, carga el certificado y las
+claves en Vercel y se corren las pruebas; después, producción.

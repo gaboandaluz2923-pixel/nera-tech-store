@@ -241,6 +241,58 @@ export function correoFactura(d: DatosPedidoCorreo, numeroFactura: string | null
   };
 }
 
+/**
+ * Entrega de la factura electrónica (Normativa DTE: el correo lleva solo la entrega, sin publicidad).
+ * Van adjuntos el PDF y el archivo JSON con la firma y el sello de Hacienda.
+ */
+export function correoDte(
+  m: Marco,
+  x: {
+    tipo: string;
+    nombre: string | null;
+    numeroControl: string;
+    codigoGeneracion: string;
+    total: number;
+    pedido: number | null;
+    enlace: string | null;
+    contingencia: boolean;
+    prueba: boolean;
+  }
+): Correo {
+  const titulo = `Tu ${x.tipo.toLowerCase()} electrónica${x.pedido ? ` del pedido #${x.pedido}` : ""}`;
+  const cuerpo =
+    (x.prueba ? destacado("<strong>Prueba:</strong> este documento es del ambiente de pruebas de Hacienda y no tiene valor legal.") : "") +
+    p(`${x.nombre ? `Hola, ${esc(x.nombre.split(" ")[0])}. ` : ""}Te enviamos tu ${esc(x.tipo.toLowerCase())} por ${usd(x.total)}. Van adjuntos el PDF y el archivo JSON: guardalos, también te sirven para la garantía.`) +
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;background:#f7f7f8;border-radius:12px"><tr><td style="padding:14px 16px;font-size:13px;line-height:1.6;color:#333">
+<strong style="color:#1c1c1c">Número de control</strong><br>${esc(x.numeroControl)}<br>
+<strong style="color:#1c1c1c">Código de generación</strong><br>${esc(x.codigoGeneracion)}
+</td></tr></table>` +
+    (x.contingencia
+      ? p("Se emitió mientras el sistema de Hacienda no respondía. En cuanto lo reciban te mandamos el sello de recepción.")
+      : p("Podés comprobarla en el sitio de consulta de Hacienda con el código QR del PDF.")) +
+    (x.enlace ? boton("Ver mi pedido", x.enlace) : "");
+  return {
+    asunto: `${x.tipo} electrónica ${x.numeroControl}${x.pedido ? ` · pedido #${x.pedido}` : ""}`,
+    html: marco({ ...m, motivo: "Recibís este correo porque compraste en Nera Tech. Es la entrega de tu documento tributario." }, titulo, cuerpo, `${x.tipo} ${x.numeroControl}`),
+    texto: `${titulo}\n\nNúmero de control: ${x.numeroControl}\nCódigo de generación: ${x.codigoGeneracion}\nTotal: ${usd(x.total)}\n\nVan adjuntos el PDF y el archivo JSON.${x.enlace ? `\n\nTu pedido: ${x.enlace}` : ""}`,
+  };
+}
+
+/** Aviso de que un documento se invalidó ante Hacienda (el evento también se entrega al cliente). */
+export function correoDteInvalidado(m: Marco, x: { tipo: string; numeroControl: string; motivo: string; reemplazo: string | null; pedido: number | null }): Correo {
+  const titulo = `${x.tipo} ${x.numeroControl} anulada`;
+  const cuerpo =
+    p(`Te avisamos que anulamos ante el Ministerio de Hacienda tu ${esc(x.tipo.toLowerCase())} <strong>${esc(x.numeroControl)}</strong>${x.pedido ? ` del pedido #${x.pedido}` : ""}.`) +
+    p(`Motivo: ${esc(x.motivo)}`) +
+    (x.reemplazo ? p(`La reemplaza el documento <strong>${esc(x.reemplazo)}</strong>, que te llega en otro correo.`) : "") +
+    p("Va adjunto el comprobante de la anulación (archivo JSON con el sello de Hacienda).");
+  return {
+    asunto: `Anulación de ${x.tipo.toLowerCase()} ${x.numeroControl}`,
+    html: marco({ ...m, motivo: "Recibís este correo porque compraste en Nera Tech. Es un aviso sobre tu documento tributario." }, titulo, cuerpo, titulo),
+    texto: `${titulo}\n\nMotivo: ${x.motivo}${x.reemplazo ? `\nLa reemplaza: ${x.reemplazo}` : ""}`,
+  };
+}
+
 /** Aviso interno al equipo cuando entra un pedido. */
 export function correoAvisoEquipo(d: DatosPedidoCorreo & { telefono: string; enlacePanel: string }): Correo {
   const titulo = `Pedido nuevo #${d.numero} · ${usd(d.total)}`;

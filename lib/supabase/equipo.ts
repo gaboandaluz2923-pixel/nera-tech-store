@@ -14,6 +14,7 @@ export const SOLO_SUPER_ADMIN = [
   "/admin/equipo",
   "/admin/inventario",
   "/admin/finanzas",
+  "/admin/facturacion",
   "/admin/clientes/importar",
   "/admin/clientes/exportar",
 ];
