@@ -297,3 +297,65 @@ export function correoStockDisponible(m: Marco, x: { producto: string; enlace: s
     texto: `${titulo}\n\nYa está disponible${x.precio ? ` desde ${usd(x.precio)}` : ""}.\n\n${x.enlace}`,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Campañas de correo (Brevo): titular, texto corto y hasta 4 productos con su precio real.
+// El enlace de baja lo pone Brevo ({{ unsubscribe }}): quien se da de baja queda bloqueado en Brevo.
+// ---------------------------------------------------------------------------
+export type ProductoCampana = {
+  nombre: string;
+  enlace: string;
+  imagen: string | null;
+  /** Precio con tarjeta (el publicado); "desde" si hay varias opciones */
+  precio: number;
+  desde: boolean;
+  /** Precio normal tachado, si está en oferta */
+  precioRegular: number | null;
+  /** Precio pagando en efectivo o transferencia */
+  precioEfectivo: number;
+  /** "En bodega: entrega en menos de 24 horas", "Oferta hasta el 31 oct", "Open Box"… */
+  etiquetas: string[];
+};
+
+export function correoCampana(
+  m: Marco,
+  c: { asunto: string; previa: string; titulo: string; intro: string; productos: ProductoCampana[]; pctEfectivo: number; cierre: string; enlaceTienda: string }
+): Correo {
+  const tarjeta = (x: ProductoCampana) => `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px;border:1px solid #eee;border-radius:14px"><tr>
+${x.imagen ? `<td width="150" valign="middle" style="padding:12px;width:150px"><a href="${esc(x.enlace)}"><img src="${esc(x.imagen)}" width="140" alt="${esc(x.nombre)}" style="display:block;width:140px;max-width:140px;height:auto;border:0;border-radius:8px"></a></td>` : ""}
+<td valign="middle" style="padding:12px 14px 12px ${x.imagen ? "4px" : "14px"}">
+<p style="margin:0 0 6px;font-size:16px;font-weight:bold;line-height:1.3;color:#1c1c1c">${esc(x.nombre)}</p>
+${x.etiquetas.map((e) => `<span style="display:inline-block;margin:0 4px 6px 0;padding:2px 8px;border-radius:999px;background:#fff4ec;font-size:12px;color:#9a3d00">${esc(e)}</span>`).join("")}
+<p style="margin:4px 0 0;font-size:20px;font-weight:bold;color:#1c1c1c">${x.desde ? '<span style="font-size:13px;font-weight:normal;color:#666">Desde </span>' : ""}${usd(x.precio)}${
+    x.precioRegular ? ` <span style="font-size:13px;font-weight:normal;color:#999;text-decoration:line-through">${usd(x.precioRegular)}</span>` : ""
+  }</p>
+<p style="margin:2px 0 10px;font-size:13px;color:#1f9d55">${usd(x.precioEfectivo)} pagando en efectivo o transferencia (−${c.pctEfectivo}%)</p>
+<a href="${esc(x.enlace)}" style="display:inline-block;padding:10px 18px;border-radius:10px;background:${NARANJA};font-size:15px;font-weight:bold;color:#ffffff;text-decoration:none">Ver y comprar</a>
+</td></tr></table>`;
+  const confianza = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 4px;background:#f7f7f8;border-radius:12px"><tr><td style="padding:12px 14px;font-size:13px;line-height:1.6;color:#333;text-align:center">
+✔ Pagás al recibir &nbsp;·&nbsp; ✔ Garantía de 12 meses &nbsp;·&nbsp; ✔ Envío a todo el país</td></tr></table>`;
+  const cuerpo =
+    c.intro
+      .split(/\n{2,}/)
+      .map((t) => t.trim())
+      .filter(Boolean)
+      .map((t) => p(esc(t).replace(/\n/g, "<br>")))
+      .join("") +
+    c.productos.map(tarjeta).join("") +
+    confianza +
+    (c.cierre ? p(esc(c.cierre)) : "") +
+    boton("Ver todo en la tienda", c.enlaceTienda, NARANJA, true);
+  const html = marco(
+    { ...m, motivo: "Recibís este correo porque compraste en Nera Tech.", baja: "{{ unsubscribe }}" },
+    c.titulo,
+    cuerpo,
+    c.previa
+  );
+  const texto =
+    `${c.titulo}\n\n${c.intro}\n\n` +
+    c.productos
+      .map((x) => `${x.nombre}: ${x.desde ? "desde " : ""}${usd(x.precio)} (${usd(x.precioEfectivo)} en efectivo)\n${x.enlace}`)
+      .join("\n\n") +
+    `\n\n${c.cierre}\n\nPagás al recibir · Garantía de 12 meses · Envío a todo el país\n${c.enlaceTienda}\n\nNo quiero recibir más correos: {{ unsubscribe }}`;
+  return { asunto: c.asunto, html, texto };
+}

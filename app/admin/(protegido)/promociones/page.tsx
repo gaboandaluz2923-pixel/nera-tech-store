@@ -394,14 +394,22 @@ async function CampanasCorreo() {
             Lo que está agendado para salir y cómo les fue a las últimas. Las campañas se arman y agendan en Brevo → Campañas.
           </CardDescription>
         </div>
+        <div className="flex shrink-0 flex-wrap gap-2">
+        <Link
+          href="/admin/promociones/campana"
+          className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
+        >
+          + Preparar campaña
+        </Link>
         <a
           href="https://app.brevo.com/marketing-campaign/list"
           target="_blank"
           rel="noopener noreferrer"
-          className="shrink-0 rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted"
+          className="rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted"
         >
           Abrir Brevo
         </a>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4 text-sm">
         {error ? <p className="text-red-700">No se pudieron leer las campañas: {error}</p> : null}

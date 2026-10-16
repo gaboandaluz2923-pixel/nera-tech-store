@@ -471,6 +471,16 @@ aviso pequeño de cookies con el botón **Entendido**.
 **Campañas de correo (Brevo)**, arriba: las campañas **agendadas** con su fecha y hora, los **borradores** sin agendar
 y las 5 **últimas enviadas** con cuántos correos se entregaron y qué porcentaje abrió y dio clic. Las campañas se
 arman y agendan en Brevo (botón **Abrir Brevo**); aquí solo se ven.
+
+**+ Preparar campaña**: arma el correo con productos y precios reales.
+1. Elegí el tipo: *Oferta de quincena* (sugiere lo que está en oferta y lo más pedido), *Ya llegó a bodega* (lo que
+   está en bodega), *Open Box* o *Campaña libre*. Cada tipo trae textos de ejemplo.
+2. Marcá hasta 4 productos (solo los publicados y disponibles). Cada uno sale con su foto, precio con tarjeta, precio
+   en efectivo o transferencia, y etiquetas reales: «En bodega: entrega en menos de 24 h», «Oferta hasta el…», «Open Box».
+3. Revisá el asunto, el texto de vista previa, el titular y los textos.
+4. **Ver cómo queda** muestra el correo. **Crear borrador en Brevo** lo deja en Brevo → Campañas como borrador para
+   la lista «Clientes Nera Tech», con enlaces medidos (utm). Ahí te mandás una prueba y lo agendás; el panel nunca
+   lo envía solo. Luego aparece aquí en **Agendadas**.
 Menú **Promociones**. Tiene tres recuadros. Nada se borra: las ofertas, combos y cupones se apagan.
 
 **1. Ofertas con fecha** (precio rebajado por unos días)

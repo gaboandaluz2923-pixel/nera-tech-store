@@ -21,7 +21,7 @@ async function brevo<T>(ruta: string, init?: RequestInit): Promise<T> {
 }
 
 /** Id de la lista con ese nombre; si no existe, la crea (en la primera carpeta, o en una nueva "Nera Tech") */
-async function idDeLista(nombre: string): Promise<number> {
+export async function idDeLista(nombre: string): Promise<number> {
   for (let offset = 0; offset < 1000; offset += 50) {
     const r = await brevo<{ lists?: { id: number; name: string }[]; count?: number }>(`/contacts/lists?limit=50&offset=${offset}`);
     const lista = r.lists?.find((l) => l.name.trim().toLowerCase() === nombre.toLowerCase());
