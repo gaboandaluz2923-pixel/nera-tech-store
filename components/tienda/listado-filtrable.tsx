@@ -23,7 +23,7 @@ function Chip({ activo, onClick, children }: { activo: boolean; onClick: () => v
       type="button"
       onClick={onClick}
       aria-pressed={activo}
-      className={`shrink-0 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+      className={`shrink-0 rounded-full border px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors ${
         activo ? "border-marca bg-marca text-white" : "bg-background hover:bg-muted"
       }`}
     >
@@ -94,7 +94,7 @@ export function ListadoFiltrable({
     <div>
       <div className="space-y-2" role="group" aria-label="Filtros">
         {/* Una sola fila: marca y precio. En el teléfono se desliza de lado; en la computadora se acomoda */}
-        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
+        <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
           {marcas.length > 1 ? (
             <>
               <Chip activo={!marca} onClick={() => setMarca(null)}>
@@ -107,7 +107,7 @@ export function ListadoFiltrable({
               ))}
             </>
           ) : null}
-          {marcas.length > 1 && presupuestos.length > 1 ? <span className="my-1 w-px shrink-0 bg-border" aria-hidden /> : null}
+          {marcas.length > 1 && presupuestos.length > 1 ? <span className="h-6 w-px shrink-0 bg-border" aria-hidden /> : null}
           {presupuestos.length > 1
             ? presupuestos.map((r) => (
                 <Chip key={r.id} activo={presupuesto === r.id} onClick={() => setPresupuesto(presupuesto === r.id ? null : r.id)}>
@@ -116,7 +116,7 @@ export function ListadoFiltrable({
               ))
             : null}
           {hayMas ? (
-            <span className="sm:hidden">
+            <span className="shrink-0 sm:hidden">
               <Chip activo={masAbierto || secundarios > 0} onClick={() => setMasAbierto(!masAbierto)}>
                 {masAbierto ? "Menos filtros" : `Más filtros${secundarios ? ` (${secundarios})` : ""}`}
               </Chip>
