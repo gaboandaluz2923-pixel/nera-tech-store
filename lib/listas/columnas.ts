@@ -90,8 +90,9 @@ const ENC = {
 
 // Columna con el número de fila del proveedor (1, 2, 3…): no es precio ni existencia
 function esCorrelativo(vals: string[]) {
-  const ns = vals.map((v) => aNumero(v));
-  if (ns.length < 5 || ns.some((n) => n === null || !Number.isInteger(n))) return false;
+  // Se ignoran los títulos de sección sueltos en la misma columna ("ANKER", "ECOFLOW")
+  const ns = vals.map((v) => aNumero(v)).filter((n) => n !== null);
+  if (ns.length < 5 || ns.length < vals.length * 0.9 || ns.some((n) => !Number.isInteger(n))) return false;
   // Sube de 1 en 1 (o de 2 en 2 donde había una fila de título), con algún salto suelto
   let seguidos = 0;
   for (let i = 1; i < ns.length; i++) {
@@ -198,6 +199,13 @@ export function extraerLineas(tabla: Tabla, m: Mapeo): LineaCruda[] {
       sku: m.sku === null ? null : (f[m.sku] ?? "").replace(/\s+new!*$/i, "").trim() || null,
       precioSugerido: m.precioSugerido === null ? null : aNumero(f[m.precioSugerido]),
     });
+  }
+  // Un "código" que se repite en líneas distintas ("Sin existencias locales") o que es una frase sin números no
+  // identifica al producto: esas líneas se reconocen por su descripción
+  const descPorSku = new Map<string, Set<string>>();
+  for (const l of lineas) if (l.sku) descPorSku.set(l.sku, (descPorSku.get(l.sku) ?? new Set()).add(l.descripcion.toLowerCase()));
+  for (const l of lineas) {
+    if (l.sku && ((descPorSku.get(l.sku)?.size ?? 0) > 1 || (/\s/.test(l.sku) && !/\d/.test(l.sku)))) l.sku = null;
   }
   return lineas;
 }

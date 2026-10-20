@@ -1,6 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { conNombre, interpretar, sinAcentos, slugDe, formatoAlmacenamiento } from "@/lib/listas/normalizar";
+import { claveSinMarcaRepetida, conNombre, interpretar, sinAcentos, slugDe, formatoAlmacenamiento } from "@/lib/listas/normalizar";
 
 
 /** Trae todas las filas de una consulta, de 1000 en 1000 (límite de Supabase por consulta). */
@@ -160,9 +160,18 @@ export async function crearDesdeLineas(supabase: SupabaseClient, descripciones: 
     todo((a, b) => supabase.from("variantes").select("id, clave").order("id").range(a, b)),
   ]);
   const catPorSlug = new Map(cats.map((c) => [c.slug, c.id]));
-  const prodPorClave = new Map(prods.map((p) => [p.clave, p.id as string]));
+  // Los productos viejos de marcas desconocidas tienen la marca repetida en la clave: se buscan también así
+  const prodPorClave = new Map<string, string>();
+  for (const p of prods) {
+    prodPorClave.set(claveSinMarcaRepetida(p.clave), p.id as string);
+    prodPorClave.set(p.clave, p.id as string);
+  }
   const slugsUsados = new Set(prods.map((p) => p.slug as string));
-  const varPorClave = new Map(vars.map((v) => [v.clave, v.id as string]));
+  const varPorClave = new Map<string, string>();
+  for (const v of vars) {
+    varPorClave.set(claveSinMarcaRepetida(v.clave), v.id as string);
+    varPorClave.set(v.clave, v.id as string);
+  }
 
   // 1) Productos nuevos
   const nuevosProd = new Map<string, Record<string, unknown>>();

@@ -104,9 +104,11 @@ function colorCanonico(texto: string): string | null {
 // ---------- categoría ----------
 function categoriaSugerida(t: string, tieneMemoria: boolean): string {
   if (/\b(tv|smart tv)\b/.test(t)) return "otros";
+  // "Charging station 3-in-1 pad" es un cargador, no una tablet
+  if (/\b(charger|charging|cargador)\b/.test(t) && !tieneMemoria) return "cargadores";
   if (/\b(tab|pad|tablet|xpad)\b/.test(t)) return "tablets";
-  if (/\b(watch|wacht|band|reloj)\b/.test(t)) return "relojes";
-  if (/\b(buds|earbuds|earphones?|headphones?|audifonos|freebuds|tune|auriculares)\b/.test(t))
+  if (/\b(watch|wacht|xwatch|smartwatch|band|reloj)\b/.test(t)) return "relojes";
+  if (/\b(buds|earbuds|xbuds|earphones?|headphones?|nanophones|audifonos|freebuds|tune|auriculares)\b/.test(t))
     return "audifonos";
   if (/\b(speaker|bocina|musicbox|go4|grip|parlante)\b/.test(t)) return "bocinas";
   if (/\b(charger|charging|cargador|adaptador|adapter|cable)\b/.test(t)) return "cargadores";
@@ -196,7 +198,9 @@ export function interpretar(descripcionOriginal: string): Interpretacion {
   }
 
   // 4) Modelo: lo que está antes de la memoria, sin marca, códigos ni ruido
-  const quitarMarca = new Set(def?.quitar ?? []);
+  // Marca conocida: se quitan sus alias. Marca que no conozco (Kieslect, Ecoflow, Insta360…): se toma la primera
+  // palabra como marca y se quita del modelo, para no armar "Kieslect Kieslect Calling Watch".
+  const quitarMarca = new Set(def?.quitar ?? [tokensTodos[0]]);
   let tokensModelo = antes
     .replace(/[(),]/g, " ")
     .split(/[\s/-]+/)
@@ -280,6 +284,16 @@ export function conNombre(i: Interpretacion, nombre: string | null | undefined):
   const claveProducto = j.claveProducto;
   const claveVariante = [claveProducto, i.ramGb ?? "-", i.almacenamientoGb ?? "-", i.color ? sinAcentos(i.color.toLowerCase()) : "-"].join("|");
   return { ...i, marca: j.marca, modelo: j.modelo, claveProducto, claveVariante, nombreProducto: limpio };
+}
+
+/**
+ * Clave con la marca repetida al inicio del modelo ("coolpad|coolpad cp12 neo k18"), como se guardaba antes
+ * para marcas desconocidas → "coolpad|cp12 neo k18". Sirve para encontrar esos productos viejos.
+ */
+export function claveSinMarcaRepetida(clave: string) {
+  const [marca, modelo, ...resto] = clave.split("|");
+  if (!marca || !modelo?.startsWith(`${marca} `)) return clave;
+  return [marca, modelo.slice(marca.length + 1), ...resto].join("|");
 }
 
 export function formatoAlmacenamiento(gb: number) {
