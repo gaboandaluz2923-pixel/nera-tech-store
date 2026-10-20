@@ -130,3 +130,7 @@ Campañas con envío gratis (15 oct 2026) — «Octubre Naranja» hasta el 15 de
 Infinix GT 50 Pro (10 en bodega) y envío gratis en todo pedido que lleve un producto de la campaña. Los precios del arte
 son los de efectivo; el precio publicado (tarjeta) = efectivo ÷ 0.94. No se muestran precios «regulares» tachados
 inventados. Al terminar, el envío vuelve a $5 y los precios quedan como estén (se cambian en Precios). Migración 0012.
+Categorías (20 oct 2026) — Gabriel: «Cámaras» (Insta360 y sus accesorios, cámaras Eufy), «Estaciones de energía y
+paneles solares» (EcoFlow; en el menú: «Estaciones de energía») y «Cargadores y cables» pasa a «Powerbanks, Cargadores y
+Cables» (en el menú: «Powerbanks y cargadores»; el slug sigue siendo `cargadores`). El panel las sugiere solo al
+importar listas. Migración 0013.

@@ -24,7 +24,18 @@ const INTRO: Record<string, { titulo: string; texto: string }> = {
   relojes: { titulo: "Relojes inteligentes", texto: "Medí tu actividad y recibí notificaciones sin sacar el teléfono." },
   tablets: { titulo: "Tablets", texto: "Pantalla grande para estudiar, trabajar o ver series." },
   bocinas: { titulo: "Bocinas Bluetooth", texto: "Sonido potente para llevar a todos lados." },
-  cargadores: { titulo: "Cargadores y cables", texto: "Carga rápida y segura para tu celular." },
+  cargadores: {
+    titulo: "Powerbanks, cargadores y cables",
+    texto: "Powerbanks, cargadores de carga rápida y cables originales para tu celular.",
+  },
+  camaras: {
+    titulo: "Cámaras de acción y seguridad",
+    texto: "Insta360 para grabar tus aventuras en 360° y cámaras para cuidar tu casa.",
+  },
+  energia: {
+    titulo: "Estaciones de energía y paneles solares",
+    texto: "Energía de respaldo para apagones, trabajo y camping, con carga solar.",
+  },
   proteccion: { titulo: "Protección para tu celular", texto: "Cases y protectores de pantalla para que tu equipo dure más." },
 };
 

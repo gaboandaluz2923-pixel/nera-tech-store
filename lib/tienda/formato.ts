@@ -89,8 +89,10 @@ export const CATEGORIAS = [
   { slug: "relojes", nombre: "Relojes" },
   { slug: "tablets", nombre: "Tablets" },
   { slug: "bocinas", nombre: "Bocinas" },
-  { slug: "cargadores", nombre: "Cargadores" },
+  { slug: "cargadores", nombre: "Powerbanks y cargadores" },
   { slug: "proteccion", nombre: "Protección" },
+  { slug: "camaras", nombre: "Cámaras" },
+  { slug: "energia", nombre: "Estaciones de energía" },
 ] as const;
 
 export type SlugCategoria = (typeof CATEGORIAS)[number]["slug"];
@@ -120,6 +122,9 @@ export const NOMBRE_CARACTERISTICA: Record<string, string> = {
   compatible_con: "Compatible con",
   material: "Material",
   compatibilidad: "Compatibilidad",
+  capacidad: "Capacidad",
+  resolucion: "Resolución",
+  puertos: "Puertos",
 };
 
 /** Las 4 características que deciden la compra de un celular (se muestran primero y en el comparador). */

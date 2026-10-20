@@ -104,8 +104,14 @@ function colorCanonico(texto: string): string | null {
 // ---------- categoría ----------
 function categoriaSugerida(t: string, tieneMemoria: boolean): string {
   if (/\b(tv|smart tv)\b/.test(t)) return "otros";
+  // Sin memoria: cámaras (Insta360 y sus accesorios, cámaras de seguridad), estaciones de energía y paneles
+  // solares (EcoFlow), y powerbanks (van con cargadores)
+  if (!tieneMemoria && /\b(insta360|nsta360|gopro|dashcam|solocam|doorbell|floodlight cam|camara|camera)\b/.test(t)) return "camaras";
+  if (!tieneMemoria && /\b(ecoflow|bluetti|jackery|power ?station|solar panel|panel solar|paneles solares|estacion de energia)\b/.test(t))
+    return "energia";
+  if (!tieneMemoria && /\b(power ?bank|powerbank|powercore|bateria externa)\b/.test(t)) return "cargadores";
   // "Charging station 3-in-1 pad" es un cargador, no una tablet
-  if (/\b(charger|charging|cargador)\b/.test(t) && !tieneMemoria) return "cargadores";
+  if (/\b(charger|charging|cargador|magsafe|maggo)\b/.test(t) && !tieneMemoria) return "cargadores";
   if (/\b(tab|pad|tablet|xpad)\b/.test(t)) return "tablets";
   if (/\b(watch|wacht|xwatch|smartwatch|band|reloj)\b/.test(t)) return "relojes";
   if (/\b(buds|earbuds|xbuds|earphones?|headphones?|nanophones|audifonos|freebuds|tune|auriculares)\b/.test(t))
