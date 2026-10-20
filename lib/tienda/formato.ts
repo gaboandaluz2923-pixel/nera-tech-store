@@ -84,9 +84,10 @@ export const TEXTO_DISPONIBILIDAD = {
 /** Categorías públicas: orden y nombre en el menú. Las que no tienen productos publicados no se muestran. */
 export const CATEGORIAS = [
   { slug: "celulares", nombre: "Celulares" },
+  { slug: "celulares-basicos", nombre: "Celulares básicos" },
   { slug: "open-box", nombre: "Open Box" },
   { slug: "audifonos", nombre: "Audífonos" },
-  { slug: "relojes", nombre: "Relojes" },
+  { slug: "relojes", nombre: "Relojes inteligentes" },
   { slug: "tablets", nombre: "Tablets" },
   { slug: "bocinas", nombre: "Bocinas" },
   { slug: "cargadores", nombre: "Powerbanks y cargadores" },

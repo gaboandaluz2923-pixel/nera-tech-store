@@ -137,3 +137,5 @@ importar listas. Migración 0013.
 Televisores y Consolas y videojuegos (20 oct 2026) — Gabriel: categorías nuevas para los TV y la Nintendo Switch de Idecom;
 los celulares básicos (de teclas o flip) van en Celulares. En Emparejar se elige la categoría de cada línea antes de crear.
 Migración 0015.
+Relojes Inteligentes y Celulares Básicos (20 oct 2026) — Gabriel: la categoría Relojes se llama «Relojes Inteligentes» y los
+teléfonos de teclas o flip de Maverik van en «Celulares Básicos» (slug celulares-basicos). Migración 0016.

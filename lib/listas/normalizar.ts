@@ -105,12 +105,12 @@ function colorCanonico(texto: string): string | null {
 function categoriaSugerida(t: string, tieneMemoria: boolean): string {
   if (/\b(tv|smart tv|televisor|televisores|google ?tv)\b/.test(t)) return "televisores";
   if (/\b(nintendo|playstation|ps5|ps4|xbox|consola|console)\b/.test(t)) return "consolas";
-  // Teléfonos básicos (de teclas o flip) sin memoria en la lista: pantalla de 1.8" a 3.5"; 7" o más con
+  // Celulares básicos (de teclas o flip) sin memoria en la lista: pantalla de 1.8" a 3.5"; 7" o más con
   // llamadas es una tablet
   const pulgadas = /(\d{1,2}(?:\.\d)?)\s*(?:"|pulg|in\b)/.exec(t);
   if (pulgadas) {
     const n = Number(pulgadas[1]);
-    if (!tieneMemoria && n >= 1.5 && n <= 3.5 && /\b(ds|dual sim|3g|4g|flip|teclas)\b/.test(t)) return "celulares";
+    if (!tieneMemoria && n >= 1.5 && n <= 3.5 && /\b(ds|dual sim|3g|4g|flip|teclas)\b/.test(t)) return "celulares-basicos";
     if (n >= 7 && n <= 14 && /(llamada|\blte\b|\btab|pad\b)/.test(t)) return "tablets";
   }
   // Sin memoria: cámaras (Insta360 y sus accesorios, cámaras de seguridad), estaciones de energía y paneles

@@ -27,6 +27,7 @@ export const PLANTILLAS: Record<string, string[]> = {
     "proteccion",
     "peso",
   ],
+  "celulares-basicos": ["pantalla", "bateria", "red", "peso"],
   tablets: ["pantalla", "procesador", "camara", "bateria", "carga", "red", "sistema_operativo", "peso"],
   audifonos: ["tipo", "autonomia", "cancelacion_ruido", "resistencia", "conexion", "conector", "peso"],
   relojes: ["pantalla", "autonomia", "resistencia", "conexion", "compatibilidad", "peso"],

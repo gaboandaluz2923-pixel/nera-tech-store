@@ -12,6 +12,10 @@ const INTRO: Record<string, { titulo: string; texto: string }> = {
     titulo: "Celulares nuevos en El Salvador",
     texto: "Samsung, Xiaomi, Infinix y más, sellados y con garantía de 12 meses. Podés pagar al recibir.",
   },
+  "celulares-basicos": {
+    titulo: "Celulares básicos",
+    texto: "Teléfonos de teclas y flip: batería que dura días, fáciles de usar y a buen precio.",
+  },
   "open-box": {
     titulo: "Open Box: originales a menor precio",
     texto:
