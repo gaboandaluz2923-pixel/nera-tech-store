@@ -95,7 +95,12 @@ export default function Listas() {
             La lista más reciente de cada proveedor es la vigente (si la manda en varias partes el mismo día, todas cuentan); las anteriores quedan como historial.
           </p>
         </div>
-        <Button nativeButton={false} render={<Link href="/admin/listas/nueva" />}>Importar lista</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" nativeButton={false} render={<Link href="/admin/listas/emparejar" />}>
+            Emparejar e ignoradas
+          </Button>
+          <Button nativeButton={false} render={<Link href="/admin/listas/nueva" />}>Importar lista</Button>
+        </div>
       </div>
       <Suspense fallback={<p className="text-sm text-muted-foreground">Cargando…</p>}>
         <Contenido />

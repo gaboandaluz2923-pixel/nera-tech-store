@@ -118,7 +118,8 @@ Una tarjeta por proveedor (Total Link, Maverik, Idecom, Intcomex ya vienen cread
 La última lista de cada proveedor es la **Vigente**; las anteriores quedan como historial.
 
 ## Listas de precios → Emparejar
-Aparece cuando una lista trae equipos que todavía no están en tu catálogo.
+Aparece cuando una lista trae equipos que todavía no están en tu catálogo. Siempre se llega desde Listas de precios →
+**Emparejar e ignoradas** (junto a Importar lista).
 - Las líneas que el sistema entendió (celular, tablet, audífonos, bocina, cargador…) vienen **marcadas**.
   Las de categoría **otros** (lo que no supo clasificar: paneles solares, power banks, TV…) vienen sin
   marcar para que las revisés.
