@@ -102,10 +102,16 @@ Una tarjeta por proveedor (Total Link, Maverik, Idecom, Intcomex ya vienen cread
 ## Listas de precios → Importar lista
 1. Elegí el proveedor y la fecha de la lista.
 2. Subí el Excel (.xlsx) o CSV tal como te lo manda el proveedor. Si llega en PDF o imagen, abrilo,
-   copiá la tabla y pegala en el cuadro de texto, y tocá **Leer lo pegado**.
-3. Revisá las columnas que detectó el sistema (descripción, precio, existencia, código, precio
-   sugerido). Si alguna está mal, cambiala en la lista desplegable.
-4. Mirá la vista previa: la columna **Lo entendí como** muestra producto, memoria, color y categoría.
+   copiá la tabla y pegala en el cuadro de texto (se agranda mientras escribís) y tocá **Leer lo pegado**.
+   Leído, el cuadro se cierra en una línea («Lo pegado: 120 filas») con el botón **Editar lo pegado**.
+3. Revisá las columnas que detectó el sistema: descripción, **marca** (si el proveedor la pone en una
+   columna aparte, como Total Link: se agrega al inicio de la descripción), precio, existencia, código y
+   precio sugerido. Si alguna está mal, cambiala en la lista desplegable. Ojo: la columna con el número de
+   fila del proveedor (1, 2, 3…) no es la existencia; el sistema la descarta solo, pero revisalo.
+   Si la lista empieza con un título («PRECIOS ACTUALES») o repite los encabezados en cada marca, no pasa nada.
+4. Mirá la vista previa, de 50 en 50 líneas con **← Anterior** y **Siguiente →** abajo («Líneas 51–100 de
+   120 · página 2 de 3»). Cada línea muestra su número, la descripción, el código del proveedor, el precio,
+   la existencia y **Lo entendí como** (producto, memoria, color y categoría).
 5. Tocá **Importar**. Lo que ya estaba vinculado se actualiza solo (precio y existencia). Lo que no
    vino en esta lista queda como no disponible con ese proveedor.
 
@@ -113,9 +119,17 @@ La última lista de cada proveedor es la **Vigente**; las anteriores quedan como
 
 ## Listas de precios → Emparejar
 Aparece cuando una lista trae equipos que todavía no están en tu catálogo.
-- Las líneas vienen **marcadas**, salvo las de categoría "otros" (TV, consolas, etc.).
+- Las líneas que el sistema entendió (celular, tablet, audífonos, bocina, cargador…) vienen **marcadas**.
+  Las de categoría **otros** (lo que no supo clasificar: paneles solares, power banks, TV…) vienen sin
+  marcar para que las revisés.
+- La casilla de arriba de la tabla **marca o desmarca todas**; arriba se ve cuántas van marcadas
+  («12 de 97 marcadas»).
+- **Se creará como**: el nombre del producto está en una casilla y se puede corregir antes de crear
+  (ej. «Hot Hot 70» → «Infinix Hot 70»). La marca sale de la primera palabra del nombre. Si el nombre
+  corregido es el de un producto que ya tenés, la opción se agrega a ese producto en vez de crear otro.
 - **Crear los marcados en el catálogo**: crea el producto y la variante (ocultos, no se ven en la
-  tienda) y los vincula al proveedor. Las próximas listas los actualizan solas.
+  tienda) y los vincula al proveedor. Las próximas listas los actualizan solas. Si después ves un nombre
+  mal puesto, se cambia en **Catálogo** → el producto → **Editar** (Nombre en la tienda y Marca).
 - **Ignorar los marcados**: para lo que no vas a vender. Marcá esas líneas primero y luego tocá el
   botón. Quedan recordadas y no vuelven a aparecer.
 - **Asociar**: si el sistema entendió mal un equipo y ya existe en tu catálogo con otro nombre,

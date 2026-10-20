@@ -11,6 +11,7 @@ export type Mapeo = {
   stock: number | null;
   sku: number | null;
   precioSugerido: number | null;
+  marca?: number | null; // columna MARCA aparte (ej. Total Link): se antepone a la descripción si no la trae
 };
 
 export type LineaCruda = {
@@ -60,6 +61,8 @@ export function leerTexto(texto: string): Tabla {
   return filas.map((f) => f.map((c) => c.trim())).filter((f) => f.some((c) => c));
 }
 
+const sinTildes = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
 // ---------- números ----------
 export function aNumero(s: string | null | undefined): number | null {
   if (s === null || s === undefined) return null;
@@ -78,20 +81,50 @@ const pareceMoneda = (s: string) => /^\$?\s*\d{1,3}(,?\d{3})*(\.\d{1,2})?$/.test
 // ---------- detección de columnas ----------
 const ENC = {
   descripcion: /(descrip|existencia|producto|nombre|articulo|item|smartphones|modelo)/i,
-  precio: /(precio|price|costo|especial|p\.\s*esp|valor)/i,
+  precio: /(precio|price|costo|especial|p\.\s*esp|valor|cliente)/i,
   sugerido: /(sugerid|pvp|retail|publico)/i,
   stock: /(cantidad|stock|exist|qty|inventario|disp)/i,
   sku: /(codigo|código|sku|unidad|item|cod\.?|part)/i,
+  marca: /^\s*(marca|brand)\s*$/i,
 };
+
+// Columna con el número de fila del proveedor (1, 2, 3…): no es precio ni existencia
+function esCorrelativo(vals: string[]) {
+  const ns = vals.map((v) => aNumero(v));
+  if (ns.length < 5 || ns.some((n) => n === null || !Number.isInteger(n))) return false;
+  // Sube de 1 en 1 (o de 2 en 2 donde había una fila de título), con algún salto suelto
+  let seguidos = 0;
+  for (let i = 1; i < ns.length; i++) {
+    const d = ns[i]! - ns[i - 1]!;
+    if (d === 1 || d === 2) seguidos++;
+  }
+  return seguidos >= (ns.length - 1) * 0.7;
+}
+
+// Cuántas celdas de una fila parecen encabezados (texto, no números ni precios)
+function puntajeEncabezado(fila: string[]) {
+  return fila.filter((c) => c && aNumero(c) === null && !pareceMoneda(c) && Object.values(ENC).some((r) => r.test(c))).length;
+}
 
 export function detectarColumnas(tabla: Tabla): Mapeo {
   const ancho = Math.max(...tabla.map((f) => f.length));
-  // Fila de encabezado: la primera de las 10 primeras con un texto que parezca encabezado de precio
+  // Fila de encabezado: de las 10 primeras, la que tiene más celdas con cara de encabezado (al menos 2),
+  // para no confundirla con un título como "PRECIOS ACTUALES". Si ninguna tiene 2, la primera que nombre el precio.
   let filaEncabezado = -1;
+  let mejor = 1;
   for (let i = 0; i < Math.min(10, tabla.length); i++) {
-    if (tabla[i].some((c) => ENC.precio.test(c) && !pareceMoneda(c))) {
+    const p = puntajeEncabezado(tabla[i]);
+    if (p > mejor) {
+      mejor = p;
       filaEncabezado = i;
-      break;
+    }
+  }
+  if (filaEncabezado < 0) {
+    for (let i = 0; i < Math.min(10, tabla.length); i++) {
+      if (tabla[i].some((c) => ENC.precio.test(c) && !pareceMoneda(c))) {
+        filaEncabezado = i;
+        break;
+      }
     }
   }
   const datos = tabla.slice(filaEncabezado + 1).slice(0, 200);
@@ -102,7 +135,8 @@ export function detectarColumnas(tabla: Tabla): Mapeo {
     const conDolar = vals.filter((v) => v.includes("$")).length;
     const numericos = vals.filter((v) => aNumero(v) !== null).length;
     const largo = vals.reduce((s, v) => s + v.length, 0) / Math.max(1, vals.length);
-    return { c, n: vals.length, conDolar, numericos, largo, enc: encabezado[c] ?? "" };
+    const enc = encabezado[c] ?? "";
+    return { c, n: vals.length, conDolar, numericos, largo, enc, correlativo: !enc && esCorrelativo(vals) };
   });
 
   // Descripción: la columna de texto más larga (prefiriendo encabezado que coincida)
@@ -112,7 +146,7 @@ export function detectarColumnas(tabla: Tabla): Mapeo {
     [...textos].sort((a, b) => b.largo - a.largo)[0]?.c ??
     0;
 
-  const numericas = stats.filter((s) => s.c !== descripcion && s.n > 0 && s.numericos >= s.n * 0.6);
+  const numericas = stats.filter((s) => s.c !== descripcion && s.n > 0 && s.numericos >= s.n * 0.6 && !s.correlativo);
   const sugerido = numericas.find((s) => ENC.sugerido.test(s.enc))?.c ?? null;
   const precio =
     numericas.find((s) => s.c !== sugerido && ENC.precio.test(s.enc) && !ENC.sugerido.test(s.enc))?.c ??
@@ -134,16 +168,24 @@ export function detectarColumnas(tabla: Tabla): Mapeo {
         s.c !== stock &&
         s.c !== sugerido &&
         ENC.sku.test(s.enc) &&
-        s.largo < 15
+        s.largo < 30
     )?.c ?? null;
 
-  return { filaEncabezado, descripcion, precio, stock, sku, precioSugerido: sugerido };
+  const marca =
+    stats.find((s) => s.c !== descripcion && s.c !== sku && ENC.marca.test(s.enc) && s.numericos === 0 && s.largo < 25)?.c ?? null;
+
+  return { filaEncabezado, descripcion, precio, stock, sku, precioSugerido: sugerido, marca };
 }
 
 export function extraerLineas(tabla: Tabla, m: Mapeo): LineaCruda[] {
   const lineas: LineaCruda[] = [];
   for (const f of tabla.slice(m.filaEncabezado + 1)) {
-    const descripcion = (f[m.descripcion] ?? "").replace(/\s+/g, " ").trim();
+    let descripcion = (f[m.descripcion] ?? "").replace(/\s+/g, " ").trim();
+    const marca = m.marca === null || m.marca === undefined ? "" : (f[m.marca] ?? "").replace(/\s+/g, " ").trim();
+    // "Smart 20 4+64GB" con MARCA "Infinix" aparte → "Infinix Smart 20 4+64GB" (si ya la trae, no se repite)
+    if (descripcion && marca && !/^marca$/i.test(marca) && !sinTildes(descripcion).startsWith(sinTildes(marca))) {
+      descripcion = `${marca} ${descripcion}`;
+    }
     const precio = aNumero(f[m.precio]);
     // Filas de sección ("SMARTPHONE SAMSUNG") o vacías no tienen precio: se saltan
     if (!descripcion || precio === null || precio <= 0) continue;
@@ -152,7 +194,8 @@ export function extraerLineas(tabla: Tabla, m: Mapeo): LineaCruda[] {
       descripcion,
       precio,
       stock: m.stock === null ? null : Math.round(aNumero(f[m.stock]) ?? 0),
-      sku: m.sku === null ? null : (f[m.sku] ?? "").trim() || null,
+      // "IT-A200-3-64 New" y "IT-A200-3-64" son el mismo código
+      sku: m.sku === null ? null : (f[m.sku] ?? "").replace(/\s+new!*$/i, "").trim() || null,
       precioSugerido: m.precioSugerido === null ? null : aNumero(f[m.precioSugerido]),
     });
   }

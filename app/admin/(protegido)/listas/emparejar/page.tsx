@@ -2,12 +2,14 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ContadorMarcadas, MarcarTodos } from "@/components/admin/marcar-todos";
 import { createClient } from "@/lib/supabase/server";
 import { lineasPendientes, todo } from "@/lib/admin/catalogo";
 import { interpretar } from "@/lib/listas/normalizar";
 import { asociarLinea, crearEnCatalogo, ignorarLineas } from "../actions";
 
-// Categorías que por defecto NO se marcan para crear (se pueden marcar a mano)
+// Categorías que por defecto NO se marcan para crear (se pueden marcar a mano): "otros" es lo que el
+// sistema no supo clasificar (paneles solares, power banks…); conviene revisarlo antes de crearlo.
 const NO_MARCAR = new Set(["otros"]);
 
 async function Contenido() {
@@ -63,19 +65,34 @@ async function Contenido() {
           <Button type="submit" variant="outline" formAction={ignorarLineas}>
             Ignorar los marcados
           </Button>
+          <ContadorMarcadas formId="principal" />
           <span className="self-center text-xs text-muted-foreground">
-            Se crean ocultos: no aparecen en la tienda hasta que los publiqués en la fase 2.
+            Se crean ocultos: no aparecen en la tienda hasta que los publiqués en Catálogo.
           </span>
         </div>
+        <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground">
+          <li>
+            Vienen marcadas las líneas que entendí como celular, tablet, audífonos, bocina, cargador, etc. Las de categoría{" "}
+            <strong>otros</strong> (lo que no supe clasificar) vienen sin marcar para que las revisés: marcalas a mano o con la
+            casilla de arriba de la tabla.
+          </li>
+          <li>
+            Antes de crear, podés corregir el <strong>nombre del producto</strong> en su casilla (ej. «Infinix Hot 70»). Si el
+            nombre corregido es el de un producto que ya tenés, la opción se agrega a ese producto. Después se cambia en
+            Catálogo → el producto → Editar.
+          </li>
+        </ul>
         <div className="overflow-x-auto rounded-lg border">
           <table className="w-full text-sm">
             <thead className="bg-muted text-left text-xs">
               <tr>
-                <th className="w-8 p-2"></th>
+                <th className="w-8 p-2">
+                  <MarcarTodos formId="principal" />
+                </th>
                 <th className="p-2">Proveedor</th>
                 <th className="p-2">Descripción del proveedor</th>
                 <th className="p-2 text-right">Precio</th>
-                <th className="p-2">Se creará como</th>
+                <th className="p-2">Se creará como (podés corregir el nombre)</th>
                 <th className="p-2">…o asociar a uno existente</th>
               </tr>
             </thead>
@@ -102,10 +119,17 @@ async function Contenido() {
                       ) : null}
                     </td>
                     <td className="p-2 text-right tabular-nums">${Number(l.precio).toFixed(2)}</td>
-                    <td className="p-2">
-                      <span className="font-medium">{l.i.nombreProducto}</span>
-                      <span className="text-muted-foreground"> · {l.i.nombreVariante}</span>{" "}
-                      <Badge variant="secondary">{l.i.categoria}</Badge>
+                    <td className="min-w-56 p-2">
+                      <input
+                        name={`nombre_${l.id}`}
+                        defaultValue={l.i.nombreProducto}
+                        maxLength={120}
+                        aria-label={`Nombre del producto para ${l.descripcion}`}
+                        className="h-8 w-full rounded-md border bg-background px-2 text-sm font-medium"
+                      />
+                      <span className="mt-1 block text-xs text-muted-foreground">
+                        {l.i.nombreVariante} <Badge variant="secondary">{l.i.categoria}</Badge>
+                      </span>
                     </td>
                     <td className="p-2">
                       {opciones.length ? (

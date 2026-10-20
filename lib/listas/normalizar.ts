@@ -268,6 +268,20 @@ export function interpretar(descripcionOriginal: string): Interpretacion {
   };
 }
 
+/**
+ * Nombre del producto corregido a mano (Emparejar): la marca, el modelo y la clave salen del nombre nuevo,
+ * la memoria y el color siguen siendo los de la línea. Si el nombre no cambió, queda igual.
+ * Así "Hot Hot 70" corregido a "Infinix Hot 70" se une al producto Infinix Hot 70 si ya existe.
+ */
+export function conNombre(i: Interpretacion, nombre: string | null | undefined): Interpretacion {
+  const limpio = (nombre ?? "").replace(/\s+/g, " ").trim().slice(0, 120);
+  if (!limpio || limpio === i.nombreProducto) return i;
+  const j = interpretar(limpio);
+  const claveProducto = j.claveProducto;
+  const claveVariante = [claveProducto, i.ramGb ?? "-", i.almacenamientoGb ?? "-", i.color ? sinAcentos(i.color.toLowerCase()) : "-"].join("|");
+  return { ...i, marca: j.marca, modelo: j.modelo, claveProducto, claveVariante, nombreProducto: limpio };
+}
+
 export function formatoAlmacenamiento(gb: number) {
   return gb >= 1024 && gb % 1024 === 0 ? `${gb / 1024} TB` : `${gb} GB`;
 }

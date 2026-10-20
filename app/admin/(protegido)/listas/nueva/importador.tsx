@@ -19,6 +19,8 @@ import { importarLista, type ResultadoImportacion } from "../actions";
 
 type Proveedor = { id: string; nombre: string };
 
+const POR_PAGINA = 50;
+
 const selectClase =
   "h-9 w-full rounded-lg border border-input bg-background px-2 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
 
@@ -46,6 +48,10 @@ export function Importador({ proveedores, hoy }: { proveedores: Proveedor[]; hoy
   const [tabla, setTabla] = useState<Tabla | null>(null);
   const [mapeo, setMapeo] = useState<Mapeo | null>(null);
   const [pegado, setPegado] = useState("");
+  // Lo pegado se ve completo solo mientras se edita; leído, queda en una línea con "Editar"
+  const [editandoPegado, setEditandoPegado] = useState(true);
+  const [enfocado, setEnfocado] = useState(false);
+  const [pagina, setPagina] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [resultado, setResultado] = useState<ResultadoImportacion | null>(null);
   const [pendiente, iniciar] = useTransition();
@@ -59,6 +65,7 @@ export function Importador({ proveedores, hoy }: { proveedores: Proveedor[]; hoy
     setResultado(null);
     setTabla(t);
     setMapeo(detectarColumnas(t));
+    setPagina(0);
     setNombreArchivo(nombre);
   }
 
@@ -73,6 +80,10 @@ export function Importador({ proveedores, hoy }: { proveedores: Proveedor[]; hoy
   }
 
   const lineas = useMemo(() => (tabla && mapeo ? extraerLineas(tabla, mapeo) : []), [tabla, mapeo]);
+  const paginas = Math.max(1, Math.ceil(lineas.length / POR_PAGINA));
+  const actual = Math.min(pagina, paginas - 1);
+  const desde = actual * POR_PAGINA;
+  const visibles = lineas.slice(desde, desde + POR_PAGINA);
   const columnas = useMemo(() => {
     if (!tabla) return [];
     const ancho = Math.max(...tabla.map((f) => f.length));
@@ -85,16 +96,17 @@ export function Importador({ proveedores, hoy }: { proveedores: Proveedor[]; hoy
 
   function campo(nombre: keyof Omit<Mapeo, "filaEncabezado">, etiqueta: string, opcional: boolean) {
     if (!mapeo) return null;
-    const valor = mapeo[nombre];
+    const valor = mapeo[nombre] ?? null;
     return (
       <div className="space-y-1">
         <Label>{etiqueta}</Label>
         <select
           className={selectClase}
           value={valor === null ? "" : String(valor)}
-          onChange={(e) =>
-            setMapeo({ ...mapeo, [nombre]: e.target.value === "" ? null : Number(e.target.value) })
-          }
+          onChange={(e) => {
+            setMapeo({ ...mapeo, [nombre]: e.target.value === "" ? null : Number(e.target.value) });
+            setPagina(0);
+          }}
         >
           {opcional ? <option value="">— No trae —</option> : null}
           {columnas.map((c) => (
@@ -144,6 +156,7 @@ export function Importador({ proveedores, hoy }: { proveedores: Proveedor[]; hoy
               setTabla(null);
               setMapeo(null);
               setPegado("");
+              setEditandoPegado(true);
             }}
           >
             Importar otra lista
@@ -185,20 +198,39 @@ export function Importador({ proveedores, hoy }: { proveedores: Proveedor[]; hoy
           Excel (.xlsx) o CSV tal como te lo manda el proveedor. Si te llega en PDF o imagen, abrilo, copiá
           la tabla y pegala aquí:
         </p>
-        <Textarea
-          rows={4}
-          placeholder="Pegá aquí las filas copiadas desde Excel (con encabezados)…"
-          value={pegado}
-          onChange={(e) => setPegado(e.target.value)}
-        />
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={!pegado.trim()}
-          onClick={() => cargar(leerTexto(pegado), "pegado")}
-        >
-          Leer lo pegado
-        </Button>
+        {editandoPegado || !pegado.trim() ? (
+          <>
+            <Textarea
+              rows={enfocado ? 14 : 3}
+              placeholder="Pegá aquí las filas copiadas desde Excel (con encabezados)…"
+              value={pegado}
+              onFocus={() => setEnfocado(true)}
+              onBlur={() => setEnfocado(false)}
+              onChange={(e) => setPegado(e.target.value)}
+              className="max-h-[60vh] resize-y"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!pegado.trim()}
+              onClick={() => {
+                cargar(leerTexto(pegado), "pegado");
+                setEditandoPegado(false);
+              }}
+            >
+              Leer lo pegado
+            </Button>
+          </>
+        ) : (
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-muted/40 px-3 py-2 text-sm">
+            <span>
+              Lo pegado: {pegado.split(/\r?\n/).filter((l) => l.trim()).length} filas
+            </span>
+            <Button variant="outline" size="sm" onClick={() => setEditandoPegado(true)}>
+              Editar lo pegado
+            </Button>
+          </div>
+        )}
       </div>
 
       {mapeo && tabla ? (
@@ -209,8 +241,9 @@ export function Importador({ proveedores, hoy }: { proveedores: Proveedor[]; hoy
               Las detecté solas; corregilas si alguna está mal.
             </p>
           </div>
-          <div className="grid gap-3 sm:grid-cols-5">
+          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
             {campo("descripcion", "Descripción", false)}
+            {campo("marca", "Marca (si va aparte)", true)}
             {campo("precio", "Precio (tu costo)", false)}
             {campo("stock", "Existencia", true)}
             {campo("sku", "Código", true)}
@@ -227,10 +260,11 @@ export function Importador({ proveedores, hoy }: { proveedores: Proveedor[]; hoy
                 </span>
               ) : null}
             </p>
-            <div className="mt-2 max-h-96 overflow-auto rounded-lg border">
+            <div className="mt-2 overflow-x-auto rounded-lg border">
               <table className="w-full text-xs">
-                <thead className="sticky top-0 bg-muted text-left">
+                <thead className="bg-muted text-left">
                   <tr>
+                    <th className="p-2 text-right text-muted-foreground">#</th>
                     <th className="p-2">Descripción del proveedor</th>
                     <th className="p-2 text-right">Precio</th>
                     <th className="p-2 text-right">Exist.</th>
@@ -238,11 +272,15 @@ export function Importador({ proveedores, hoy }: { proveedores: Proveedor[]; hoy
                   </tr>
                 </thead>
                 <tbody>
-                  {lineas.slice(0, 60).map((l, n) => {
+                  {visibles.map((l, n) => {
                     const i = interpretar(l.descripcion);
                     return (
-                      <tr key={n} className="border-t">
-                        <td className="p-2">{l.descripcion}</td>
+                      <tr key={desde + n} className="border-t">
+                        <td className="p-2 text-right text-muted-foreground tabular-nums">{desde + n + 1}</td>
+                        <td className="p-2">
+                          {l.descripcion}
+                          {l.sku ? <span className="block text-muted-foreground">{l.sku}</span> : null}
+                        </td>
                         <td className="p-2 text-right tabular-nums">${l.precio.toFixed(2)}</td>
                         <td className="p-2 text-right tabular-nums">{l.stock ?? "—"}</td>
                         <td className="p-2">
@@ -255,8 +293,18 @@ export function Importador({ proveedores, hoy }: { proveedores: Proveedor[]; hoy
                 </tbody>
               </table>
             </div>
-            {lineas.length > 60 ? (
-              <p className="mt-1 text-xs text-muted-foreground">Mostrando 60 de {lineas.length}.</p>
+            {paginas > 1 ? (
+              <nav aria-label="Páginas de la vista previa" className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                <Button variant="outline" size="sm" disabled={actual === 0} onClick={() => setPagina(actual - 1)}>
+                  ← Anterior
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  Líneas {desde + 1}–{Math.min(desde + POR_PAGINA, lineas.length)} de {lineas.length} · página {actual + 1} de {paginas}
+                </span>
+                <Button variant="outline" size="sm" disabled={actual >= paginas - 1} onClick={() => setPagina(actual + 1)}>
+                  Siguiente →
+                </Button>
+              </nav>
             ) : null}
           </div>
 

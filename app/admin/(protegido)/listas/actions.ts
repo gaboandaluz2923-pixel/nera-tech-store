@@ -45,8 +45,10 @@ export async function importarLista(entrada: unknown): Promise<ResultadoImportac
 export async function crearEnCatalogo(formData: FormData) {
   const ids = formData.getAll("ids").map(String).filter(Boolean);
   if (ids.length === 0) return;
+  // Nombre del producto corregido a mano en Emparejar (casilla nombre_<id>)
+  const nombres = new Map(ids.map((id) => [id, String(formData.get(`nombre_${id}`) ?? "").trim()]));
   const { supabase } = await superAdmin();
-  await crearEnCatalogoEn(supabase, ids);
+  await crearEnCatalogoEn(supabase, ids, nombres);
   refrescar();
 }
 

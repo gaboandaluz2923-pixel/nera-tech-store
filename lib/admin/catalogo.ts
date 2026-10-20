@@ -1,6 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { interpretar, sinAcentos, slugDe, formatoAlmacenamiento } from "@/lib/listas/normalizar";
+import { conNombre, interpretar, sinAcentos, slugDe, formatoAlmacenamiento } from "@/lib/listas/normalizar";
 
 
 /** Trae todas las filas de una consulta, de 1000 en 1000 (límite de Supabase por consulta). */
@@ -152,8 +152,8 @@ export async function vincular(
 }
 
 /** Crea (si no existen) los productos y variantes que describen las líneas, y devuelve la variante de cada línea. */
-export async function crearDesdeLineas(supabase: SupabaseClient, descripciones: string[]) {
-  const interps = descripciones.map((d) => interpretar(d));
+export async function crearDesdeLineas(supabase: SupabaseClient, descripciones: string[], nombres?: (string | null)[]) {
+  const interps = descripciones.map((d, n) => conNombre(interpretar(d), nombres?.[n]));
   const [cats, prods, vars] = await Promise.all([
     todo((a, b) => supabase.from("categorias").select("id, slug").range(a, b)),
     todo((a, b) => supabase.from("productos").select("id, clave, slug").order("id").range(a, b)),

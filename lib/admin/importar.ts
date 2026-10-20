@@ -155,12 +155,13 @@ const aVinculo = (l: LineaBD, varianteId: string) => ({
   fecha: l.listas_precios.fecha,
 });
 
-export async function crearEnCatalogoEn(supabase: SupabaseClient, ids: string[]) {
+export async function crearEnCatalogoEn(supabase: SupabaseClient, ids: string[], nombres?: Map<string, string>) {
   const lineas = await leerLineas(supabase, ids);
   if (lineas.length === 0) return 0;
   const varianteIds = await crearDesdeLineas(
     supabase,
-    lineas.map((l) => l.descripcion)
+    lineas.map((l) => l.descripcion),
+    lineas.map((l) => nombres?.get(l.id) || null)
   );
   await vincular(
     supabase,
