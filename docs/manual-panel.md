@@ -22,6 +22,11 @@ La información se ve como texto. Para cambiar algo:
 Lo que se crea nuevo (ofertas, combos, cupones, gasto de pauta) tiene su botón **+ Nuevo…**. Los botones de un
 solo paso (confirmar un pedido, marcar pagado, mover o quitar fotos) actúan al tocarlos, como antes.
 
+**Ancho de las columnas (todas las tablas)**: pasá el mouse por el borde derecho del encabezado de una columna (se marca
+en naranja) y arrastralo para hacerla más angosta o más ancha; el texto se acomoda en varias líneas. Si la tabla queda
+más ancha que la pantalla, se desliza de lado. Cada tabla recuerda sus anchos en tu navegador. **Doble clic** en el
+borde vuelve al ancho automático.
+
 ## Roles: administrador y operador
 Cada persona del equipo tiene un rol (lo ves arriba a la derecha, junto a tu nombre):
 | | Administrador | Operador |

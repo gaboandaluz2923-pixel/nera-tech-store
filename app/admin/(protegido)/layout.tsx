@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
+import { ColumnasAjustables } from "@/components/admin/columnas-ajustables";
 import { createClient } from "@/lib/supabase/server";
 import { cerrarSesion } from "../login/actions";
 import { rolActual } from "@/lib/admin/sesion";
@@ -105,7 +106,10 @@ export default function LayoutAdmin({ children }: LayoutProps<"/admin">) {
             <Navegacion />
           </Suspense>
         </nav>
-        <main className="flex-1 p-4 sm:p-6">{children}</main>
+        <main className="min-w-0 flex-1 p-4 sm:p-6">{children}</main>
+        <Suspense fallback={null}>
+          <ColumnasAjustables />
+        </Suspense>
       </div>
     </div>
   );

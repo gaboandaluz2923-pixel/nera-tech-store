@@ -137,3 +137,38 @@
     @apply font-sans;
   }
 }
+
+/* Panel: columnas ajustables (components/admin/columnas-ajustables.tsx) */
+.asa-columna {
+  position: absolute;
+  top: 0;
+  right: -4px;
+  z-index: 1;
+  width: 9px;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+}
+.asa-columna::after {
+  content: "";
+  position: absolute;
+  top: 20%;
+  bottom: 20%;
+  left: 4px;
+  width: 1px;
+  background: var(--border);
+}
+.asa-columna:hover::after,
+.asa-columna:active::after {
+  top: 0;
+  bottom: 0;
+  left: 3px;
+  width: 3px;
+  background: var(--primary);
+}
+/* Con anchos fijos el texto se acomoda en varias líneas en vez de cortarse */
+table.columnas-fijas th,
+table.columnas-fijas td {
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+}
