@@ -140,7 +140,14 @@ export function Importador({ proveedores, hoy }: { proveedores: Proveedor[]; hoy
         <ul className="text-sm">
           <li>{resultado.vinculadas} ya estaban vinculadas a tu catálogo (precios actualizados)</li>
           <li>{resultado.pendientes} nuevas, por emparejar</li>
-          {resultado.ignoradas ? <li>{resultado.ignoradas} ignoradas (las marcaste antes)</li> : null}
+          {resultado.ignoradas ? (
+            <li>
+              {resultado.ignoradas} ignoradas (las marcaste antes).{" "}
+              <Link href="/admin/listas/emparejar#ignoradas" className="underline">
+                ¿Fue por error? Volvé a mostrarlas
+              </Link>
+            </li>
+          ) : null}
         </ul>
         <div className="flex flex-wrap gap-2">
           {resultado.pendientes > 0 ? (

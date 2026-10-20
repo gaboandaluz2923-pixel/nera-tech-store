@@ -6,11 +6,78 @@ import { ContadorMarcadas, MarcarTodos } from "@/components/admin/marcar-todos";
 import { createClient } from "@/lib/supabase/server";
 import { lineasPendientes, todo } from "@/lib/admin/catalogo";
 import { interpretar } from "@/lib/listas/normalizar";
-import { asociarLinea, crearEnCatalogo, ignorarLineas } from "../actions";
+import { asociarLinea, crearEnCatalogo, dejarDeIgnorar, ignorarLineas } from "../actions";
 
 // Categorías que por defecto NO se marcan para crear (se pueden marcar a mano): "otros" es lo que el
 // sistema no supo clasificar (paneles solares, power banks…); conviene revisarlo antes de crearlo.
 const NO_MARCAR = new Set(["otros"]);
+
+type Ignorado = { proveedor_id: string; sku_proveedor: string; descripcion: string | null; created_at: string; proveedores: { nombre: string } | null };
+
+const fechaCorta = (s: string) =>
+  new Intl.DateTimeFormat("es-SV", { day: "numeric", month: "short", year: "numeric", timeZone: "America/El_Salvador" }).format(new Date(s));
+
+/** Lo que se marcó "Ignorar": se puede volver a mostrar en Emparejar (por si se ignoró por error). */
+async function Ignoradas() {
+  const supabase = await createClient();
+  const ignorados = (await todo((a, b) =>
+    supabase
+      .from("skus_ignorados")
+      .select("proveedor_id, sku_proveedor, descripcion, created_at, proveedores(nombre)")
+      .order("created_at", { ascending: false })
+      .order("sku_proveedor")
+      .range(a, b)
+  )) as unknown as Ignorado[];
+  if (ignorados.length === 0) return null;
+  return (
+    <details id="ignoradas" className="rounded-lg border p-3">
+      <summary className="cursor-pointer text-sm font-medium">
+        Ignoradas ({ignorados.length}) · si ignoraste algo por error, volvé a mostrarlo aquí
+      </summary>
+      <form id="form-ignoradas" action={dejarDeIgnorar} className="mt-3 space-y-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <Button type="submit" variant="outline">
+            Volver a mostrar las marcadas
+          </Button>
+          <ContadorMarcadas formId="form-ignoradas" nombre="ignorados" />
+          <span className="text-xs text-muted-foreground">Vuelven a esta pantalla para crearlas o asociarlas.</span>
+        </div>
+        <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full text-sm">
+            <thead className="bg-muted text-left text-xs">
+              <tr>
+                <th className="w-8 p-2">
+                  <MarcarTodos formId="form-ignoradas" nombre="ignorados" />
+                </th>
+                <th className="p-2">Proveedor</th>
+                <th className="p-2">Descripción del proveedor</th>
+                <th className="p-2">Ignorada el</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ignorados.map((g) => (
+                <tr key={`${g.proveedor_id}::${g.sku_proveedor}`} className="border-t">
+                  <td className="p-2">
+                    <input
+                      type="checkbox"
+                      name="ignorados"
+                      value={`${g.proveedor_id}::${g.sku_proveedor}`}
+                      aria-label={`Volver a mostrar ${g.descripcion ?? g.sku_proveedor}`}
+                      className="size-4"
+                    />
+                  </td>
+                  <td className="p-2 whitespace-nowrap">{g.proveedores?.nombre ?? ""}</td>
+                  <td className="p-2">{g.descripcion ?? g.sku_proveedor.replace(/^(sku|desc):/, "")}</td>
+                  <td className="p-2 whitespace-nowrap text-muted-foreground">{fechaCorta(g.created_at)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </form>
+    </details>
+  );
+}
 
 async function Contenido() {
   const supabase = await createClient();
@@ -32,6 +99,7 @@ async function Contenido() {
         <Button variant="outline" nativeButton={false} render={<Link href="/admin/precios" />}>
           Ver precios
         </Button>
+        <Ignoradas />
       </div>
     );
   }
@@ -170,6 +238,7 @@ async function Contenido() {
           <input type="hidden" name="lineaId" value={l.id} />
         </form>
       ))}
+      <Ignoradas />
     </>
   );
 }

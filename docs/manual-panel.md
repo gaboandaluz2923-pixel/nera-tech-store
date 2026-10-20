@@ -134,6 +134,11 @@ Aparece cuando una lista trae equipos que todavía no están en tu catálogo.
   botón. Quedan recordadas y no vuelven a aparecer.
 - **Asociar**: si el sistema entendió mal un equipo y ya existe en tu catálogo con otro nombre,
   elegilo en la lista de la derecha y tocá **Asociar**.
+- **Ignoradas** (abajo, se abre al tocarla): lista de lo que ignoraste, con proveedor, descripción y fecha. Si
+  ignoraste algo por error, marcalo (o todas con la casilla de arriba) y tocá **Volver a mostrar las marcadas**:
+  vuelven a esta pantalla para crearlas o asociarlas. Al importar, si hubo ignoradas, aparece el enlace
+  «¿Fue por error? Volvé a mostrarlas».
+- Si importás la misma lista dos veces el mismo día, cada línea aparece una sola vez (la de la última importación).
 
 ## Precios
 Una fila por configuración (modelo + memoria; los colores van juntos).

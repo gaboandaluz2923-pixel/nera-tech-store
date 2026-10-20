@@ -176,6 +176,30 @@ export async function asociarLineaEn(supabase: SupabaseClient, lineaId: string, 
   await vincular(supabase, [aVinculo(l, varianteId)]);
 }
 
+/** Deshace "Ignorar": las líneas vuelven a Emparejar (claves "proveedorId::skuProveedor"). */
+export async function dejarDeIgnorarEn(supabase: SupabaseClient, claves: string[]) {
+  const porProveedor = new Map<string, string[]>();
+  for (const c of claves) {
+    const i = c.indexOf("::");
+    if (i < 0) continue;
+    const prov = c.slice(0, i);
+    porProveedor.set(prov, [...(porProveedor.get(prov) ?? []), c.slice(i + 2)]);
+  }
+  let total = 0;
+  for (const [prov, skus] of porProveedor) {
+    for (let i = 0; i < skus.length; i += 100) {
+      const { error, count } = await supabase
+        .from("skus_ignorados")
+        .delete({ count: "exact" })
+        .eq("proveedor_id", prov)
+        .in("sku_proveedor", skus.slice(i, i + 100));
+      if (error) throw error;
+      total += count ?? 0;
+    }
+  }
+  return total;
+}
+
 export async function ignorarLineasEn(supabase: SupabaseClient, ids: string[]) {
   const lineas = await leerLineas(supabase, ids);
   const filas = [

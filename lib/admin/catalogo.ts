@@ -51,8 +51,9 @@ export type LineaPendiente = {
 export async function ultimasListas(supabase: SupabaseClient) {
   const { data, error } = await supabase
     .from("listas_precios")
-    .select("id, proveedor_id, fecha")
-    .order("fecha", { ascending: false });
+    .select("id, proveedor_id, fecha, created_at")
+    .order("fecha", { ascending: false })
+    .order("created_at", { ascending: false });
   if (error) throw error;
   const fechaVigente = new Map<string, string>();
   const vigentes = new Map<string, string>();
@@ -89,12 +90,23 @@ export async function lineasPendientes(supabase: SupabaseClient): Promise<LineaP
     [...vinculos, ...ignorados].map((v) => `${v.proveedor_id}::${v.sku_proveedor}`)
   );
 
+  // Si la misma lista se importó dos veces el mismo día, cada línea sale una vez: la de la importación más nueva
+  // (las listas vienen de la más nueva a la más vieja)
+  const orden = new Map([...ultimas.keys()].map((id, n) => [id, n]));
+  const vistas = new Set<string>();
   return lineas
     .map((l) => {
       const proveedor_id = listaAProveedor.get(l.lista_id)!;
       return { ...l, proveedor_id, proveedor: nombres.get(proveedor_id) ?? "" } as LineaPendiente;
     })
-    .filter((l) => !resueltos.has(`${l.proveedor_id}::${l.sku_clave}`));
+    .filter((l) => !resueltos.has(`${l.proveedor_id}::${l.sku_clave}`))
+    .sort((a, b) => (orden.get(a.lista_id) ?? 0) - (orden.get(b.lista_id) ?? 0))
+    .filter((l) => {
+      const k = `${l.proveedor_id}::${l.sku_clave}`;
+      if (vistas.has(k)) return false;
+      vistas.add(k);
+      return true;
+    });
 }
 
 /**

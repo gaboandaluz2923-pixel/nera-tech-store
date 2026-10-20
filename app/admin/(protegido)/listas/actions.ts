@@ -7,6 +7,7 @@ import { superAdmin } from "@/lib/admin/sesion";
 import {
   asociarLineaEn,
   crearEnCatalogoEn,
+  dejarDeIgnorarEn,
   esquemaImportacion,
   ignorarLineasEn,
   importarListaEn,
@@ -59,6 +60,15 @@ export async function asociarLinea(formData: FormData) {
   if (!lineaId || !varianteId) return;
   const { supabase } = await superAdmin();
   await asociarLineaEn(supabase, lineaId, varianteId);
+  refrescar();
+}
+
+/** Deshace "Ignorar": las líneas marcadas en "Ignoradas" vuelven a Emparejar. */
+export async function dejarDeIgnorar(formData: FormData) {
+  const claves = formData.getAll("ignorados").map(String).filter(Boolean);
+  if (claves.length === 0) return;
+  const { supabase } = await superAdmin();
+  await dejarDeIgnorarEn(supabase, claves);
   refrescar();
 }
 
