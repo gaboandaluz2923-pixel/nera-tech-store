@@ -143,3 +143,7 @@ Editar pedidos (20 oct 2026) — Gabriel aprobó: un administrador corrige produ
 (con motivo); queda en el historial y el cliente recibe «Actualizamos tu pedido». Productos hasta antes de «En camino»;
 montos hasta «En camino»; nunca entregados, cancelados ni con factura real (ambiente 01). Saldo = total − pagos aprobados
 (las devoluciones se anotan como pago negativo). Migración 0014.
+Fotos oficiales (20 oct 2026) — 217 fotos de 98 productos nuevos (Total Link, Idecom y Maverik) bajadas de las páginas
+oficiales de cada marca y procesadas con `scripts/procesar-foto.py`; enlazadas en `imagenes`. Sin foto oficial (9, para
+que Angel las fotografíe): Insta360 Bullet Time Bundle, Kieslect KS3E, Gomobile F18, cable Anker 542 USB-C a Lightning,
+timbre Eufy 1080p, los 3 tarros de cables Infinix y los audífonos con cable Infinix XH01.
