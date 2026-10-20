@@ -19,6 +19,16 @@ export const ESTADOS_PRODUCTOS = ["pendiente_confirmar", "confirmado", "pagado"]
 /** Estados en los que se pueden cambiar montos (envío, precios, descuento) */
 export const ESTADOS_MONTOS = [...ESTADOS_PRODUCTOS, "en_camino"] as const;
 
+/**
+ * Cuánto pagó el cliente: la suma de los pagos aprobados (las devoluciones restan). Pedidos viejos marcados
+ * como pagados sin el detalle del pago: se toma el total.
+ */
+export function pagadoDe(p: { pagado_en: string | null; total: number | string; pagos: { monto: number | string; estado: string }[] }) {
+  const aprobados = p.pagos.filter((x) => x.estado === "aprobado");
+  if (!aprobados.length) return p.pagado_en ? r2(Number(p.total)) : 0;
+  return r2(aprobados.reduce((s, x) => s + Number(x.monto), 0));
+}
+
 export type LineaEdicion = {
   /** id de la línea que ya estaba en el pedido; vacío = producto nuevo */
   id?: string | null;
@@ -130,6 +140,7 @@ export async function bloqueoEdicion(p: Pick<PedidoActual, "id" | "estado" | "fa
     .from("dte_documentos")
     .select("id", { count: "exact", head: true })
     .eq("pedido_id", p.id)
+    .eq("ambiente", "01") // los del ambiente de pruebas de Hacienda no son facturas de verdad
     .in("tipo_dte", ["01", "03"])
     .in("estado", ["pendiente", "procesado", "contingencia"])
     .eq("prueba", false);
@@ -203,7 +214,11 @@ export async function cotizarEdicion(e: EntradaEdicion, p?: PedidoActual): Promi
 
   // 2) Montos
   const subtotal = r2(lineas.reduce((s, l) => s + l.precio * l.cantidad, 0));
-  const descuentoPago = descuentoSinTarjeta(subtotal, pedido.forma_pago, config.descuentoSinTarjeta);
+  // Descuento por efectivo o transferencia: el que ya tenía si los productos suman lo mismo; si cambian, se recalcula
+  const descuentoPago =
+    Math.abs(subtotal - Number(pedido.subtotal)) < 0.005
+      ? Number(pedido.descuento) || 0
+      : descuentoSinTarjeta(subtotal, pedido.forma_pago, config.descuentoSinTarjeta);
   const campana = await campanaDeVariantes(lineas.map((l) => l.varianteId).filter(Boolean) as string[], campanas);
   let envio: number;
   let envioMotivo: string | null;
@@ -232,7 +247,7 @@ export async function cotizarEdicion(e: EntradaEdicion, p?: PedidoActual): Promi
   if (total < 0) throw new Error("Los descuentos superan el valor del pedido.");
 
   // 3) Pagos, costo y contribución
-  const pagado = r2(pedido.pagos.filter((x) => x.estado === "aprobado").reduce((s, x) => s + Number(x.monto), 0));
+  const pagado = pagadoDe(pedido);
   const costos = await costosDeLineas(pedido.id, lineas);
   for (const l of lineas) l.costo = costos.get(l.id ?? `v:${l.varianteId}`) ?? null;
   const costo = r2(lineas.reduce((s, l) => s + (l.costo ?? 0) * l.cantidad, 0));

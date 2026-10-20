@@ -288,6 +288,32 @@ el estado, cómo pagar (cuentas para transferencia, botón para reintentar la ta
 0%), y la factura cuando la subís. Puede entrar con Google para ver todos sus pedidos en **Mis pedidos**;
 aparecen solos los que hizo con el mismo correo, y puede agregar otros con número de pedido y teléfono.
 
+## Pedidos → Editar pedido (solo administradores)
+En el pedido, el recuadro **Productos** tiene el botón **Editar pedido**. Sirve para corregir un pedido: cambiar
+cantidades o precios, quitar o agregar productos, el envío o un descuento que se olvidó.
+1. **Lo que lleva**: cada producto con cantidad (− / +) y precio c/u; el basurero lo quita y el buscador de abajo agrega
+   otro (al precio vigente). Los productos solo se cambian mientras el pedido no va en camino; si ya estaba confirmado,
+   los equipos vuelven a bodega y se apartan otra vez al guardar (revisá los IMEI).
+2. **Envío**: *Cobrar $5*, *Gratis* (con el motivo que ve el cliente, ej. «Octubre Naranja» o «Cortesía») u *Otro monto*.
+   Si un producto del pedido está en una campaña con envío gratis, aparece un aviso para aplicarla con un toque.
+3. **Descuento extra**: en $ o en % de los productos, con su motivo (lo ve el cliente). Si el pedido tenía un combo que
+   ya no aplica, se puede quitar.
+4. El recuadro de abajo muestra el **total nuevo** (tachado el de antes), cuánto pagó el cliente y el **saldo**, el costo
+   y cuánto te deja, y la lista de cambios. Si el pedido pierde dinero sale en rojo y hay que marcar «Sí, dejarlo así».
+5. Escribí el **motivo del cambio** (obligatorio, queda en el historial con tu nombre), un **mensaje para el cliente**
+   (opcional) y dejá marcado **Avisar al cliente por correo**: le llega «Actualizamos tu pedido #…» con los cambios, el
+   total nuevo y cómo pagar o lo que tiene a favor.
+6. Tocá **Guardar cambios**.
+
+No se puede editar un pedido entregado, cancelado o con factura emitida (ahí va devolución o nota de crédito); el
+recuadro dice por qué. El cupón y los Puntos Nera que el cliente usó se mantienen. El descuento por efectivo o
+transferencia se recalcula solo si cambian los productos.
+
+**Pago → Saldo**: si el cliente ya pagó y el total cambió, se ve *Pendiente $X* o *A favor del cliente $X (devolver)*.
+- Saldo pendiente: cuando pague la diferencia, escribí el monto y la referencia y tocá **Registrar pago del saldo**.
+- A favor del cliente: primero devolvé el dinero (Wompi → Transacciones → Reembolsar, o por transferencia) y después
+  tocá **Registrar devolución**. Al quedar en cero dice *Al día*.
+
 ## Mi cuenta (lo que ve el cliente con Google)
 El ícono de persona arriba a la derecha de la tienda lleva a **Mi cuenta**. Lo primero que ve son **sus pedidos**
 (tocá uno para ver su estado y factura); abajo, en chico, sus **Puntos Nera** (se abren para ver el detalle), y

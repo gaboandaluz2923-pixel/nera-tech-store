@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { COLUMNAS_DESCUENTOS, lineasDescuento } from "@/lib/tienda/descuentos";
+import { COLUMNAS_DESCUENTOS, lineasDescuento, textoEnvio } from "@/lib/tienda/descuentos";
 import { MedirEvento } from "@/components/tienda/medir-evento";
 import { Check, CircleAlert, Clock, FileText, Landmark, Truck } from "lucide-react";
 import { BotonGoogle } from "@/components/tienda/boton-google";
@@ -25,6 +25,7 @@ type Pedido = {
   forma_pago: "contra_entrega" | "transferencia" | "wompi" | "tasa_cero";
   subtotal: number;
   envio: number;
+  envio_motivo: string | null;
   descuento: number;
   descuento_combos: number;
   descuento_cupon: number;
@@ -309,7 +310,7 @@ async function Detalle({ params, searchParams }: PageProps<"/pedido/[token]">) {
         <dl className="mt-3 space-y-1 border-t pt-3 text-sm">
           <div className="flex justify-between">
             <dt>Envío</dt>
-            <dd>{Number(p.envio) === 0 ? "Gratis" : usd2(Number(p.envio))}</dd>
+            <dd>{textoEnvio(p.envio, p.envio_motivo)}</dd>
           </div>
           {lineasDescuento(p).map((d) => (
             <div key={d.texto} className="flex justify-between text-green-700">

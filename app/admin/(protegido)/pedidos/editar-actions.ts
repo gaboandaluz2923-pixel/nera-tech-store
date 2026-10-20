@@ -7,6 +7,7 @@ import {
   bloqueoEdicion,
   cotizarEdicion,
   leerPedidoParaEditar,
+  pagadoDe,
   r2,
   type CotizacionEdicion,
   type EntradaEdicion,
@@ -98,6 +99,11 @@ export async function guardarEdicionPedido(
   }
 
   const sb = createServiceClient();
+  // Pedido viejo marcado como pagado sin el detalle del pago: se anota el pago por el total de antes, así el
+  // saldo queda bien de aquí en adelante
+  if (p.pagado_en && !p.pagos.some((x) => x.estado === "aprobado")) {
+    await sb.from("pagos").insert({ pedido_id: p.id, metodo: p.forma_pago, monto: Number(p.total), estado: "aprobado", payload: { nota: "Pago anterior (anotado al corregir el pedido)" } });
+  }
   const conBodega = cot.cambianProductos && p.inventario_descontado;
   // 1) Si cambian los productos de un pedido ya apartado en bodega: vuelve todo y se aparta de nuevo al final
   if (conBodega) {
@@ -206,9 +212,9 @@ export async function registrarPagoSaldo(_prev: EstadoAccion, form: FormData): P
   const referencia = texto(form.get("referencia"), 80);
   if (!(monto > 0)) return falla("Escribí el monto que pagó el cliente.");
   const sb = createServiceClient();
-  const { data: p } = await sb.from("pedidos").select("id, estado, forma_pago, total, pagos(monto, estado)").eq("id", id).single();
+  const { data: p } = await sb.from("pedidos").select("id, estado, forma_pago, total, pagado_en, pagos(monto, estado)").eq("id", id).single();
   if (!p) return falla("No se encontró el pedido.");
-  const pagado = (p.pagos as { monto: number; estado: string }[]).filter((x) => x.estado === "aprobado").reduce((s, x) => s + Number(x.monto), 0);
+  const pagado = pagadoDe(p as { pagado_en: string | null; total: number; pagos: { monto: number; estado: string }[] });
   const saldo = r2(Number(p.total) - pagado);
   if (monto > saldo + 0.009) return falla(`El saldo pendiente es ${usd2(saldo)}; no se puede registrar más que eso.`);
   await sb.from("pagos").insert({ pedido_id: id, metodo: p.forma_pago, monto, estado: "aprobado", referencia_externa: referencia || null });
@@ -231,9 +237,9 @@ export async function registrarDevolucion(_prev: EstadoAccion, form: FormData): 
   const referencia = texto(form.get("referencia"), 80);
   if (!(monto > 0)) return falla("Escribí el monto que le devolviste.");
   const sb = createServiceClient();
-  const { data: p } = await sb.from("pedidos").select("id, estado, forma_pago, total, pagos(monto, estado)").eq("id", id).single();
+  const { data: p } = await sb.from("pedidos").select("id, estado, forma_pago, total, pagado_en, pagos(monto, estado)").eq("id", id).single();
   if (!p) return falla("No se encontró el pedido.");
-  const pagado = (p.pagos as { monto: number; estado: string }[]).filter((x) => x.estado === "aprobado").reduce((s, x) => s + Number(x.monto), 0);
+  const pagado = pagadoDe(p as { pagado_en: string | null; total: number; pagos: { monto: number; estado: string }[] });
   const aFavor = r2(pagado - Number(p.total));
   if (monto > aFavor + 0.009) return falla(`Lo que está a favor del cliente es ${usd2(Math.max(0, aFavor))}.`);
   await sb.from("pagos").insert({ pedido_id: id, metodo: p.forma_pago, monto: -monto, estado: "aprobado", referencia_externa: referencia || null });

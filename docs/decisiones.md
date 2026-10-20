@@ -139,3 +139,7 @@ los celulares básicos (de teclas o flip) van en Celulares. En Emparejar se elig
 Migración 0015.
 Relojes Inteligentes y Celulares Básicos (20 oct 2026) — Gabriel: la categoría Relojes se llama «Relojes Inteligentes» y los
 teléfonos de teclas o flip de Maverik van en «Celulares Básicos» (slug celulares-basicos). Migración 0016.
+Editar pedidos (20 oct 2026) — Gabriel aprobó: un administrador corrige productos, envío (con motivo) y un descuento extra
+(con motivo); queda en el historial y el cliente recibe «Actualizamos tu pedido». Productos hasta antes de «En camino»;
+montos hasta «En camino»; nunca entregados, cancelados ni con factura real (ambiente 01). Saldo = total − pagos aprobados
+(las devoluciones se anotan como pago negativo). Migración 0014.

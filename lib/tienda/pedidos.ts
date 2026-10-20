@@ -208,6 +208,8 @@ export async function crearPedido(
       forma_pago: datos.formaPago,
       subtotal: resumen.subtotal,
       envio: resumen.envio,
+      // Por qué no paga envío (campaña como «Octubre Naranja»): se ve en el pedido, el panel y los correos
+      envio_motivo: resumen.envioGratis === "campana" ? resumen.campanaEnvio : null,
       descuento: cot.descuentoPago,
       descuento_combos: resumen.descuentoCombos,
       combos: resumen.combos,

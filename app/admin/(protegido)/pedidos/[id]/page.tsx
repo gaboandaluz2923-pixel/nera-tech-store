@@ -9,7 +9,11 @@ import { IconoWhatsApp } from "@/components/tienda/icono-whatsapp";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { COLUMNAS_DESCUENTOS, lineasDescuento } from "@/lib/tienda/descuentos";
+import { COLUMNAS_DESCUENTOS, lineasDescuento, textoEnvio } from "@/lib/tienda/descuentos";
+import { ProductosPedido } from "@/components/admin/editar-pedido";
+import { bloqueoEdicion, ESTADOS_PRODUCTOS, pagadoDe } from "@/lib/admin/editar-pedido";
+import { variantesVendibles } from "@/lib/admin/pedido-manual";
+import { configTienda } from "@/lib/tienda/datos";
 import { CANAL, SIGUIENTES, esperandoPago, porFacturar, type EstadoPedido, type PedidoBase } from "@/lib/admin/pedidos";
 import { nombresEquipo, quien } from "@/lib/admin/historial";
 import { asignarUnidad } from "../../inventario/actions";
@@ -27,6 +31,7 @@ import {
   guardarFactura,
   registrarPago,
 } from "../actions";
+import { registrarDevolucion, registrarPagoSaldo } from "../editar-actions";
 
 type Pedido = PedidoBase & {
   id: string;
@@ -39,6 +44,9 @@ type Pedido = PedidoBase & {
   descuento_cupon: number;
   puntos_usados: number;
   descuento_puntos: number;
+  descuento_extra: number;
+  descuento_extra_motivo: string | null;
+  envio_motivo: string | null;
   combos: { nombre: string; veces: number; descuento: number }[] | null;
   cupones: { codigo: string } | null;
   total: number;
@@ -144,6 +152,16 @@ async function Detalle({ params }: { params: PageProps<"/admin/pedidos/[id]">["p
       (u) => u.linea_pedido_id === lineaId
     );
   const conInventario = Boolean(p.inventario_descontado);
+  // Editar el pedido (solo administradores) y saldo de pagos
+  const esAdmin = rol === "super_admin";
+  const bloqueo = esAdmin ? await bloqueoEdicion({ id: p.id, estado: p.estado, factura_estado: p.factura_estado }) : null;
+  const puedeProductos = (ESTADOS_PRODUCTOS as readonly string[]).includes(p.estado);
+  const [vendibles, config] = await Promise.all([
+    esAdmin && !bloqueo && puedeProductos ? variantesVendibles().catch(() => []) : Promise.resolve([]),
+    configTienda(),
+  ]);
+  const pagadoTotal = pagadoDe(p);
+  const saldo = Math.round((Number(p.total) - pagadoTotal) * 100) / 100;
   const esEnPersona = p.entrega.municipio === "Entrega en persona";
 
   return (
@@ -235,6 +253,18 @@ async function Detalle({ params }: { params: PageProps<"/admin/pedidos/[id]">["p
           <dl>
             <Dato etiqueta="Forma">{FORMA_PAGO[p.forma_pago]}</Dato>
             <Dato etiqueta="Estado">{p.pagado_en ? `Pagado el ${fechaHora(p.pagado_en)}` : "Sin pagar"}</Dato>
+            {pagadoTotal > 0 ? (
+              <Dato etiqueta="Saldo">
+                {saldo > 0.004 ? (
+                  <strong className="text-amber-700">Pendiente {usd2(saldo)}</strong>
+                ) : saldo < -0.004 ? (
+                  <strong className="text-blue-700">A favor del cliente {usd2(-saldo)} (devolver)</strong>
+                ) : (
+                  <span className="text-green-700">Al día</span>
+                )}
+                <span className="text-muted-foreground"> · pagó {usd2(pagadoTotal)} de {usd2(Number(p.total))}</span>
+              </Dato>
+            ) : null}
           </dl>
           {p.pagos.length ? (
             <ul className="space-y-1 text-xs text-muted-foreground">
@@ -254,6 +284,37 @@ async function Detalle({ params }: { params: PageProps<"/admin/pedidos/[id]">["p
                 <Input id="ref-pago" name="referencia" placeholder="Núm. de transferencia o de autorización" />
               </div>
               <BotonGuardar variant="outline">Marcar como pagado</BotonGuardar>
+            </FormularioAccion>
+          ) : null}
+          {esAdmin && pagadoTotal > 0 && saldo > 0.004 && !["cancelado", "devuelto"].includes(p.estado) ? (
+            <FormularioAccion accion={registrarPagoSaldo} className="flex flex-wrap items-end gap-2 border-t pt-3">
+              <input type="hidden" name="id" value={p.id} />
+              <div className="w-28 space-y-1">
+                <Label htmlFor="saldo-monto">Monto</Label>
+                <Input id="saldo-monto" name="monto" type="number" step="0.01" min="0.01" defaultValue={saldo.toFixed(2)} />
+              </div>
+              <div className="min-w-48 flex-1 space-y-1">
+                <Label htmlFor="saldo-ref">Referencia (opcional)</Label>
+                <Input id="saldo-ref" name="referencia" placeholder="Núm. de transferencia o de autorización" />
+              </div>
+              <BotonGuardar variant="outline">Registrar pago del saldo</BotonGuardar>
+            </FormularioAccion>
+          ) : null}
+          {esAdmin && pagadoTotal > 0 && saldo < -0.004 ? (
+            <FormularioAccion accion={registrarDevolucion} className="flex flex-wrap items-end gap-2 border-t pt-3">
+              <input type="hidden" name="id" value={p.id} />
+              <div className="w-28 space-y-1">
+                <Label htmlFor="dev-monto">Monto</Label>
+                <Input id="dev-monto" name="monto" type="number" step="0.01" min="0.01" defaultValue={(-saldo).toFixed(2)} />
+              </div>
+              <div className="min-w-48 flex-1 space-y-1">
+                <Label htmlFor="dev-ref">Referencia (opcional)</Label>
+                <Input id="dev-ref" name="referencia" placeholder="Transferencia o reembolso en Wompi" />
+              </div>
+              <BotonGuardar variant="outline">Registrar devolución</BotonGuardar>
+              <p className="w-full text-xs text-muted-foreground">
+                Primero devolvé el dinero (en Wompi → Transacciones → Reembolsar, o por transferencia) y después registralo aquí.
+              </p>
             </FormularioAccion>
           ) : null}
           {p.forma_pago === "contra_entrega" && !p.pagado_en ? (
@@ -386,12 +447,27 @@ async function Detalle({ params }: { params: PageProps<"/admin/pedidos/[id]">["p
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Productos */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Productos</CardTitle>
-          </CardHeader>
-          <CardContent>
+        {/* Productos (con "Editar pedido" para administradores) */}
+        <ProductosPedido
+          pedidoId={p.id}
+          puedeEditar={esAdmin}
+          bloqueo={bloqueo}
+          puedeProductos={puedeProductos}
+          lineasActuales={p.lineas_pedido.map((l) => ({
+            id: l.id,
+            varianteId: l.variante_id,
+            nombre: l.nombre,
+            cantidad: l.cantidad,
+            precio: Number(l.precio_unitario),
+          }))}
+          variantes={vendibles}
+          envio={{ monto: Number(p.envio), motivo: p.envio_motivo }}
+          costoEnvio={Number(config.envio.costo) || 0}
+          descuentoExtra={{ monto: Number(p.descuento_extra) || 0, motivo: p.descuento_extra_motivo }}
+          descuentoCombos={Number(p.descuento_combos) || 0}
+          correoCliente={p.entrega.correo || p.clientes?.correo || null}
+          vista={
+            <>
             <ul className="space-y-2 text-sm">
               {p.lineas_pedido.map((l) => {
                 const unidades = unidadesDe(l.id);
@@ -461,7 +537,7 @@ async function Detalle({ params }: { params: PageProps<"/admin/pedidos/[id]">["p
             ) : null}
             <dl className="mt-3 border-t pt-2 text-sm">
               <Dato etiqueta="Subtotal">{usd2(Number(p.subtotal))}</Dato>
-              <Dato etiqueta="Envío">{Number(p.envio) ? usd2(Number(p.envio)) : "Gratis"}</Dato>
+              <Dato etiqueta="Envío">{textoEnvio(p.envio, p.envio_motivo)}</Dato>
               {lineasDescuento(p).map((d) => (
                 <Dato key={d.texto} etiqueta={d.texto}>
                   <span className="text-green-700">−{usd2(d.monto)}</span>
@@ -471,8 +547,9 @@ async function Detalle({ params }: { params: PageProps<"/admin/pedidos/[id]">["p
                 <strong>{usd2(Number(p.total))}</strong>
               </Dato>
             </dl>
-          </CardContent>
-        </Card>
+                      </>
+          }
+        />
 
         {/* Cliente y entrega */}
         <Editable

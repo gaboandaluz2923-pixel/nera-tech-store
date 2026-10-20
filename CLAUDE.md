@@ -105,7 +105,7 @@ Reglas de negocio:
 ## Estructura de carpetas
 /app              rutas públicas (/, /celulares, /accesorios, /producto/[slug], /carrito, /checkout, /guias)
 /app/admin        panel: /login (público) y (protegido)/… (proveedores, listas, precios, catalogo,
-                  pedidos (+ nuevo: pedido manual), clientes (+ importar: Excel y Brevo), inventario
+                  pedidos (+ nuevo: pedido manual; Editar pedido en el detalle), clientes (+ importar: Excel y Brevo), inventario
                   (compras, variante/[id] kardex), garantia, promociones (+ campana, envio-gratis/[id]), correos, analitica, finanzas,
                   facturacion, configuracion, equipo, contrasena)
 /app/api          webhooks (wompi, brevo), endpoints internos, dte/[id]/[pdf|json] (descarga de facturas)
