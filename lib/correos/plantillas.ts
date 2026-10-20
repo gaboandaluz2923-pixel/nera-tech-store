@@ -6,6 +6,8 @@ export type DatosPedidoCorreo = {
   nombre: string;
   total: number;
   envio: number;
+  /** Por qué el envío es gratis o distinto (ej. "Octubre Naranja") */
+  envioMotivo?: string | null;
   /** Combos, descuento por efectivo o transferencia, cupón y puntos (ver lib/tienda/descuentos.ts) */
   descuentos: { texto: string; monto: number }[];
   formaPago: string;
@@ -59,7 +61,7 @@ function tablaProductos(d: DatosPedidoCorreo) {
     .join("");
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #eee;border-bottom:1px solid #eee;margin:16px 0">
 ${filas}
-<tr><td style="padding:6px 0;font-size:14px;color:#666">Envío</td><td style="padding:6px 0;font-size:14px;color:#666;text-align:right">${d.envio ? usd(d.envio) : "Gratis"}</td></tr>
+<tr><td style="padding:6px 0;font-size:14px;color:#666">Envío${d.envioMotivo ? ` · ${esc(d.envioMotivo)}` : ""}</td><td style="padding:6px 0;font-size:14px;color:#666;text-align:right">${d.envio ? usd(d.envio) : "Gratis"}</td></tr>
 ${d.descuentos
   .map(
     (x) =>
@@ -140,7 +142,7 @@ export type Correo = { asunto: string; html: string; texto: string };
 
 const textoProductos = (d: DatosPedidoCorreo) =>
   d.lineas.map((l) => `- ${l.cantidad} x ${l.nombre}: ${usd(l.precio * l.cantidad)}`).join("\n") +
-  `\nEnvío: ${d.envio ? usd(d.envio) : "Gratis"}` +
+  `\nEnvío: ${d.envio ? usd(d.envio) : "Gratis"}${d.envioMotivo ? ` (${d.envioMotivo})` : ""}` +
   d.descuentos.map((x) => `\n${x.texto}: -${usd(x.monto)}`).join("") +
   `\nTotal: ${usd(d.total)}`;
 
@@ -225,6 +227,40 @@ export function correoEstado(d: DatosPedidoCorreo, estado: string): Correo | nul
     asunto: n(m.asunto),
     html: base(d, n(m.titulo), cuerpo, n(m.texto)),
     texto: `${n(m.titulo)}\n\n${m.texto}${d.repartidor && estado === "en_camino" ? `\nTe lo lleva ${d.repartidor.nombre || "nuestro repartidor"}${d.repartidor.telefono ? ` (tel. ${d.repartidor.telefono})` : ""}` : ""}${d.mensaje ? `\n\nMensaje de Nera Tech: ${d.mensaje}` : ""}\n\n${textoProductos(d)}\n\nVer tu pedido: ${d.enlacePedido}`,
+  };
+}
+
+/** El equipo corrigió el pedido: qué cambió, el total nuevo y si queda saldo por pagar o algo a favor. */
+export function correoPedidoModificado(
+  d: DatosPedidoCorreo,
+  x: { cambios: string[]; totalAnterior: number; pagado: number; saldo: number; mensaje: string | null }
+): Correo {
+  const nombre = d.nombre.split(" ")[0];
+  const titulo = `${nombre}, actualizamos tu pedido #${d.numero}`;
+  const lista = `<ul style="margin:0 0 12px;padding-left:20px;font-size:15px;line-height:1.6;color:#333">${x.cambios.map((c) => `<li>${esc(c)}</li>`).join("")}</ul>`;
+  const totales = p(
+    x.totalAnterior !== d.total
+      ? `El total pasó de <span style="text-decoration:line-through;color:#999">${usd(x.totalAnterior)}</span> a <strong>${usd(d.total)}</strong>.`
+      : `El total sigue siendo <strong>${usd(d.total)}</strong>.`
+  );
+  const yaPago = x.pagado > 0.004;
+  let pago = "";
+  if (yaPago && x.saldo > 0.004) {
+    pago = destacado(`<strong>Te falta pagar ${usd(x.saldo)}</strong><br>Ya recibimos ${usd(x.pagado)}. Escribinos por WhatsApp y te ayudamos a completar el pago.`);
+  } else if (yaPago && x.saldo < -0.004) {
+    pago = destacado(`<strong>Tenés ${usd(-x.saldo)} a tu favor</strong><br>Te los devolvemos por el mismo medio con que pagaste. Te escribimos para coordinarlo.`);
+  } else if (!yaPago) {
+    pago = instruccionesPago(d);
+  } else {
+    pago = p("<strong>Tu pago está al día.</strong> No tenés que hacer nada más.");
+  }
+  const mensaje = x.mensaje ? destacado(`<strong>Mensaje de Nera Tech:</strong><br>${esc(x.mensaje)}`) : "";
+  const cuerpo = p("Hicimos estos cambios en tu pedido:") + lista + mensaje + totales + pago + tablaProductos(d) + boton("Ver mi pedido", d.enlacePedido);
+  const saldoTexto = yaPago && x.saldo > 0.004 ? `\nTe falta pagar: ${usd(x.saldo)}` : yaPago && x.saldo < -0.004 ? `\nA tu favor: ${usd(-x.saldo)}` : "";
+  return {
+    asunto: `Actualizamos tu pedido #${d.numero}`,
+    html: base(d, titulo, cuerpo, `Total nuevo: ${usd(d.total)}`),
+    texto: `${titulo}\n\nCambios:\n${x.cambios.map((c) => `- ${c}`).join("\n")}${x.mensaje ? `\n\nMensaje de Nera Tech: ${x.mensaje}` : ""}\n\nTotal: ${usd(x.totalAnterior)} → ${usd(d.total)}${saldoTexto}\n\n${textoProductos(d)}\n\nVer tu pedido: ${d.enlacePedido}`,
   };
 }
 

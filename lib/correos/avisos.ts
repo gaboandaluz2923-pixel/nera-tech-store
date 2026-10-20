@@ -10,6 +10,7 @@ import {
   correoEstado,
   correoFactura,
   correoPagoConfirmado,
+  correoPedidoModificado,
   correoPedidoRecibido,
   type Correo,
   type DatosPedidoCorreo,
@@ -26,6 +27,7 @@ type Pedido = {
   forma_pago: string;
   total: number;
   envio: number;
+  envio_motivo: string | null;
   descuento: number;
   descuento_combos: number;
   descuento_cupon: number;
@@ -76,6 +78,7 @@ async function cargar(pedidoId: string, sitio: string) {
     puntosGanados: ganados?.puntos ? { puntos: Number(ganados.puntos), valor: reglas.puntos.valor_punto } : null,
     total: Number(p.total),
     envio: Number(p.envio),
+    envioMotivo: p.envio_motivo,
     descuentos: lineasDescuento(p),
     formaPago: p.forma_pago,
     pagado: Boolean(p.pagado_en),
@@ -136,6 +139,16 @@ export async function avisarEstado(pedidoId: string, estado: string, sitio: stri
   if (!x) return;
   const correo = correoEstado(x.datos, estado);
   if (correo) await enviarYAnotar(x.p, x.p.entrega.correo, x.p.entrega.nombre, correo, `estado-${estado}`, "cliente");
+}
+
+export async function avisarPedidoModificado(
+  pedidoId: string,
+  sitio: string,
+  resumen: { cambios: string[]; totalAnterior: number; pagado: number; saldo: number; mensaje: string | null }
+) {
+  const x = await cargar(pedidoId, sitio);
+  if (!x) return;
+  await enviarYAnotar(x.p, x.p.entrega.correo, x.p.entrega.nombre, correoPedidoModificado(x.datos, resumen), "pedido-modificado", "cliente");
 }
 
 export async function avisarFactura(pedidoId: string, sitio: string) {

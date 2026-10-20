@@ -8,13 +8,23 @@ export type DescuentosPedido = {
   descuento_cupon?: number | string | null;
   puntos_usados?: number | null;
   descuento_puntos?: number | string | null;
+  /** Descuento que puso el equipo al corregir el pedido, con su motivo */
+  descuento_extra?: number | string | null;
+  descuento_extra_motivo?: string | null;
   combos?: { nombre: string; veces: number; descuento: number }[] | null;
   cupones?: { codigo: string } | null;
 };
 
 /** Columnas que hay que pedir a la base para armar las líneas */
 export const COLUMNAS_DESCUENTOS =
-  "descuento, descuento_combos, descuento_cupon, puntos_usados, descuento_puntos, combos, cupones(codigo)";
+  "descuento, descuento_combos, descuento_cupon, puntos_usados, descuento_puntos, descuento_extra, descuento_extra_motivo, envio_motivo, combos, cupones(codigo)";
+
+/** "Gratis · Octubre Naranja", "$5.00" o "$3.00 · Zona cercana" */
+export function textoEnvio(envio: number | string | null | undefined, motivo?: string | null) {
+  const n = Number(envio ?? 0) || 0;
+  const monto = n ? n.toLocaleString("en-US", { style: "currency", currency: "USD" }) : "Gratis";
+  return motivo ? `${monto} · ${motivo}` : monto;
+}
 
 export function lineasDescuento(p: DescuentosPedido): { texto: string; monto: number }[] {
   const n = (x: number | string | null | undefined) => Number(x ?? 0) || 0;
@@ -33,5 +43,6 @@ export function lineasDescuento(p: DescuentosPedido): { texto: string; monto: nu
   }
   if (n(p.descuento_cupon) > 0) lineas.push({ texto: `Cupón ${p.cupones?.codigo ?? ""}`.trim(), monto: n(p.descuento_cupon) });
   if (n(p.descuento_puntos) > 0) lineas.push({ texto: `${p.puntos_usados ?? 0} Puntos Nera`, monto: n(p.descuento_puntos) });
+  if (n(p.descuento_extra) > 0) lineas.push({ texto: p.descuento_extra_motivo ? `Descuento: ${p.descuento_extra_motivo}` : "Descuento especial", monto: n(p.descuento_extra) });
   return lineas;
 }

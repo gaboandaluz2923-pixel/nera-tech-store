@@ -296,7 +296,8 @@ export function conNombre(i: Interpretacion, nombre: string | null | undefined):
  * Clave con la marca repetida al inicio del modelo ("coolpad|coolpad cp12 neo k18"), como se guardaba antes
  * para marcas desconocidas → "coolpad|cp12 neo k18". Sirve para encontrar esos productos viejos.
  */
-export function claveSinMarcaRepetida(clave: string) {
+export function claveSinMarcaRepetida(clave: string | null | undefined) {
+  if (!clave) return "";
   const [marca, modelo, ...resto] = clave.split("|");
   if (!marca || !modelo?.startsWith(`${marca} `)) return clave;
   return [marca, modelo.slice(marca.length + 1), ...resto].join("|");

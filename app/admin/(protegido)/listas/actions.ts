@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath, updateTag } from "next/cache";
+import { redirect } from "next/navigation";
 import { avisarStockDespues } from "@/lib/tienda/regalos";
 import { ETIQUETA_CATALOGO } from "@/lib/tienda/datos";
 import { superAdmin } from "@/lib/admin/sesion";
@@ -16,6 +17,18 @@ import {
 export type ResultadoImportacion =
   | { ok: true; listaId: string; total: number; vinculadas: number; pendientes: number; ignoradas: number }
   | { ok: false; error: string };
+
+/** Si algo falla, se vuelve a Emparejar con el motivo (en vez de la pantalla de error) */
+async function conAviso(paso: () => Promise<unknown>) {
+  let error: string | null = null;
+  try {
+    await paso();
+  } catch (e) {
+    console.error("emparejar", e);
+    error = e instanceof Error ? e.message : String(e);
+  }
+  if (error) redirect(`/admin/listas/emparejar?error=${encodeURIComponent(error.slice(0, 300))}`);
+}
 
 function refrescar() {
   revalidatePath("/admin/listas");
@@ -48,9 +61,13 @@ export async function crearEnCatalogo(formData: FormData) {
   if (ids.length === 0) return;
   // Nombre del producto corregido a mano en Emparejar (casilla nombre_<id>)
   const nombres = new Map(ids.map((id) => [id, String(formData.get(`nombre_${id}`) ?? "").trim()]));
-  const { supabase } = await superAdmin();
-  await crearEnCatalogoEn(supabase, ids, nombres);
+  let creadas = 0;
+  await conAviso(async () => {
+    const { supabase } = await superAdmin();
+    creadas = await crearEnCatalogoEn(supabase, ids, nombres);
+  });
   refrescar();
+  redirect(`/admin/listas/emparejar?listo=${encodeURIComponent(`Listo: ${creadas} líneas creadas en el catálogo (ocultas) y vinculadas al proveedor`)}`);
 }
 
 /** Vincula una línea a una variante que ya existe (cuando el normalizador no acertó). */
@@ -58,8 +75,10 @@ export async function asociarLinea(formData: FormData) {
   const lineaId = String(formData.get("lineaId") ?? "");
   const varianteId = String(formData.get("varianteId") ?? "");
   if (!lineaId || !varianteId) return;
-  const { supabase } = await superAdmin();
-  await asociarLineaEn(supabase, lineaId, varianteId);
+  await conAviso(async () => {
+    const { supabase } = await superAdmin();
+    await asociarLineaEn(supabase, lineaId, varianteId);
+  });
   refrescar();
 }
 
@@ -67,8 +86,10 @@ export async function asociarLinea(formData: FormData) {
 export async function dejarDeIgnorar(formData: FormData) {
   const claves = formData.getAll("ignorados").map(String).filter(Boolean);
   if (claves.length === 0) return;
-  const { supabase } = await superAdmin();
-  await dejarDeIgnorarEn(supabase, claves);
+  await conAviso(async () => {
+    const { supabase } = await superAdmin();
+    await dejarDeIgnorarEn(supabase, claves);
+  });
   refrescar();
 }
 
@@ -76,7 +97,9 @@ export async function dejarDeIgnorar(formData: FormData) {
 export async function ignorarLineas(formData: FormData) {
   const ids = formData.getAll("ids").map(String).filter(Boolean);
   if (ids.length === 0) return;
-  const { supabase } = await superAdmin();
-  await ignorarLineasEn(supabase, ids);
+  await conAviso(async () => {
+    const { supabase } = await superAdmin();
+    await ignorarLineasEn(supabase, ids);
+  });
   refrescar();
 }

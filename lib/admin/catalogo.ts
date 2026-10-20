@@ -174,13 +174,16 @@ export async function crearDesdeLineas(supabase: SupabaseClient, descripciones: 
   const catPorSlug = new Map(cats.map((c) => [c.slug, c.id]));
   // Los productos viejos de marcas desconocidas tienen la marca repetida en la clave: se buscan también así
   const prodPorClave = new Map<string, string>();
+  // (los productos hechos a mano, como un Open Box, pueden no tener clave)
   for (const p of prods) {
+    if (!p.clave) continue;
     prodPorClave.set(claveSinMarcaRepetida(p.clave), p.id as string);
     prodPorClave.set(p.clave, p.id as string);
   }
   const slugsUsados = new Set(prods.map((p) => p.slug as string));
   const varPorClave = new Map<string, string>();
   for (const v of vars) {
+    if (!v.clave) continue;
     varPorClave.set(claveSinMarcaRepetida(v.clave), v.id as string);
     varPorClave.set(v.clave, v.id as string);
   }

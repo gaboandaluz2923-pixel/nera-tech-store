@@ -243,7 +243,24 @@ async function Contenido() {
   );
 }
 
-export default function Emparejar() {
+async function AvisoError({ searchParams }: { searchParams: PageProps<"/admin/listas/emparejar">["searchParams"] }) {
+  const { error, listo } = await searchParams;
+  if (typeof listo === "string" && listo) {
+    return (
+      <p role="status" className="rounded-lg border border-green-300 bg-green-50 p-3 text-sm text-green-900 dark:border-green-800 dark:bg-green-950/30 dark:text-green-100">
+        {listo}. Publicalas en Catálogo cuando tengan foto y precio.
+      </p>
+    );
+  }
+  if (!error || typeof error !== "string") return null;
+  return (
+    <p role="alert" className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-900 dark:border-red-800 dark:bg-red-950/30 dark:text-red-100">
+      No se pudo completar: {error}. Probá de nuevo; si se repite, mandame este mensaje.
+    </p>
+  );
+}
+
+export default function Emparejar({ searchParams }: PageProps<"/admin/listas/emparejar">) {
   return (
     <div className="space-y-4">
       <div>
@@ -253,6 +270,9 @@ export default function Emparejar() {
           las próximas listas lo actualizan solas. Si un equipo ya existe con otro nombre, asocialo.
         </p>
       </div>
+      <Suspense fallback={null}>
+        <AvisoError searchParams={searchParams} />
+      </Suspense>
       <Suspense fallback={<p className="text-sm text-muted-foreground">Cargando…</p>}>
         <Contenido />
       </Suspense>
