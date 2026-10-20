@@ -164,8 +164,18 @@ export async function vincular(
 }
 
 /** Crea (si no existen) los productos y variantes que describen las líneas, y devuelve la variante de cada línea. */
-export async function crearDesdeLineas(supabase: SupabaseClient, descripciones: string[], nombres?: (string | null)[]) {
-  const interps = descripciones.map((d, n) => conNombre(interpretar(d), nombres?.[n]));
+export async function crearDesdeLineas(
+  supabase: SupabaseClient,
+  descripciones: string[],
+  nombres?: (string | null)[],
+  /** Categoría elegida a mano en Emparejar (slug); vacío = la sugerida */
+  categorias?: (string | null)[]
+) {
+  const interps = descripciones.map((d, n) => {
+    const i = conNombre(interpretar(d), nombres?.[n]);
+    const cat = categorias?.[n];
+    return cat ? { ...i, categoria: cat } : i;
+  });
   const [cats, prods, vars] = await Promise.all([
     todo((a, b) => supabase.from("categorias").select("id, slug").range(a, b)),
     todo((a, b) => supabase.from("productos").select("id, clave, slug").order("id").range(a, b)),

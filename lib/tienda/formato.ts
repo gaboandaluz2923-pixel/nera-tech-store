@@ -93,6 +93,8 @@ export const CATEGORIAS = [
   { slug: "proteccion", nombre: "Protección" },
   { slug: "camaras", nombre: "Cámaras" },
   { slug: "energia", nombre: "Estaciones de energía" },
+  { slug: "televisores", nombre: "Televisores" },
+  { slug: "consolas", nombre: "Consolas" },
 ] as const;
 
 export type SlugCategoria = (typeof CATEGORIAS)[number]["slug"];

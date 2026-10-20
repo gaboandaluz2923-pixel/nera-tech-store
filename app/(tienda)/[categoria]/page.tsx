@@ -32,6 +32,14 @@ const INTRO: Record<string, { titulo: string; texto: string }> = {
     titulo: "Cámaras de acción y seguridad",
     texto: "Insta360 para grabar tus aventuras en 360° y cámaras para cuidar tu casa.",
   },
+  televisores: {
+    titulo: "Televisores",
+    texto: "Smart TV 4K con Google TV, originales y con garantía. Te lo llevamos a tu casa.",
+  },
+  consolas: {
+    titulo: "Consolas y videojuegos",
+    texto: "Consolas, controles y juegos originales, con garantía.",
+  },
   energia: {
     titulo: "Estaciones de energía y paneles solares",
     texto: "Energía de respaldo para apagones, trabajo y camping, con carga solar.",

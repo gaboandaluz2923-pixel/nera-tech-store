@@ -134,3 +134,6 @@ Categorías (20 oct 2026) — Gabriel: «Cámaras» (Insta360 y sus accesorios, 
 paneles solares» (EcoFlow; en el menú: «Estaciones de energía») y «Cargadores y cables» pasa a «Powerbanks, Cargadores y
 Cables» (en el menú: «Powerbanks y cargadores»; el slug sigue siendo `cargadores`). El panel las sugiere solo al
 importar listas. Migración 0013.
+Televisores y Consolas y videojuegos (20 oct 2026) — Gabriel: categorías nuevas para los TV y la Nintendo Switch de Idecom;
+los celulares básicos (de teclas o flip) van en Celulares. En Emparejar se elige la categoría de cada línea antes de crear.
+Migración 0015.

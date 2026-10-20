@@ -34,6 +34,8 @@ export const PLANTILLAS: Record<string, string[]> = {
   cargadores: ["capacidad", "potencia", "conector", "largo", "compatible_con"],
   camaras: ["resolucion", "bateria", "resistencia", "conexion", "peso"],
   energia: ["capacidad", "potencia", "puertos", "carga", "peso"],
+  televisores: ["pantalla", "resolucion", "sistema_operativo", "conexion", "peso"],
+  consolas: ["pantalla", "almacenamiento", "bateria", "conexion", "peso"],
   proteccion: ["compatible_con", "material"],
   otros: [],
 };

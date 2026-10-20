@@ -61,10 +61,12 @@ export async function crearEnCatalogo(formData: FormData) {
   if (ids.length === 0) return;
   // Nombre del producto corregido a mano en Emparejar (casilla nombre_<id>)
   const nombres = new Map(ids.map((id) => [id, String(formData.get(`nombre_${id}`) ?? "").trim()]));
+  // Categoría elegida en Emparejar (casilla cat_<id>, slug)
+  const categorias = new Map(ids.map((id) => [id, String(formData.get(`cat_${id}`) ?? "").replace(/[^a-z0-9-]/g, "")]));
   let creadas = 0;
   await conAviso(async () => {
     const { supabase } = await superAdmin();
-    creadas = await crearEnCatalogoEn(supabase, ids, nombres);
+    creadas = await crearEnCatalogoEn(supabase, ids, nombres, categorias);
   });
   refrescar();
   redirect(`/admin/listas/emparejar?listo=${encodeURIComponent(`Listo: ${creadas} líneas creadas en el catálogo (ocultas) y vinculadas al proveedor`)}`);

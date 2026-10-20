@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ContadorMarcadas, MarcarTodos } from "@/components/admin/marcar-todos";
 import { createClient } from "@/lib/supabase/server";
@@ -81,7 +80,7 @@ async function Ignoradas() {
 
 async function Contenido() {
   const supabase = await createClient();
-  const [pendientes, variantes] = await Promise.all([
+  const [pendientes, variantes, { data: cats }] = await Promise.all([
     lineasPendientes(supabase),
     todo((a, b) =>
       supabase
@@ -90,7 +89,9 @@ async function Contenido() {
         .order("id")
         .range(a, b)
     ),
+    supabase.from("categorias").select("slug, nombre").order("orden"),
   ]);
+  const categorias = (cats ?? []) as { slug: string; nombre: string }[];
 
   if (pendientes.length === 0) {
     return (
@@ -145,7 +146,7 @@ async function Contenido() {
             casilla de arriba de la tabla.
           </li>
           <li>
-            Antes de crear, podés corregir el <strong>nombre del producto</strong> en su casilla (ej. «Infinix Hot 70»). Si el
+            Antes de crear, podés corregir el <strong>nombre del producto</strong> en su casilla (ej. «Infinix Hot 70») y elegir su <strong>categoría</strong> en la lista de abajo. Si el
             nombre corregido es el de un producto que ya tenés, la opción se agrega a ese producto. Después se cambia en
             Catálogo → el producto → Editar.
           </li>
@@ -160,7 +161,7 @@ async function Contenido() {
                 <th className="p-2">Proveedor</th>
                 <th className="p-2">Descripción del proveedor</th>
                 <th className="p-2 text-right">Precio</th>
-                <th className="p-2">Se creará como (podés corregir el nombre)</th>
+                <th className="p-2">Se creará como (podés corregir nombre y categoría)</th>
                 <th className="p-2">…o asociar a uno existente</th>
               </tr>
             </thead>
@@ -195,8 +196,20 @@ async function Contenido() {
                         aria-label={`Nombre del producto para ${l.descripcion}`}
                         className="h-8 w-full rounded-md border bg-background px-2 text-sm font-medium"
                       />
-                      <span className="mt-1 block text-xs text-muted-foreground">
-                        {l.i.nombreVariante} <Badge variant="secondary">{l.i.categoria}</Badge>
+                      <span className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                        {l.i.nombreVariante}
+                        <select
+                          name={`cat_${l.id}`}
+                          defaultValue={l.i.categoria}
+                          aria-label={`Categoría de ${l.descripcion}`}
+                          className="h-7 rounded-md border bg-background px-1 text-xs text-foreground"
+                        >
+                          {categorias.map((c) => (
+                            <option key={c.slug} value={c.slug}>
+                              {c.nombre}
+                            </option>
+                          ))}
+                        </select>
                       </span>
                     </td>
                     <td className="p-2">

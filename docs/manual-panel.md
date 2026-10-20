@@ -125,7 +125,8 @@ Aparece cuando una lista trae equipos que todavía no están en tu catálogo. Si
   marcar para que las revisés.
 - La casilla de arriba de la tabla **marca o desmarca todas**; arriba se ve cuántas van marcadas
   («12 de 97 marcadas»).
-- **Se creará como**: el nombre del producto está en una casilla y se puede corregir antes de crear
+- **Se creará como**: el nombre del producto está en una casilla y debajo su **categoría** en una lista; ambos se
+  pueden corregir antes de crear. Para el nombre:
   (ej. «Hot Hot 70» → «Infinix Hot 70»). La marca sale de la primera palabra del nombre. Si el nombre
   corregido es el de un producto que ya tenés, la opción se agrega a ese producto en vez de crear otro.
 - **Crear los marcados en el catálogo**: crea el producto y la variante (ocultos, no se ven en la
