@@ -141,6 +141,8 @@ Aparece cuando una lista trae equipos que todavía no están en tu catálogo.
 - Si importás la misma lista dos veces el mismo día, cada línea aparece una sola vez (la de la última importación).
 
 ## Precios
+Cada fila muestra a la izquierda la **foto principal** del producto en pequeño, para distinguirlo rápido. Si no
+tiene foto sale un cuadro gris con un ícono; tocá la foto (o el cuadro) para abrir el producto en Catálogo y subirla.
 Una fila por configuración (modelo + memoria; los colores van juntos).
 - **Proveedores**: en negrita el mejor (menor costo puesto con existencia). Entre paréntesis la
   existencia que informa el proveedor. Tachado = sin existencia. ▲▼ = cambio contra su lista anterior.

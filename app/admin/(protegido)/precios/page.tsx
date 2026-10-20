@@ -1,4 +1,6 @@
+import Image from "next/image";
 import Link from "next/link";
+import { ImageOff } from "lucide-react";
 import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,9 +33,28 @@ function FilaTabla({ f }: { f: FilaPrecio }) {
   return (
     <tr className="border-t align-top">
       <td className="p-2">
-        <div className="font-medium">{f.producto}</div>
-        <div className="text-xs text-muted-foreground">
-          {[f.memoria, f.colores.join(", ")].filter(Boolean).join(" · ")}
+        <div className="flex items-start gap-2">
+          {/* Miniatura: toca para abrir el producto en Catálogo (ahí se suben las fotos) */}
+          <Link
+            href={`/admin/catalogo/${f.productoId}`}
+            className="relative size-12 shrink-0 overflow-hidden rounded-md border bg-white"
+            title={f.foto ? `Ver ${f.producto} en Catálogo` : "Sin foto: subila en Catálogo"}
+          >
+            {f.foto ? (
+              <Image src={f.foto} alt="" fill sizes="48px" className="object-contain p-0.5" />
+            ) : (
+              <span className="flex size-full items-center justify-center text-muted-foreground">
+                <ImageOff className="size-4" aria-hidden />
+                <span className="sr-only">Sin foto</span>
+              </span>
+            )}
+          </Link>
+          <div className="min-w-0">
+            <div className="font-medium">{f.producto}</div>
+            <div className="text-xs text-muted-foreground">
+              {[f.memoria, f.colores.join(", ")].filter(Boolean).join(" · ")}
+            </div>
+          </div>
         </div>
       </td>
       <td className="p-2">

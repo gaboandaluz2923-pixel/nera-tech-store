@@ -26,6 +26,8 @@ export type FilaPrecio = {
   clave: string;
   productoId: string;
   producto: string;
+  /** Foto principal del producto (miniatura en la tabla), o null si todavía no tiene */
+  foto: string | null;
   marca: string;
   categoria: string;
   categoriaSlug: string;
@@ -70,6 +72,7 @@ type Producto = {
   nombre: string;
   marca: string;
   categorias: { nombre: string; slug: string; margen_objetivo_pct: number } | null;
+  imagenes: { url: string; principal: boolean; orden: number }[];
 };
 type Proveedor = CostosProveedor & { id: string; nombre: string; plazo_credito_dias: number };
 
@@ -97,7 +100,7 @@ export async function tablaPrecios(supabase: SupabaseClient): Promise<FilaPrecio
     todo<Producto>((a, b) =>
       supabase
         .from("productos")
-        .select("id, nombre, marca, categorias(nombre, slug, margen_objetivo_pct)")
+        .select("id, nombre, marca, categorias(nombre, slug, margen_objetivo_pct), imagenes(url, principal, orden)")
         .order("id")
         .range(a, b)
     ),
@@ -195,6 +198,9 @@ export async function tablaPrecios(supabase: SupabaseClient): Promise<FilaPrecio
       clave,
       productoId: prod.id,
       producto: prod.nombre,
+      foto:
+        [...(prod.imagenes ?? [])].sort((a, b) => Number(b.principal) - Number(a.principal) || a.orden - b.orden)[0]?.url ??
+        null,
       marca: prod.marca,
       categoria: prod.categorias?.nombre ?? "—",
       categoriaSlug: prod.categorias?.slug ?? "otros",
