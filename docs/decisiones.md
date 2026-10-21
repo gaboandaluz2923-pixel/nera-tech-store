@@ -156,3 +156,9 @@ arriba); si no, el sugerido (3% abajo terminado en 9, nunca menos de 5% en efect
 categoría). Costos de Intcomex + 13% IVA. 334 variantes cambiaron de precio (historial en `precios_venta`, razón
 "estudio de mercado 20 oct") y se publicaron 185 productos; el Redmi Watch 6 Active duplicado quedó oculto. Los 119
 precios de la competencia quedaron en `precios_observados`.
+
+**2026-10-21 · Fichas y fotos faltantes.** 125 productos recibieron descripción, características, "incluye", preguntas
+frecuentes y meta descripción con datos oficiales de cada marca (`supabase/contenido/fichas-2026-10-21.*`, cargado con
+`scripts/fichas-completar.mjs`, que solo llena campos vacíos). Fotos oficiales nuevas para Insta360 Bullet Time, timbre
+eufy 1080p (kit E8220) y cable Anker 542 (A80B1H21, liso "Bio-Based"). Siguen sin foto, para que Angel las tome: Gomobile
+F18, audífonos con cable Infinix (modelo por confirmar), Kieslect KS3E (Ks3 Elite por confirmar) y los 3 tarros de cables Infinix.
