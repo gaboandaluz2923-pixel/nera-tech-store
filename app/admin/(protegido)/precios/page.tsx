@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { tablaPrecios, type FilaPrecio } from "@/lib/admin/precios-tabla";
 import { pct, roasMinimo, usd } from "@/lib/precios";
 import { BotonGuardar, FormularioAccion } from "@/components/admin/formulario-accion";
-import { PrecioEditable } from "@/components/admin/precio-editable";
+import { PrecioMargenEditable } from "@/components/admin/precio-margen-editable";
 import { anotarPrecioObservado, fijarPrecio } from "./actions";
 
 const ROTACION = { rapida: "se vende rápido", normal: "rotación normal", lenta: "sin ventas en 30 días" } as const;
@@ -29,7 +29,8 @@ function Cambio({ valor }: { valor: number | null }) {
 }
 
 function FilaTabla({ f }: { f: FilaPrecio }) {
-  const margenBajo = f.margen !== null && f.margen * 100 < f.margenObjetivoPct - 0.05;
+  // En rojo si pagando sin tarjeta deja menos de 5% (el mínimo que usamos para los precios)
+  const margenBajo = f.margenEfectivo !== null && f.margenEfectivo < 0.05;
   return (
     <tr className="border-t align-top">
       <td className="p-2">
@@ -148,17 +149,20 @@ function FilaTabla({ f }: { f: FilaPrecio }) {
         )}
       </td>
       <td className="p-2">
-        <PrecioEditable
+        <PrecioMargenEditable
           accion={fijarPrecio}
           ocultos={{ productoId: f.productoId, ram: String(f.ramGb ?? ""), alm: String(f.almacenamientoGb ?? "") }}
           valor={f.precioVenta}
+          costo={f.mejor?.costo ?? null}
+          descuentoPct={f.descuentoSinTarjetaPct}
           sugerido={f.precioObjetivo}
           etiqueta={`Precio de venta de ${f.producto} ${f.memoria}`}
         />
         {f.precioVaria ? <p className="mt-1 text-xs text-amber-700">Los colores tienen precios distintos</p> : null}
       </td>
-      <td className={`p-2 text-right tabular-nums ${margenBajo ? "text-red-600 dark:text-red-400" : ""}`}>
-        {pct(f.margen)}
+      <td className="p-2 text-right tabular-nums">
+        <div className={margenBajo ? "text-red-600 dark:text-red-400" : ""}>{pct(f.margenEfectivo)}</div>
+        {f.margen !== null ? <div className="text-xs text-muted-foreground">tarjeta {pct(f.margen)}</div> : null}
       </td>
       <td className="p-2 text-right tabular-nums">
         <div>{usd(f.contribucion)}</div>
@@ -240,7 +244,7 @@ async function Contenido({ searchParams }: { searchParams: Promise<Filtros> }) {
               <th className="p-2 text-right">Costo puesto</th>
               <th className="p-2 text-right">Precio sugerido</th>
               <th className="p-2">Tu precio de venta</th>
-              <th className="p-2 text-right">Margen</th>
+              <th className="p-2 text-right">Margen en efectivo</th>
               <th className="p-2 text-right">Contribución</th>
             </tr>
           </thead>
@@ -252,7 +256,10 @@ async function Contenido({ searchParams }: { searchParams: Promise<Filtros> }) {
         </table>
       </div>
       <p className="text-xs text-muted-foreground">
-        En negrita el mejor proveedor (menor costo puesto con existencia). Tachado = sin existencia. Contribución
+        En negrita el mejor proveedor (menor costo puesto con existencia). Tachado = sin existencia. Margen en
+        efectivo = lo que queda si el cliente paga sin tarjeta (precio menos el descuento de Configuración), sobre lo
+        que cobrás; en rojo si es menos de 5%. Con el lápiz podés escribir el precio o el margen: el otro se calcula
+        solo. Contribución
         = precio + $5 de envío − costo − $1.75 de paquetería y seguro − 2.5% de comisión. ROAS mínimo = lo que
         necesitás vender por cada dólar de pauta para no perder. El precio sugerido combina tu costo, el margen
         objetivo de la categoría, los precios de mercado que anotaste en los últimos 30 días y cuánto se vendió;

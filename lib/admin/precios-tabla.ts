@@ -6,6 +6,7 @@ import {
   contribucion,
   costoPuesto,
   margen,
+  margenEfectivo,
   precioConMargen,
   type CostosProveedor,
 } from "@/lib/precios";
@@ -40,6 +41,10 @@ export type FilaPrecio = {
   precioVenta: number | null;
   precioVaria: boolean;
   margen: number | null;
+  /** Margen si paga sin tarjeta (precio − descuento sin tarjeta) */
+  margenEfectivo: number | null;
+  /** % de descuento por pagar sin tarjeta (Configuración) */
+  descuentoSinTarjetaPct: number;
   contribucion: number | null;
   margenObjetivoPct: number;
   precioObjetivo: number | null;
@@ -218,6 +223,8 @@ export async function tablaPrecios(supabase: SupabaseClient): Promise<FilaPrecio
       precioVenta,
       precioVaria: new Set(precios).size > 1,
       margen: mejor && precioVenta ? margen(precioVenta, mejor.costo) : null,
+      margenEfectivo: mejor && precioVenta ? margenEfectivo(precioVenta, mejor.costo, pct) : null,
+      descuentoSinTarjetaPct: pct,
       contribucion: mejor && precioVenta ? contribucion(precioVenta, mejor.costo) : null,
       margenObjetivoPct,
       precioObjetivo: mejor ? precioConMargen(mejor.costo, margenObjetivoPct) : null,

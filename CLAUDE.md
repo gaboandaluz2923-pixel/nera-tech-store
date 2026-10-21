@@ -101,6 +101,9 @@ Reglas de negocio:
   eventos, suscriptores) pasa por Server Actions o Route Handlers que usan
   `createServiceClient()` del servidor; el navegador nunca escribe directo.
 - Las claves van en variables de entorno (ver .env.example); nunca en el código ni en el chat.
+- Tablas nuevas: desde el 30-oct-2026 Supabase ya no da acceso automático por la API a tablas nuevas en `public`.
+  Cada migración que crea una tabla incluye, junto con su RLS, sus `grant` explícitos: `select` a `anon` solo si es
+  de catálogo público; `select, insert, update, delete` a `authenticated` (RLS decide qué ve cada rol) y a `service_role`.
 
 ## Estructura de carpetas
 /app              rutas públicas (/, /celulares, /accesorios, /producto/[slug], /carrito, /checkout, /guias)

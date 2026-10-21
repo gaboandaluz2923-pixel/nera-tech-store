@@ -156,9 +156,13 @@ Una fila por configuración (modelo + memoria; los colores van juntos).
   "sug." = precio sugerido por el proveedor (Idecom lo manda).
 - **Precio con margen objetivo**: lo que tendrías que cobrar para el margen de la categoría
   (celulares 10%, accesorios 15–25%), redondeado a precios terminados en 5 o 9.
-- **Tu precio de venta**: se ve el precio (o "Sin precio" en naranja). Tocá el lápiz, escribilo y **Guardar**.
-  Se aplica a todos los colores de esa configuración y queda en el historial. **Usar** aplica el sugerido.
-- **Margen** en rojo = debajo del objetivo de la categoría.
+- **Tu precio de venta**: se ve el precio (o "Sin precio" en naranja). Tocá el lápiz y salen dos campos juntos:
+  **$** (el precio publicado, con tarjeta) y **%** (el margen en efectivo). Si escribís el precio, el margen se
+  calcula solo; si escribís el margen, el precio se calcula solo, exacto con centavos. Debajo dice el margen con
+  tarjeta, o avisa en rojo si en efectivo queda bajo el costo. **Guardar** aplica el precio a todos los colores de
+  esa configuración y queda en el historial. **Usar** aplica el sugerido.
+- **Margen en efectivo** = (precio − descuento sin tarjeta − costo) ÷ (precio − descuento sin tarjeta). El
+  descuento es el de Configuración (hoy 9%). En rojo si es menos de 5%. Debajo, en gris, el margen con tarjeta.
 - **Contribución** = lo que te deja una venta enviada por paquetera antes de pauta. **ROAS mínimo** =
   cuánto tenés que vender por cada dólar de pauta para no perder.
 - Filtros: buscar por modelo, por categoría, solo los que están en 2 o más proveedores, solo los que

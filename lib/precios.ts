@@ -55,6 +55,24 @@ export function margen(precioVenta: number, costo: number): number | null {
   return (precioVenta - costo) / precioVenta;
 }
 
+/**
+ * Margen sobre lo que entra si el cliente paga sin tarjeta (efectivo o transferencia):
+ * (precio − descuento − costo) ÷ (precio − descuento). 0.10 = 10%.
+ */
+export function margenEfectivo(precioVenta: number, costo: number, descuentoPct: number): number | null {
+  const cobrado = precioVenta * (1 - descuentoPct / 100);
+  if (!(cobrado > 0)) return null;
+  return (cobrado - costo) / cobrado;
+}
+
+/** Precio publicado (con tarjeta) que deja ese margen pagando sin tarjeta; exacto, a dos decimales. */
+export function precioParaMargenEfectivo(costo: number, margenPct: number, descuentoPct: number): number | null {
+  const m = margenPct / 100;
+  const d = descuentoPct / 100;
+  if (!(costo > 0) || m >= 1 || d >= 1) return null;
+  return Math.ceil((costo / (1 - m) / (1 - d)) * 100 - 1e-6) / 100;
+}
+
 /** Precio que deja el margen objetivo, redondeado hacia arriba al dólar terminado en 9 o 5. */
 export function precioConMargen(costo: number, margenObjetivoPct: number): number {
   const m = Math.min(Math.max(margenObjetivoPct, 0), 90) / 100;
