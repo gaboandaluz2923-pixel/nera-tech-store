@@ -147,3 +147,12 @@ Fotos oficiales (20 oct 2026) — 217 fotos de 98 productos nuevos (Total Link, 
 oficiales de cada marca y procesadas con `scripts/procesar-foto.py`; enlazadas en `imagenes`. Sin foto oficial (9, para
 que Angel las fotografíe): Insta360 Bullet Time Bundle, Kieslect KS3E, Gomobile F18, cable Anker 542 USB-C a Lightning,
 timbre Eufy 1080p, los 3 tarros de cables Infinix y los audífonos con cable Infinix XH01.
+
+**2026-10-20 · Precios por estudio de mercado y catálogo publicado (aprobado por Gabriel).** Se compararon 223
+configuraciones contra La Curacao, Siman, Walmart, Samsung Store, Prado y S Store (ElSalvadorYA solo como referencia:
+importación bajo pedido). El margen se mide con el precio en efectivo (precio publicado − 9% de descuento sin tarjeta).
+Regla aplicada: si al precio del más barato queda al menos 2% en efectivo, se usa ese precio (centavos raros al .99 de
+arriba); si no, el sugerido (3% abajo terminado en 9, nunca menos de 5% en efectivo; sin competencia, margen de la
+categoría). Costos de Intcomex + 13% IVA. 334 variantes cambiaron de precio (historial en `precios_venta`, razón
+"estudio de mercado 20 oct") y se publicaron 185 productos; el Redmi Watch 6 Active duplicado quedó oculto. Los 119
+precios de la competencia quedaron en `precios_observados`.
