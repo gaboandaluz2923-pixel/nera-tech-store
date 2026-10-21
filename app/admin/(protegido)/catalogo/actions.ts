@@ -1,8 +1,10 @@
 "use server";
 
 import { revalidatePath, updateTag } from "next/cache";
+import { redirect } from "next/navigation";
 import type { EstadoAccion } from "@/components/admin/formulario-accion";
 import { equipo } from "@/lib/admin/sesion";
+import { datosVariante, interpretarNombre, productoConClave, slugLibre, type VarianteNueva } from "@/lib/admin/catalogo";
 import { formatoAlmacenamiento, slugDe } from "@/lib/listas/normalizar";
 import { avisarStockDespues } from "@/lib/tienda/regalos";
 import { ETIQUETA_CATALOGO } from "@/lib/tienda/datos";
@@ -438,4 +440,137 @@ export async function guardarCondicion(_prev: EstadoAccion, form: FormData): Pro
   if (error) return falla(`No se pudo guardar: ${error.message}`);
   refrescar(id);
   return ok("Condición guardada");
+}
+
+// ---------------------------------------------------------------------------
+// Productos y variantes nuevos, escritos a mano (lo que no viene en una lista de proveedor)
+// ---------------------------------------------------------------------------
+const MAX_VARIANTES = 20;
+
+/** "6" → 6; "" → null; "1TB" → 1024. Devuelve undefined si no es un número válido. */
+function gb(v: FormDataEntryValue | null): number | null | undefined {
+  const t = String(v ?? "").trim().toLowerCase().replace(/\s|gb/g, "");
+  if (!t) return null;
+  const tb = t.endsWith("tb");
+  const n = Number(tb ? t.slice(0, -2) : t);
+  if (!Number.isFinite(n) || n <= 0 || n > 4096) return undefined;
+  return Math.round(tb ? n * 1024 : n);
+}
+
+/** Lee las filas de variantes del formulario (campos ram, alm y color repetidos). */
+function leerVariantes(form: FormData): VarianteNueva[] | string {
+  const rams = form.getAll("ram");
+  const alms = form.getAll("alm");
+  const colores = form.getAll("color");
+  const filas: VarianteNueva[] = [];
+  for (let i = 0; i < Math.max(rams.length, alms.length, colores.length); i++) {
+    const ramGb = gb(rams[i] ?? null);
+    const almacenamientoGb = gb(alms[i] ?? null);
+    const color = texto(colores[i] ?? null).slice(0, 40) || null;
+    if (ramGb === undefined || almacenamientoGb === undefined) return `Fila ${i + 1}: la RAM y el almacenamiento van en GB (ej. 8 y 256).`;
+    if (ramGb !== null && almacenamientoGb === null) return `Fila ${i + 1}: si ponés RAM, poné también el almacenamiento.`;
+    if (ramGb === null && almacenamientoGb === null && !color) continue;
+    filas.push({ ramGb, almacenamientoGb, color });
+  }
+  return filas.length ? filas : [{ ramGb: null, almacenamientoGb: null, color: null }];
+}
+
+export async function crearProducto(_prev: EstadoAccion, form: FormData): Promise<EstadoAccion> {
+  const nombre = texto(form.get("nombre")).replace(/\s+/g, " ").slice(0, 120);
+  if (nombre.length < 3) return falla("Escribí el nombre del producto (ej. Xiaomi Redmi Note 17 Pro 5G).");
+  const variantes = leerVariantes(form);
+  if (typeof variantes === "string") return falla(variantes);
+  if (variantes.length > MAX_VARIANTES) return falla(`Máximo ${MAX_VARIANTES} variantes a la vez.`);
+  const categoriaId = textoONulo(form.get("categoria_id"));
+  if (!categoriaId) return falla("Elegí la categoría.");
+  const proveedorId = textoONulo(form.get("proveedor_id"));
+  const costo = Number(String(form.get("costo") ?? "").replace(/[$,\s]/g, "")) || 0;
+  const sku = texto(form.get("sku")).slice(0, 60);
+  if (proveedorId && !(costo > 0)) return falla("Si elegís proveedor, escribí cuánto te cuesta (precio de lista).");
+
+  const { supabase, esSuperAdmin } = await equipo();
+  const i = interpretarNombre(nombre);
+  const existe = await productoConClave(supabase, i.clave);
+  if (existe) return falla(`Ya existe "${existe.nombre}". Abrilo en Catálogo y agregale la variante con "+ Agregar variante".`);
+
+  const slug = await slugLibre(supabase, nombre);
+  const { data: prod, error } = await supabase
+    .from("productos")
+    .insert({
+      clave: i.clave,
+      slug,
+      nombre,
+      marca: texto(form.get("marca")).slice(0, 40) || i.marca,
+      modelo: i.modelo,
+      categoria_id: categoriaId,
+      estado: "oculto",
+    })
+    .select("id")
+    .single();
+  if (error || !prod) return falla(`No se pudo crear: ${error?.message ?? "sin respuesta"}`);
+
+  // Variantes (sin repetir la misma memoria y color)
+  const filas = [...new Map(variantes.map((v) => datosVariante(i.clave, v)).map((d) => [d.clave, d])).values()];
+  const { data: vars, error: e2 } = await supabase
+    .from("variantes")
+    .insert(filas.map((d) => ({ ...d, producto_id: prod.id, precio: 0, stock: 0, activo: true })))
+    .select("id, clave");
+  if (e2) return falla(`Se creó el producto, pero no sus variantes: ${e2.message}`);
+
+  // Proveedor y costo (solo administradores: el costo no lo ve el operador)
+  let avisoCosto = "";
+  if (proveedorId && costo > 0) {
+    if (!esSuperAdmin) avisoCosto = " El costo no se guardó: eso lo pone un administrador en Precios.";
+    else {
+      const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "America/El_Salvador" });
+      const { error: e3 } = await supabase.from("producto_proveedor").insert(
+        (vars ?? []).map((v) => ({
+          variante_id: v.id,
+          proveedor_id: proveedorId,
+          sku_proveedor: sku && (vars ?? []).length === 1 ? `sku:${sku}` : `manual:${v.clave}`,
+          ultimo_precio: Math.round(costo * 100) / 100,
+          ultima_fecha: hoy,
+          activo: true,
+        }))
+      );
+      if (e3) avisoCosto = ` El costo no se guardó (${e3.message}).`;
+    }
+  }
+  refrescar(prod.id);
+  revalidatePath("/admin/precios");
+  redirect(
+    `/admin/catalogo/${prod.id}?nuevo=${encodeURIComponent(`Se creó "${nombre}" (oculto).${avisoCosto} Subí fotos, completá los textos y ponele precio.`)}`
+  );
+}
+
+/** "+ Agregar variante" en la ficha: otra memoria o color del mismo producto. */
+export async function agregarVariante(_prev: EstadoAccion, form: FormData): Promise<EstadoAccion> {
+  const id = texto(form.get("id"));
+  const variantes = leerVariantes(form);
+  if (typeof variantes === "string") return falla(variantes);
+  const v = variantes[0];
+  if (v.ramGb === null && v.almacenamientoGb === null && !v.color) return falla("Escribí la memoria, el color o los dos.");
+
+  const { supabase } = await equipo();
+  const { data: p } = await supabase
+    .from("productos")
+    .select("clave, nombre, variantes(id, ram_gb, almacenamiento_gb, color, precio)")
+    .eq("id", id)
+    .single();
+  if (!p) return falla("No se encontró el producto.");
+  const existentes = (p.variantes ?? []) as { ram_gb: number | null; almacenamiento_gb: number | null; color: string | null; precio: number }[];
+  const igual = (x: string | null, y: string | null) => (x ?? "").trim().toLowerCase() === (y ?? "").trim().toLowerCase();
+  if (existentes.some((x) => x.ram_gb === v.ramGb && x.almacenamiento_gb === v.almacenamientoGb && igual(x.color, v.color)))
+    return falla("Esa variante ya existe.");
+  // Mismo precio que los otros colores de esa memoria (si ya tiene); si no, sin precio hasta que lo pongas en Precios
+  const precio = Math.max(
+    0,
+    ...existentes.filter((x) => x.ram_gb === v.ramGb && x.almacenamiento_gb === v.almacenamientoGb).map((x) => Number(x.precio) || 0)
+  );
+  const d = datosVariante(p.clave as string | null, v);
+  const { error } = await supabase.from("variantes").insert({ ...d, producto_id: id, precio, stock: 0, activo: true });
+  if (error) return falla(`No se pudo agregar: ${error.message}`);
+  refrescar(id);
+  revalidatePath("/admin/precios");
+  return ok(precio ? `${d.nombre} agregado a ${p.nombre}, a $${precio.toFixed(2)} como los otros colores.` : `${d.nombre} agregado a ${p.nombre}. Ponele precio en Precios.`);
 }

@@ -256,3 +256,66 @@ export async function crearDesdeLineas(
 
   return interps.map((i) => varPorClave.get(i.claveVariante)!);
 }
+
+// ---------------------------------------------------------------------------
+// Productos creados a mano (Catálogo → "+ Nuevo producto" y "+ Agregar variante")
+// ---------------------------------------------------------------------------
+export type VarianteNueva = { ramGb: number | null; almacenamientoGb: number | null; color: string | null };
+
+/** Clave, nombre y memoria de una variante, con el mismo formato que las que vienen de las listas. */
+export function datosVariante(claveProducto: string | null, v: VarianteNueva) {
+  const memLarga =
+    v.almacenamientoGb === null
+      ? null
+      : v.ramGb === null
+        ? formatoAlmacenamiento(v.almacenamientoGb)
+        : `${v.ramGb} GB + ${formatoAlmacenamiento(v.almacenamientoGb)}`;
+  return {
+    clave: claveProducto
+      ? [claveProducto, v.ramGb ?? "-", v.almacenamientoGb ?? "-", v.color ? sinAcentos(v.color.toLowerCase()) : "-"].join("|")
+      : null,
+    nombre: [memLarga, v.color].filter(Boolean).join(" · ") || "Único",
+    memoria:
+      v.almacenamientoGb === null
+        ? null
+        : v.ramGb === null
+          ? formatoAlmacenamiento(v.almacenamientoGb)
+          : `${v.ramGb}+${formatoAlmacenamiento(v.almacenamientoGb).replace(" ", "")}`,
+    color: v.color,
+    ram_gb: v.ramGb,
+    almacenamiento_gb: v.almacenamientoGb,
+  };
+}
+
+/** Marca, modelo y clave de un producto escrito a mano (ej. "Xiaomi Redmi Note 17 Pro 5G"). */
+export function interpretarNombre(nombre: string) {
+  const i = interpretar(nombre);
+  return { marca: i.marca, modelo: i.modelo, clave: i.claveProducto, categoria: i.categoria };
+}
+
+/** "xiaomi|redmi note 17" → "xiaomi|xiaomi redmi note 17" (como se guardaban antes las marcas desconocidas). */
+function conMarcaRepetida(clave: string) {
+  const [marca, modelo, ...resto] = clave.split("|");
+  return modelo ? [marca, `${marca} ${modelo}`, ...resto].join("|") : clave;
+}
+
+/** Busca un producto que ya tenga esa clave (también con la marca repetida, como se guardaba antes). */
+export async function productoConClave(supabase: SupabaseClient, clave: string) {
+  const { data } = await supabase
+    .from("productos")
+    .select("id, nombre")
+    .in("clave", [...new Set([clave, conMarcaRepetida(clave), claveSinMarcaRepetida(clave)])])
+    .limit(1)
+    .maybeSingle();
+  return data as { id: string; nombre: string } | null;
+}
+
+/** Dirección (slug) libre a partir del nombre: "xiaomi-redmi-note-17-pro-5g", o con -2, -3… si ya existe. */
+export async function slugLibre(supabase: SupabaseClient, nombre: string) {
+  const base = slugDe(nombre);
+  const { data } = await supabase.from("productos").select("slug").like("slug", `${base}%`);
+  const usados = new Set((data ?? []).map((p) => p.slug as string));
+  let slug = base;
+  for (let n = 2; usados.has(slug); n++) slug = `${base}-${n}`;
+  return slug;
+}

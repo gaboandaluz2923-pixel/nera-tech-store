@@ -231,8 +231,8 @@ export async function verArchivoCompra(compraId: string, ruta: string): Promise<
 
 async function compraBorrador(compraId: string) {
   const s = await superAdmin();
-  const { data: c } = await s.supabase.from("compras").select("id, estado, proveedor_id").eq("id", compraId).single();
-  return { ...s, compra: c as { id: string; estado: string; proveedor_id: string | null } | null };
+  const { data: c } = await s.supabase.from("compras").select("id, estado, proveedor_id, documento").eq("id", compraId).single();
+  return { ...s, compra: c as { id: string; estado: string; proveedor_id: string | null; documento: Documento } | null };
 }
 
 function datosLinea(form: FormData) {
@@ -261,6 +261,18 @@ export async function guardarLineaCompra(_prev: EstadoAccion, form: FormData): P
   if (!d.descripcion && !d.variante_id) return falla("Escribí qué producto es.");
   if (d.cantidad <= 0) return falla("La cantidad debe ser mayor que cero.");
   if (d.costo_unitario < 0) return falla("El costo no puede ser negativo.");
+  // El costo se guarda como lo pide el documento: sin IVA en crédito fiscal (el IVA se recupera) y con IVA en factura
+  // de consumidor final. Si el proveedor lo dio al revés, se convierte aquí.
+  const escrito = d.costo_unitario;
+  const conIva = texto(form.get("costo_iva")) === "con";
+  let conversion = "";
+  if (compra.documento === "ccf" && conIva) {
+    d.costo_unitario = Math.round((escrito / 1.13) * 10000) / 10000;
+    conversion = ` ($${escrito.toFixed(2)} con IVA → $${d.costo_unitario.toFixed(2)} sin IVA, porque es crédito fiscal)`;
+  } else if (compra.documento === "factura" && texto(form.get("costo_iva")) === "sin") {
+    d.costo_unitario = Math.round(escrito * 1.13 * 10000) / 10000;
+    conversion = ` ($${escrito.toFixed(2)} + IVA → $${d.costo_unitario.toFixed(2)} con IVA, porque es factura de consumidor final)`;
+  }
   if (d.identificadores.length > d.cantidad)
     return falla(`Pegaste ${d.identificadores.length} identificadores para ${d.cantidad} unidades.`);
   if (!d.descripcion && d.variante_id) {
@@ -274,7 +286,7 @@ export async function guardarLineaCompra(_prev: EstadoAccion, form: FormData): P
   if (error) return falla(`No se pudo guardar: ${error.message}`);
   await recalcularTotales(supabase, compraId);
   refrescar(compraId);
-  return ok(lineaId ? "Línea guardada" : "Línea agregada");
+  return ok((lineaId ? "Línea guardada" : "Línea agregada") + conversion);
 }
 
 export async function quitarLineaCompra(_prev: EstadoAccion, form: FormData): Promise<EstadoAccion> {

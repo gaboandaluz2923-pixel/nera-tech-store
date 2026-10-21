@@ -20,6 +20,7 @@ import { NOMBRE_CARACTERISTICA } from "@/lib/tienda/formato";
 import {
   cambiarEstado,
   cambiarFoto,
+  agregarVariante,
   crearOpenBox,
   guardarCondicion,
   guardarCaracteristicas,
@@ -106,8 +107,15 @@ function Campo({
   );
 }
 
-async function Editor({ params }: { params: PageProps<"/admin/catalogo/[id]">["params"] }) {
+async function Editor({
+  params,
+  searchParams,
+}: {
+  params: PageProps<"/admin/catalogo/[id]">["params"];
+  searchParams: PageProps<"/admin/catalogo/[id]">["searchParams"];
+}) {
   const { id } = await params;
+  const { nuevo } = (await searchParams) as { nuevo?: string };
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   const supabase = await createClient();
   const [{ data, error }, { data: categorias }, { data: colecciones }, { rol }, historial, nombres] = await Promise.all([
@@ -184,6 +192,9 @@ async function Editor({ params }: { params: PageProps<"/admin/catalogo/[id]">["p
             ← Catálogo
           </Link>
           <h1 className="text-xl font-semibold">{p.nombre}</h1>
+          {nuevo ? (
+            <p className="mt-2 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-900">{nuevo.slice(0, 300)}</p>
+          ) : null}
         </div>
         {p.estado !== "oculto" ? (
           <a
@@ -602,6 +613,36 @@ async function Editor({ params }: { params: PageProps<"/admin/catalogo/[id]">["p
               </div>
             </FilaEditable>
           ))}
+          <details className="rounded-md border border-dashed p-3">
+            <summary className="cursor-pointer text-sm font-medium text-primary">+ Agregar variante</summary>
+            <FormularioAccion accion={agregarVariante} limpiar className="mt-3 space-y-2">
+              <input type="hidden" name="id" value={p.id} />
+              <div className="grid grid-cols-3 items-end gap-2">
+                <div className="space-y-1">
+                  <Label htmlFor="nueva-ram" className="text-xs">
+                    RAM (GB)
+                  </Label>
+                  <Input id="nueva-ram" name="ram" inputMode="numeric" placeholder="6" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="nueva-alm" className="text-xs">
+                    Almacenamiento (GB)
+                  </Label>
+                  <Input id="nueva-alm" name="alm" inputMode="numeric" placeholder="256" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="nueva-color" className="text-xs">
+                    Color
+                  </Label>
+                  <Input id="nueva-color" name="color" placeholder="Negro" />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Si ya hay otro color con esa memoria, toma su precio; si no, queda sin precio hasta que lo pongas en Precios.
+              </p>
+              <BotonGuardar size="sm">Agregar</BotonGuardar>
+            </FormularioAccion>
+          </details>
         </CardContent>
       </Card>
 
@@ -674,11 +715,11 @@ async function Editor({ params }: { params: PageProps<"/admin/catalogo/[id]">["p
   );
 }
 
-export default function EditarProducto({ params }: PageProps<"/admin/catalogo/[id]">) {
+export default function EditarProducto({ params, searchParams }: PageProps<"/admin/catalogo/[id]">) {
   return (
     <div className="max-w-4xl">
       <Suspense fallback={<p className="text-sm text-muted-foreground">Cargando…</p>}>
-        <Editor params={params} />
+        <Editor params={params} searchParams={searchParams} />
       </Suspense>
     </div>
   );

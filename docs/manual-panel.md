@@ -175,6 +175,16 @@ Aquí se completa cómo se ve cada producto en la tienda.
 para cargar rápido y se refresca sola cada vez que guardás algo en el panel. Si cambiaste datos directo
 en Supabase con un SQL, tocá este botón para que la tienda los muestre de inmediato.
 
+**+ Nuevo producto** (botón arriba a la derecha): para lo que no viene en una lista de proveedor (compra suelta,
+Miami, regalo). Escribí el nombre como querés que se vea (marca y modelo, ej. "Xiaomi Redmi Note 17 Pro 5G"),
+elegí la categoría y poné una fila por cada memoria y color (**+ Otra variante**; en accesorios solo el color o nada).
+Si sos administrador podés poner el proveedor y el costo para que aparezca en Precios con su margen. **Crear
+producto** lo deja oculto y abre su ficha para subir fotos, textos y precio. Si ya existe uno con ese nombre, te avisa
+para que le agregues la variante en vez de duplicarlo. Si viene en una lista de precios, mejor importala en Listas.
+
+**+ Agregar variante** (en la ficha, al final de "Variantes"): otra memoria o color del mismo producto. Si ya hay
+otro color con esa memoria, toma su precio; si no, queda sin precio hasta que lo pongas en Precios.
+
 **La lista** (Catálogo): arriba, cuántos productos están en la tienda y cuántos ocultos. Cada fila
 muestra la foto principal, la categoría, cuántas variantes tienen precio y cuántas fotos hay, y unas
 etiquetas grises con lo que falta ("Sin fotos", "Sin precio", "Sin descripción", "Sin características").
@@ -433,7 +443,11 @@ unidades se mueven lento (más de 30 días en bodega sin ventas en 30 días).
    **Otros costos**: flete, envío, aduana, seguro; se reparten en el costo de cada unidad (no se suman a lo que se
    le debe al proveedor).
 3. Tocá **Crear compra**. Se abre la compra **Sin recibir**: revisá cada producto (**Editar**): el producto del
-   catálogo (el sistema sugiere uno; si no está, crealo en Catálogo), la cantidad, el costo como sale en la factura,
+   catálogo (el sistema sugiere uno; para cambiarlo escribí parte del nombre, por ejemplo "note 17 pro 256 naranja",
+   y elegí de las sugerencias con las flechas y Enter o tocándola; si no está, crealo con **+ Nuevo producto** en
+   Catálogo), la cantidad, el costo y si ese costo **viene SIN IVA (+IVA) o CON IVA incluido**: el sistema lo guarda
+   como corresponde al documento (sin IVA en crédito fiscal, con IVA en factura de consumidor final) y te dice la
+   conversión al guardar. Cada línea muestra si su costo está "sin IVA" o "con IVA". Luego
    la **condición** (Nuevo sellado / Open Box / Usado: revisá cada caja al recibir) y los **IMEI o números de serie**
    (uno por línea; con un lector de código de barras se escanean directo). Los celulares necesitan el IMEI de cada
    unidad; si falta uno o un número está mal digitado, avisa antes de recibir.

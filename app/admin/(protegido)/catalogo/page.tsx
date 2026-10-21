@@ -180,11 +180,16 @@ export default function Catalogo(props: PageProps<"/admin/catalogo">) {
     <div className="max-w-4xl space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <h1 className="text-xl font-semibold">Catálogo</h1>
-        <FormularioAccion accion={refrescarTienda}>
-          <BotonGuardar variant="outline" size="sm">
-            Actualizar la tienda ahora
-          </BotonGuardar>
-        </FormularioAccion>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" nativeButton={false} render={<Link href="/admin/catalogo/nuevo" />}>
+            + Nuevo producto
+          </Button>
+          <FormularioAccion accion={refrescarTienda}>
+            <BotonGuardar variant="outline" size="sm">
+              Actualizar la tienda ahora
+            </BotonGuardar>
+          </FormularioAccion>
+        </div>
       </div>
       <div>
         <p className="text-sm text-muted-foreground">

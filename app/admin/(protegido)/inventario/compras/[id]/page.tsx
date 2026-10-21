@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { AlertTriangle } from "lucide-react";
 import { Editable, FilaEditable } from "@/components/admin/editable";
 import { BotonGuardar, FormularioAccion } from "@/components/admin/formulario-accion";
+import { BuscadorProducto } from "@/components/admin/buscador-producto";
 import { VerArchivo } from "@/components/admin/ver-archivo";
 import { Dato, Datos } from "@/components/admin/vista";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -69,14 +70,19 @@ type Linea = {
 const SELECT = "h-9 w-full rounded-md border bg-background px-2 text-sm";
 const ESTADO = { borrador: "Sin recibir (todavía no entra a bodega)", recibida: "Recibida en bodega", anulada: "Anulada" } as const;
 
+/** Cómo está guardado el costo de las líneas según el documento */
+const IVA_DEL_COSTO: Record<Documento, string> = { ccf: "sin IVA", factura: "con IVA", sin_iva: "sin IVA (no lleva)" };
+
 function CamposLinea({
   compraId,
   linea,
   variantes,
+  documento,
 }: {
   compraId: string;
   linea?: Linea;
   variantes: Awaited<ReturnType<typeof variantesParaElegir>>;
+  documento: Documento;
 }) {
   const sufijo = linea?.id ?? "nueva";
   return (
@@ -85,30 +91,35 @@ function CamposLinea({
       {linea ? <input type="hidden" name="linea_id" value={linea.id} /> : null}
       <div className="space-y-1">
         <Label htmlFor={`var-${sufijo}`}>Producto del catálogo</Label>
-        <select id={`var-${sufijo}`} name="variante_id" defaultValue={linea?.variante_id ?? ""} className={SELECT}>
-          <option value="">— Elegí el producto —</option>
-          {variantes.map((v) => (
-            <option key={v.id} value={v.id}>
-              {v.texto}
-              {v.condicion !== "nuevo" ? ` (${CONDICION[v.condicion]})` : ""}
-            </option>
-          ))}
-        </select>
+        <BuscadorProducto
+          id={`var-${sufijo}`}
+          name="variante_id"
+          valor={linea?.variante_id}
+          opciones={variantes.map((v) => ({
+            id: v.id,
+            texto: v.texto,
+            detalle: v.condicion !== "nuevo" ? CONDICION[v.condicion] : undefined,
+          }))}
+        />
         <p className="text-xs text-muted-foreground">
-          ¿No está? Crealo en Catálogo (o la ficha Open Box desde el producto nuevo) y volvé.
+          ¿No está?{" "}
+          <Link href="/admin/catalogo/nuevo" className="text-primary underline">
+            Crealo con + Nuevo producto
+          </Link>{" "}
+          (o agregale la variante en su ficha) y volvé.
         </p>
       </div>
       <div className="space-y-1">
         <Label htmlFor={`desc-${sufijo}`}>Descripción en la factura</Label>
         <Input id={`desc-${sufijo}`} name="descripcion" defaultValue={linea?.descripcion ?? ""} />
       </div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <div className="space-y-1">
           <Label htmlFor={`cant-${sufijo}`}>Cantidad</Label>
           <Input id={`cant-${sufijo}`} name="cantidad" type="number" min="1" required defaultValue={linea?.cantidad ?? 1} />
         </div>
         <div className="space-y-1">
-          <Label htmlFor={`costo-${sufijo}`}>Costo c/u (como en la factura)</Label>
+          <Label htmlFor={`costo-${sufijo}`}>Costo c/u</Label>
           <Input
             id={`costo-${sufijo}`}
             name="costo_unitario"
@@ -116,6 +127,17 @@ function CamposLinea({
             required
             defaultValue={linea ? String(Number(linea.costo_unitario)) : ""}
           />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor={`iva-${sufijo}`}>El costo que escribiste</Label>
+          {documento === "sin_iva" ? (
+            <p className="flex h-9 items-center text-sm text-muted-foreground">Sin IVA (no lleva)</p>
+          ) : (
+            <select id={`iva-${sufijo}`} name="costo_iva" defaultValue={documento === "factura" ? "con" : "sin"} className={SELECT}>
+              <option value="sin">SIN IVA (+IVA)</option>
+              <option value="con">CON IVA incluido</option>
+            </select>
+          )}
         </div>
         <div className="space-y-1">
           <Label htmlFor={`cond-${sufijo}`}>Condición</Label>
@@ -337,7 +359,7 @@ async function Detalle({
                     </p>
                     <p className="text-xs text-muted-foreground">{l.descripcion}</p>
                     <p className="tabular-nums">
-                      {l.cantidad} × {usd2(Number(l.costo_unitario))} = <b>{usd2(l.cantidad * Number(l.costo_unitario))}</b>
+                      {l.cantidad} × {usd2(Number(l.costo_unitario))} {IVA_DEL_COSTO[c.documento]} = <b>{usd2(l.cantidad * Number(l.costo_unitario))}</b>
                       {factor !== 1 ? (
                         <span className="text-xs text-muted-foreground"> · costo puesto {usd2(Number(l.costo_unitario) * factor)} c/u</span>
                       ) : null}
@@ -357,13 +379,13 @@ async function Detalle({
                   </div>
                 }
               >
-                <CamposLinea compraId={c.id} linea={l} variantes={variantes} />
+                <CamposLinea compraId={c.id} linea={l} variantes={variantes} documento={c.documento} />
               </FilaEditable>
             );
           })}
           {borrador ? (
             <FilaEditable accion={guardarLineaCompra} textoEditar="+ Agregar producto" textoGuardar="Agregar" className="rounded-md border border-dashed p-3">
-              <CamposLinea compraId={c.id} variantes={variantes} />
+              <CamposLinea compraId={c.id} variantes={variantes} documento={c.documento} />
             </FilaEditable>
           ) : null}
           {borrador && lineas.length ? (
