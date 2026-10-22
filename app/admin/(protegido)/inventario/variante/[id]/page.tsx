@@ -145,7 +145,7 @@ async function Detalle({ params }: { params: PageProps<"/admin/inventario/varian
       {faltan ? (
         <Editable
           titulo={`Registrar ${tipo === "imei" ? "IMEI" : "números de serie"} (faltan ${faltan})`}
-          descripcion="Para el stock que ya estaba en bodega antes del control por unidad. Uno por línea; doble SIM: los dos IMEI en la misma línea separados por coma."
+          descripcion="Para las unidades que entraron a bodega sin identificador (compras recibidas sin IMEI o stock de antes). Uno por línea; doble SIM: los dos IMEI en la misma línea separados por coma."
           accion={registrarIdentificadores}
           textoEditar="+ Registrar"
           vista={<p className="text-sm text-muted-foreground">Sin identificador no se puede comprobar en una garantía que la unidad es nuestra.</p>}

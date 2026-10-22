@@ -457,11 +457,16 @@ unidades se mueven lento (más de 30 días en bodega sin ventas en 30 días).
    como corresponde al documento (sin IVA en crédito fiscal, con IVA en factura de consumidor final) y te dice la
    conversión al guardar. Cada línea muestra si su costo está "sin IVA" o "con IVA". Luego
    la **condición** (Nuevo sellado / Open Box / Usado: revisá cada caja al recibir) y los **IMEI o números de serie**
-   (uno por línea; con un lector de código de barras se escanean directo). Los celulares necesitan el IMEI de cada
-   unidad; si falta uno o un número está mal digitado, avisa antes de recibir.
+   (uno por línea; con un lector de código de barras se escanean directo). Si un número está mal digitado o
+   repetido, avisa antes de recibir. **Los IMEI se pueden dejar para después**: si todavía no los tenés, dejá el
+   campo vacío; abajo del botón dice cuántos celulares van sin IMEI.
 4. **Recibir en bodega**: las unidades entran con su costo, la tienda las muestra como "Entrega en menos de 24 horas"
-   y cada IMEI queda registrado. Una unidad Open Box o usada no puede entrar a un producto nuevo: va en su ficha Open
-   Box.
+   y cada IMEI que pusiste queda registrado. Una unidad Open Box o usada no puede entrar a un producto nuevo: va en su
+   ficha Open Box.
+   - **IMEI pendientes**: en la compra ya recibida, cada producto al que le faltan dice **"Faltan N IMEI ·
+     Registrarlos"** (en amarillo). Tocalo, pegá o escaneá los IMEI (uno por línea) y **Registrar IMEI**: quedan
+     en esa compra con su costo. También aparecen en Inventario como "Faltan IMEI". Registralos antes de entregar
+     el equipo: sin IMEI no se puede comprobar en una garantía que la unidad es nuestra.
 5. **Marcar pagada** con la fecha cuando le pagués al proveedor. **Anular** solo si ninguna unidad de esa compra se
    vendió (marcá la casilla de confirmación).
 La lista **Compras** filtra **Por pagar** y **Sin recibir**. Los archivos de la factura quedan guardados (privados).

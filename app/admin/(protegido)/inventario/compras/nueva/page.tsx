@@ -106,7 +106,7 @@ async function Formulario() {
       <div className="flex flex-wrap items-center gap-3">
         <BotonGuardar>Crear compra</BotonGuardar>
         <p className="text-xs text-muted-foreground">
-          Después revisás las líneas, pegás los IMEI o números de serie y tocás <b>Recibir</b> para que entre a bodega.
+          Después revisás las líneas, pegás los IMEI o números de serie (si ya los tenés) y tocás <b>Recibir</b> para que entre a bodega.
         </p>
       </div>
     </FormularioAccion>

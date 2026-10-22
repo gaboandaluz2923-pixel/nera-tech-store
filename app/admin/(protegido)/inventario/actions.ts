@@ -375,6 +375,20 @@ export async function guardarCostoLote(_prev: EstadoAccion, form: FormData): Pro
   return ok("Costo guardado");
 }
 
+export async function registrarImeiCompra(_prev: EstadoAccion, form: FormData): Promise<EstadoAccion> {
+  const compraId = texto(form.get("compra_id"));
+  const lineaId = texto(form.get("linea_id"));
+  const items = leerIdentificadores(texto(form.get("identificadores")));
+  if (!items.length) return falla("Pegá o escaneá los IMEI (uno por línea).");
+  const { supabase } = await superAdmin();
+  const { data, error } = await supabase.rpc("inv_registrar_unidades_compra", { p_linea: lineaId, p_items: items });
+  if (error) return falla(mensajeBase(error.message));
+  const { data: l } = await supabase.from("compra_lineas").select("variante_id").eq("id", lineaId).maybeSingle();
+  if (l?.variante_id) refrescarVariante(l.variante_id as string);
+  refrescar(compraId);
+  return ok(`${data} ${data === 1 ? "IMEI registrado" : "IMEI registrados"}`);
+}
+
 export async function registrarIdentificadores(_prev: EstadoAccion, form: FormData): Promise<EstadoAccion> {
   const varianteId = texto(form.get("variante_id"));
   const items = leerIdentificadores(texto(form.get("identificadores")));

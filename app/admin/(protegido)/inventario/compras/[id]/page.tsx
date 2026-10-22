@@ -23,6 +23,7 @@ import {
   guardarLineaCompra,
   pagarCompra,
   quitarLineaCompra,
+  registrarImeiCompra,
   recibirCompra,
   subirArchivoCompra,
   verArchivoCompra,
@@ -165,7 +166,8 @@ function CamposLinea({
           placeholder={"356789012345607\n356789012345615, 356789012345623   ← doble SIM: los dos IMEI en la misma línea"}
         />
         <p className="text-xs text-muted-foreground">
-          Celulares: el IMEI de cada unidad es obligatorio (está en la caja; con un lector de código de barras se escanea directo aquí).
+          Celulares: el IMEI de cada unidad (está en la caja; con un lector de código de barras se escanea directo aquí). Si
+          todavía no los tenés, dejalo vacío: recibís igual y los registrás después.
           Accesorios: el número de serie si trae; los que no traen reciben un código Nera (NT-000123) para etiquetarlos.
         </p>
       </div>
@@ -221,10 +223,32 @@ async function Detalle({
       l.variante_id && (l.variantes?.productos?.condicion ?? "nuevo") !== l.condicion
         ? `${nombre}: la condición (${CONDICION[l.condicion]}) no coincide con el producto (${CONDICION[l.variantes?.productos?.condicion ?? "nuevo"]}).`
         : "",
-      ...revisarIdentificadores(l.identificadores ?? [], tipo, l.cantidad).map((a) => `${nombre}: ${a}`),
+      // Que falten IMEI no impide recibir: se registran después (abajo se avisa aparte)
+      ...revisarIdentificadores(l.identificadores ?? [], tipo, l.cantidad)
+        .filter((a) => !a.startsWith("Faltan"))
+        .map((a) => `${nombre}: ${a}`),
     ];
     return lista.filter(Boolean);
   });
+  const sinImei = lineas
+    .filter((l) => l.variantes?.productos?.categorias?.identificador === "imei")
+    .reduce((s, l) => s + Math.max(0, l.cantidad - (l.identificadores?.length ?? 0)), 0);
+  // Ya recibida: cuántos IMEI faltan todavía por línea (unidades creadas en su lote contra las que entraron)
+  const faltanPorLinea = new Map<string, number>();
+  if (!borrador && lineas.length) {
+    const { data: lotes } = await supabase
+      .from("lotes")
+      .select("compra_linea_id, cantidad, unidades(estado)")
+      .in(
+        "compra_linea_id",
+        lineas.map((l) => l.id)
+      );
+    for (const lo of (lotes ?? []) as unknown as { compra_linea_id: string; cantidad: number; unidades: { estado: string }[] }[]) {
+      // Lo que sigue en bodega de ese lote sin unidad registrada
+      const n = lo.cantidad - (lo.unidades ?? []).filter((u) => u.estado === "en_bodega").length;
+      if (n > 0) faltanPorLinea.set(lo.compra_linea_id, (faltanPorLinea.get(lo.compra_linea_id) ?? 0) + n);
+    }
+  }
   const sinIdAccesorios = lineas
     .filter((l) => (l.variantes?.productos?.categorias?.identificador ?? "serie") === "serie")
     .reduce((s, l) => s + Math.max(0, l.cantidad - (l.identificadores?.length ?? 0)), 0);
@@ -255,7 +279,7 @@ async function Detalle({
             {c.estado === "recibida" && c.recibida_en
               ? `Recibida por ${quien(c.recibida_por, nombres)} el ${fechaHora(c.recibida_en)}.`
               : borrador
-                ? "Revisá las líneas y los IMEI. Al tocar Recibir, las unidades entran a bodega con su costo y se ven en la tienda."
+                ? "Revisá las líneas. Al tocar Recibir, las unidades entran a bodega con su costo y se ven en la tienda. Los IMEI podés ponerlos ahora o después."
                 : null}
           </CardDescription>
         </CardHeader>
@@ -319,6 +343,12 @@ async function Detalle({
               </FormularioAccion>
             ) : null}
           </div>
+          {borrador && sinImei ? (
+            <p className="text-xs text-muted-foreground">
+              {sinImei} {sinImei === 1 ? "celular va" : "celulares van"} sin IMEI: podés recibir igual. Quedan en bodega como «Faltan
+              IMEI» y los registrás después desde esta compra o en Inventario.
+            </p>
+          ) : null}
           {borrador && sinIdAccesorios ? (
             <p className="text-xs text-muted-foreground">
               {sinIdAccesorios} {sinIdAccesorios === 1 ? "unidad" : "unidades"} sin número de serie recibirán un código Nera al recibir.
@@ -340,6 +370,7 @@ async function Detalle({
           {lineas.map((l) => {
             const tipo = l.variantes?.productos?.categorias?.identificador ?? "serie";
             const ids = l.identificadores ?? [];
+            const faltan = faltanPorLinea.get(l.id) ?? 0;
             return (
               <FilaEditable
                 key={l.id}
@@ -365,7 +396,11 @@ async function Detalle({
                       ) : null}
                     </p>
                     <p className="text-xs">
-                      {tipo === "imei" ? "IMEI" : "Series"}: {ids.length} de {l.cantidad}
+                      {!borrador && tipo === "imei"
+                        ? faltan > 0
+                          ? `IMEI: ${l.cantidad - faltan} de ${l.cantidad}`
+                          : "IMEI: todos registrados"
+                        : `${tipo === "imei" ? "IMEI" : "Series"}: ${ids.length} de ${l.cantidad}`}
                       {ids.length ? (
                         <span className="ml-1 font-mono text-muted-foreground">
                           {ids
@@ -376,6 +411,26 @@ async function Detalle({
                         </span>
                       ) : null}
                     </p>
+                    {!borrador && tipo === "imei" && faltan > 0 ? (
+                      <details className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs dark:bg-amber-950/30">
+                        <summary className="cursor-pointer font-medium text-amber-900 dark:text-amber-200">
+                          Faltan {faltan} IMEI · Registrarlos
+                        </summary>
+                        <FormularioAccion accion={registrarImeiCompra} className="mt-2 space-y-2">
+                          <input type="hidden" name="compra_id" value={c.id} />
+                          <input type="hidden" name="linea_id" value={l.id} />
+                          <Textarea
+                            name="identificadores"
+                            aria-label={`IMEI que faltan de ${l.variantes?.productos?.nombre ?? ""} ${l.variantes?.nombre ?? ""}`}
+                            rows={Math.min(6, faltan + 1)}
+                            className="bg-background font-mono text-sm"
+                            placeholder={"356789012345607\n356789012345615, 356789012345623   ← doble SIM"}
+                          />
+                          <p className="text-muted-foreground">Uno por línea (con lector de código de barras se escanean directo aquí).</p>
+                          <BotonGuardar size="sm">Registrar IMEI</BotonGuardar>
+                        </FormularioAccion>
+                      </details>
+                    ) : null}
                   </div>
                 }
               >
