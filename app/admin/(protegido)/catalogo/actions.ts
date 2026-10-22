@@ -211,47 +211,70 @@ export async function cambiarFoto(_prev: EstadoAccion, form: FormData): Promise<
 // ---------------------------------------------------------------------------
 // Variantes: color, stock propio y si se muestra. El precio se cambia en Precios (guarda historial).
 // ---------------------------------------------------------------------------
-export async function guardarVariante(_prev: EstadoAccion, form: FormData): Promise<EstadoAccion> {
-  const id = texto(form.get("id"));
-  const varianteId = texto(form.get("varianteId"));
-  const color = textoONulo(form.get("color"));
-  const stock = Math.max(0, Math.round(Number(form.get("stock")) || 0));
-  const activo = form.get("activo") === "on";
-  const disp = texto(form.get("disponibilidad_manual"));
-  const disponibilidad_manual = ["auto", "bajo_pedido", "agotado"].includes(disp) ? disp : "auto";
-  const nota = textoONulo(form.get("nota"));
-  const { supabase } = await equipo();
+type CambioVariante = {
+  varianteId: string;
+  color: string | null;
+  activo: boolean;
+  disponibilidad_manual: string;
+  stock: number;
+};
+
+/** Guarda una variante: color, si se muestra, disponibilidad y (con un ajuste de inventario) las unidades en bodega. */
+async function actualizarVariante(
+  supabase: Awaited<ReturnType<typeof equipo>>["supabase"],
+  productoId: string,
+  c: CambioVariante,
+  nota: string | null
+): Promise<string | null> {
   const { data: v } = await supabase
     .from("variantes")
     .select("ram_gb, almacenamiento_gb, stock")
-    .eq("id", varianteId)
-    .eq("producto_id", id)
+    .eq("id", c.varianteId)
+    .eq("producto_id", productoId)
     .single();
-  if (!v) return falla("No se encontró la variante.");
+  if (!v) return "No se encontró la variante.";
   const memoria =
-    v?.almacenamiento_gb == null
+    v.almacenamiento_gb == null
       ? null
       : v.ram_gb == null
         ? formatoAlmacenamiento(v.almacenamiento_gb)
         : `${v.ram_gb} GB + ${formatoAlmacenamiento(v.almacenamiento_gb)}`;
-  const nombre = [memoria, color].filter(Boolean).join(" · ") || "Único";
+  const nombre = [memoria, c.color].filter(Boolean).join(" · ") || "Único";
+  const disponibilidad_manual = ["auto", "bajo_pedido", "agotado"].includes(c.disponibilidad_manual) ? c.disponibilidad_manual : "auto";
   const { error } = await supabase
     .from("variantes")
-    .update({ color, activo, nombre, disponibilidad_manual, updated_at: new Date().toISOString() })
-    .eq("id", varianteId)
-    .eq("producto_id", id);
-  if (error) return falla(`No se pudo guardar: ${error.message}`);
-  // El stock en bodega cambia con un ajuste de inventario (queda en el kardex con quién y por qué)
+    .update({ color: c.color, activo: c.activo, nombre, disponibilidad_manual, updated_at: new Date().toISOString() })
+    .eq("id", c.varianteId)
+    .eq("producto_id", productoId);
+  if (error) return `${nombre}: ${error.message}`;
+  const stock = Math.max(0, Math.round(Number(c.stock) || 0));
   if (stock !== v.stock) {
-    const { error: e2 } = await supabase.rpc("inv_ajustar", {
-      p_variante: varianteId,
-      p_total: stock,
-      p_nota: nota ?? "Conteo de bodega",
-    });
-    if (e2) return falla(`Se guardó lo demás, pero no el stock: ${e2.message}`);
+    const { error: e2 } = await supabase.rpc("inv_ajustar", { p_variante: c.varianteId, p_total: stock, p_nota: nota ?? "Conteo de bodega" });
+    if (e2) return `${nombre}: se guardó lo demás, pero no las unidades en bodega (${e2.message})`;
+  }
+  return null;
+}
+
+/** Varias variantes a la vez (la tabla de Variantes: se marcan, se cambian y se guarda una sola vez). */
+export async function guardarVariantes(_prev: EstadoAccion, form: FormData): Promise<EstadoAccion> {
+  const id = texto(form.get("id"));
+  let cambios: CambioVariante[] = [];
+  try {
+    cambios = JSON.parse(texto(form.get("cambios")) || "[]");
+  } catch {
+    return falla("No se pudieron leer los cambios.");
+  }
+  if (!Array.isArray(cambios) || !cambios.length) return falla("No hay cambios para guardar.");
+  const { supabase } = await equipo();
+  const nota = textoONulo(form.get("nota"));
+  const errores: string[] = [];
+  for (const c of cambios.slice(0, 100)) {
+    const e = await actualizarVariante(supabase, id, { ...c, color: (c.color ?? "").trim().slice(0, 40) || null, activo: !!c.activo }, nota);
+    if (e) errores.push(e);
   }
   refrescar(id);
-  return ok(`${nombre}: guardado`);
+  if (errores.length) return falla(errores.join(" · "));
+  return ok(cambios.length === 1 ? "Variante guardada" : `${cambios.length} variantes guardadas`);
 }
 
 // ---------------------------------------------------------------------------

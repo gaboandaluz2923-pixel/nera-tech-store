@@ -215,7 +215,10 @@ Publicación), cambiá y **Guardar**. De arriba hacia abajo:
 4. **Características**: los campos cambian según la categoría (celulares: pantalla, procesador,
    cámaras, batería, carga, red, sistema, NFC, resistencia, peso). Lo que dejes vacío no se muestra.
    Si falta alguna, usá "Otra característica".
-5. **Variantes**: cada combinación de memoria y color (cada fila tiene su **Editar**):
+5. **Variantes**: una tabla con cada combinación de memoria y color. Se cambia directo en la fila; la fila cambiada
+   se pinta de amarillo y abajo aparece **Guardar cambios (n)** (o **Descartar**). Nada se guarda hasta tocarlo.
+   - Casillas de la izquierda: marcá varias (o **Marcar todas**) y usá **Mostrar**, **No mostrar** o
+     "Si no hay en bodega…" para cambiarlas juntas.
    - **Color** y **Mostrar** (desmarcalo para esconder una variante).
    - **En bodega**: las unidades propias. Normalmente no se toca: las compras (Inventario) las suben y los pedidos
      las bajan solos. Si al contar hay diferencia, cambiá el número y escribí el **motivo** (conteo, dañado…);

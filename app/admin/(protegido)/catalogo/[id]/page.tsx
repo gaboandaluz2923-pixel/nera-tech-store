@@ -3,11 +3,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ArrowDown, ArrowUp, ExternalLink, Star, Trash2 } from "lucide-react";
-import { Editable, FilaEditable } from "@/components/admin/editable";
+import { Editable } from "@/components/admin/editable";
 import { BotonGuardar, FormularioAccion } from "@/components/admin/formulario-accion";
 import { ListaHistorial, type Entrada } from "@/components/admin/lista-historial";
 import { Dato, Datos, Lineas } from "@/components/admin/vista";
 import { SubirFotos } from "@/components/admin/subir-fotos";
+import { VariantesEditor } from "@/components/admin/variantes-editor";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,7 +28,7 @@ import {
   guardarColecciones,
   guardarDatos,
   guardarFaq,
-  guardarVariante,
+  guardarVariantes,
   subirFoto,
 } from "../actions";
 
@@ -66,15 +67,7 @@ type Producto = {
   coleccion_producto: { coleccion_id: string }[];
 };
 
-const DISPONIBILIDAD_MANUAL = {
-  auto: "Según la lista del proveedor",
-  bajo_pedido: "Bajo pedido (48 h)",
-  agotado: "Agotado",
-} as const;
-
 const ESTADO_PRODUCTO = { activo: "Publicado", agotado: "Publicado como agotado", oculto: "Oculto" } as const;
-
-const usd = (n: number) => (n > 0 ? n.toLocaleString("en-US", { style: "currency", currency: "USD" }) : "—");
 
 function Campo({
   nombre,
@@ -539,80 +532,31 @@ async function Editor({
               "Aquí cambiás el color, las unidades propias en bodega (después de contarlas), la disponibilidad y si se muestra. El precio lo pone un administrador."
             )}
           </p>
-          {variantes.map((v) => (
-            <FilaEditable
-              key={v.id}
-              accion={guardarVariante}
-              vista={
-                <div className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-[1.4fr_1fr_1fr_1.3fr_1fr]">
-                  <p className="font-medium">{v.nombre}</p>
-                  <p>
-                    <span className="text-muted-foreground">Precio </span>
-                    {usd(Number(v.precio))}
-                  </p>
-                  <p>
-                    <span className="text-muted-foreground">En bodega </span>
-                    {v.stock}
-                  </p>
-                  <p>
-                    <span className="text-muted-foreground">Sin bodega </span>
-                    {DISPONIBILIDAD_MANUAL[v.disponibilidad_manual]}
-                  </p>
-                  <p className={v.activo ? "" : "text-muted-foreground"}>{v.activo ? "Se muestra" : "No se muestra"}</p>
-                </div>
-              }
-            >
-              <input type="hidden" name="id" value={p.id} />
-              <input type="hidden" name="varianteId" value={v.id} />
-              <p className="text-sm font-medium">
-                {v.nombre} <span className="font-normal text-muted-foreground">· Precio {usd(Number(v.precio))}</span>
-              </p>
-              <div className="grid grid-cols-2 items-end gap-3 sm:grid-cols-3">
-                <div className="space-y-1">
-                  <Label htmlFor={`color-${v.id}`} className="text-xs">
-                    Color
-                  </Label>
-                  <Input id={`color-${v.id}`} name="color" defaultValue={v.color ?? ""} />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor={`stock-${v.id}`} className="text-xs">
-                    En bodega
-                  </Label>
-                  <Input id={`stock-${v.id}`} name="stock" type="number" min="0" defaultValue={v.stock} />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor={`disp-${v.id}`} className="text-xs">
-                    Si no hay en bodega
-                  </Label>
-                  <select
-                    id={`disp-${v.id}`}
-                    name="disponibilidad_manual"
-                    defaultValue={v.disponibilidad_manual}
-                    className="h-9 w-full rounded-md border bg-background px-2 text-sm"
-                  >
-                    {Object.entries(DISPONIBILIDAD_MANUAL).map(([valor, texto]) => (
-                      <option key={valor} value={valor}>
-                        {texto}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <label className="flex h-9 items-center gap-2 text-sm">
-                  <input type="checkbox" name="activo" defaultChecked={v.activo} className="size-4 accent-[var(--marca)]" />
-                  Mostrar
-                </label>
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor={`nota-${v.id}`} className="text-xs">
-                  Si cambiaste las unidades en bodega: ¿por qué? (conteo, dañado, regalo…)
-                </Label>
-                <Input id={`nota-${v.id}`} name="nota" placeholder="Conteo de bodega" />
-                <p className="text-xs text-muted-foreground">
-                  Las compras al proveedor y las ventas mueven el stock solas; aquí solo se corrige después de contar.
-                </p>
-              </div>
-            </FilaEditable>
-          ))}
+          <VariantesEditor
+            key={JSON.stringify(variantes.map((v) => [v.id, v.color, v.stock, v.activo, v.disponibilidad_manual, v.precio]))}
+            productoId={p.id}
+            accion={guardarVariantes}
+            variantes={[...variantes]
+              .sort(
+                (a, b) =>
+                  (a.almacenamiento_gb ?? 0) - (b.almacenamiento_gb ?? 0) ||
+                  (a.ram_gb ?? 0) - (b.ram_gb ?? 0) ||
+                  (a.color ?? "").localeCompare(b.color ?? "") ||
+                  a.id.localeCompare(b.id)
+              )
+              .map((v) => ({
+                id: v.id,
+                memoria:
+                  v.almacenamiento_gb == null
+                    ? "Única"
+                    : `${v.ram_gb == null ? "" : `${v.ram_gb} GB + `}${v.almacenamiento_gb >= 1024 ? `${v.almacenamiento_gb / 1024} TB` : `${v.almacenamiento_gb} GB`}`,
+                color: v.color,
+                stock: v.stock,
+                precio: Number(v.precio),
+                activo: v.activo,
+                disponibilidad_manual: v.disponibilidad_manual,
+              }))}
+          />
           <details className="rounded-md border border-dashed p-3">
             <summary className="cursor-pointer text-sm font-medium text-primary">+ Agregar variante</summary>
             <FormularioAccion accion={agregarVariante} limpiar className="mt-3 space-y-2">
