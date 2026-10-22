@@ -1,0 +1,38 @@
+[
+ {
+  "slug": "xiaomi-redmi-note-17-pro-5g",
+  "resumen": "Batería de 8340 mAh con carga de 67 W, pantalla AMOLED 1.5K y resistencia IP68/IP69K",
+  "descripcion": "El Redmi Note 17 Pro 5G trae una batería de 8340 mAh que, según Xiaomi, te dura más de dos días. Con su carga de 67 W llegás al 50% en unos 34 minutos, y hasta podés cargar otro teléfono por cable (22.5 W).\n\nSu pantalla AMOLED de 6.83\" en 1.5K a 120 Hz llega a 3500 nits, así que se ve clara aunque estés bajo el sol. Aguanta polvo y agua (IP66, IP68, IP69 e IP69K) y tiene Gorilla Glass Victus 2.\n\nLa cámara de 50 MP con estabilizador óptico te da fotos nítidas, y con el Snapdragon 6s Gen 4, NFC y 6 años de actualizaciones de seguridad, te acompaña por años.",
+  "caracteristicas": {
+   "pantalla": "6.83\" AMOLED 1.5K (2772 × 1280), 120 Hz, hasta 3500 nits",
+   "procesador": "Snapdragon 6s Gen 4 (4 nm), ocho núcleos hasta 2.4 GHz",
+   "ram": "6 GB",
+   "almacenamiento": "256 GB (UFS 3.1)",
+   "camara": "50 MP con estabilizador óptico + 8 MP gran angular",
+   "camara_frontal": "16 MP",
+   "bateria": "8340 mAh (silicio-carbono)",
+   "carga": "67 W HyperCharge por USB-C; carga inversa por cable de 22.5 W",
+   "red": "5G, Dual SIM (nano + nano o nano + eSIM)",
+   "sistema_operativo": "Xiaomi HyperOS 3, con 6 años de actualizaciones de seguridad",
+   "nfc": "Sí",
+   "proteccion": "IP66, IP68, IP69 e IP69K; Gorilla Glass Victus 2; caídas de hasta 3 m (certificación SGS)",
+   "peso": "223 g"
+  },
+  "incluye": "Teléfono\nAdaptador de corriente de 67 W\nCable USB tipo C\nPin para sacar la SIM\nFunda protectora\nGuía rápida y tarjeta de garantía",
+  "faq": [
+   {
+    "pregunta": "¿Trae cargador?",
+    "respuesta": "Xiaomi lista en la caja el cargador de 67 W, el cable USB-C y una funda, aunque aclara que el contenido puede variar según la región."
+   },
+   {
+    "pregunta": "¿Se puede mojar?",
+    "respuesta": "Tiene IP68 e IP69K: en pruebas de laboratorio aguantó 2 metros de agua dulce por 72 horas y chorros de agua a presión. Xiaomi no lo recomienda para playa ni piscina, y la garantía no cubre daños por líquidos."
+   },
+   {
+    "pregunta": "¿Funciona con las compañías de El Salvador?",
+    "respuesta": "Sí, viene liberado y funciona con cualquier compañía de El Salvador."
+   }
+  ],
+  "meta_descripcion": "Xiaomi Redmi Note 17 Pro 5G 6/256 GB: batería 8340 mAh, carga 67 W, AMOLED 1.5K e IP68. Garantía de 12 meses y pago contra entrega."
+ }
+]
