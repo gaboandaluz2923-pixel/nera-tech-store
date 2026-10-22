@@ -154,6 +154,11 @@ Una fila por configuración (modelo + memoria; los colores van juntos).
 - **Proveedores**: en negrita el mejor (menor costo puesto con existencia). Entre paréntesis la
   existencia que informa el proveedor. Tachado = sin existencia. ▲▼ = cambio contra su lista anterior.
   "sug." = precio sugerido por el proveedor (Idecom lo manda).
+  **En bodega** = lo que ya compraste y tenés guardado: su costo es el real del lote más viejo (el próximo que
+  sale) y, si hay, manda sobre los proveedores para calcular margen y sugerido.
+- Aparecen los productos que se le pueden comprar a un proveedor, los que tienen unidades en bodega y los
+  creados con **+ Nuevo producto** aunque todavía no tengan proveedor (en ese caso sin costo ni margen: el margen
+  aparece cuando recibís la compra en bodega o cuando le ponés proveedor).
 - **Precio con margen objetivo**: lo que tendrías que cobrar para el margen de la categoría
   (celulares 10%, accesorios 15–25%), redondeado a precios terminados en 5 o 9.
 - **Tu precio de venta**: se ve el precio (o "Sin precio" en naranja). Tocá el lápiz y salen dos campos juntos:

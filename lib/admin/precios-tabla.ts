@@ -81,12 +81,14 @@ type Producto = {
 };
 type Proveedor = CostosProveedor & { id: string; nombre: string; plazo_credito_dias: number };
 
+type Lote = { variante_id: string; cantidad: number; costo_unitario: number | null; fecha: string; created_at: string };
+
 type Observado = { producto_id: string; ram_gb: number | null; almacenamiento_gb: number | null; precio: number; fuente: string; fecha: string };
 
 export async function tablaPrecios(supabase: SupabaseClient): Promise<FilaPrecio[]> {
   const hace30 = new Date(Date.now() - 30 * 86_400_000);
   const pct = (await configTienda()).descuentoSinTarjeta;
-  const [vinculos, variantes, productos, proveedores, observadosR, ventasR] = await Promise.all([
+  const [vinculos, variantes, productos, proveedores, observadosR, ventasR, conProveedorR, lotesR] = await Promise.all([
     todo<Vinculo>((a, b) =>
       supabase
         .from("producto_proveedor")
@@ -118,7 +120,21 @@ export async function tablaPrecios(supabase: SupabaseClient): Promise<FilaPrecio
       .order("fecha", { ascending: false })
       .limit(5000),
     supabase.rpc("ventas_por_configuracion", { desde: hace30.toISOString() }),
+    // Variantes que alguna vez tuvieron proveedor (aunque ya no): las que nunca tuvieron son productos creados a mano
+    todo<{ variante_id: string }>((a, b) => supabase.from("producto_proveedor").select("variante_id").order("id").range(a, b)),
+    // Lo que hay en bodega: lo más viejo sale primero, así que ese es el costo de la próxima venta
+    todo<Lote>((a, b) =>
+      supabase
+        .from("lotes")
+        .select("variante_id, cantidad, costo_unitario, fecha, created_at")
+        .gt("cantidad", 0)
+        .order("fecha")
+        .order("created_at")
+        .range(a, b)
+    ).catch(() => [] as Lote[]),
   ]);
+  const conProveedor = new Set(conProveedorR.map((l) => l.variante_id));
+  const lotes = lotesR;
   // Sin la migración 0007 la tabla sigue funcionando, solo sin mercado ni rotación
   const observados = (observadosR.error ? [] : (observadosR.data ?? [])) as Observado[];
   const ventas = new Map(
@@ -146,9 +162,15 @@ export async function tablaPrecios(supabase: SupabaseClient): Promise<FilaPrecio
     if (v) grupos.get(claveDe(v))?.vinculos.push(l);
   }
 
+  const lotesPorVariante = new Map<string, Lote[]>();
+  for (const l of lotes) lotesPorVariante.set(l.variante_id, [...(lotesPorVariante.get(l.variante_id) ?? []), l]);
+
   const filas: FilaPrecio[] = [];
   for (const [clave, g] of grupos) {
-    if (g.vinculos.length === 0) continue; // sin proveedor vigente: no se puede comprar
+    const enBodega = [...g.variantes.keys()].flatMap((id) => lotesPorVariante.get(id) ?? []);
+    const creadoAMano = [...g.variantes.keys()].every((id) => !conProveedor.has(id));
+    // Se muestra si se le puede comprar a alguien, si hay en bodega o si es un producto nuevo creado en Catálogo
+    if (g.vinculos.length === 0 && enBodega.length === 0 && !creadoAMano) continue;
     const v0 = [...g.variantes.values()][0];
     const prod = prodPorId.get(v0.producto_id);
     if (!prod) continue;
@@ -185,6 +207,22 @@ export async function tablaPrecios(supabase: SupabaseClient): Promise<FilaPrecio
     const ofertas = [...porProveedor.entries()]
       .sort(([ia, a], [ib, b]) => a.costo - b.costo || plazo(ib) - plazo(ia))
       .map(([, o]) => o);
+    // Bodega: el costo real del lote más viejo (con IVA si la compra no da crédito fiscal). Si hay, manda.
+    const primerLote = enBodega
+      .filter((l) => l.costo_unitario !== null)
+      .sort((a, b) => a.fecha.localeCompare(b.fecha) || a.created_at.localeCompare(b.created_at))[0];
+    if (primerLote) {
+      const costo = Math.round(Number(primerLote.costo_unitario) * 100) / 100;
+      ofertas.unshift({
+        proveedor: "En bodega",
+        precio: costo,
+        costo,
+        anterior: null,
+        stock: enBodega.reduce((s, l) => s + l.cantidad, 0),
+        disponible: true,
+        sugerido: null,
+      });
+    }
     const mejor = ofertas.find((o) => o.disponible) ?? null;
 
     const precios = [...g.variantes.values()].map((v) => Number(v.precio)).filter((p) => p > 0);
