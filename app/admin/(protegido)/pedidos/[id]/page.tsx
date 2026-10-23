@@ -31,7 +31,7 @@ import {
   guardarFactura,
   registrarPago,
 } from "../actions";
-import { registrarDevolucion, registrarPagoSaldo } from "../editar-actions";
+import { quitarPago, registrarDevolucion, registrarPagoSaldo } from "../editar-actions";
 
 type Pedido = PedidoBase & {
   id: string;
@@ -316,6 +316,24 @@ async function Detalle({ params }: { params: PageProps<"/admin/pedidos/[id]">["p
                 Primero devolvé el dinero (en Wompi → Transacciones → Reembolsar, o por transferencia) y después registralo aquí.
               </p>
             </FormularioAccion>
+          ) : null}
+          {esAdmin && p.pagado_en ? (
+            <details className="border-t pt-3 text-sm">
+              <summary className="cursor-pointer text-muted-foreground">¿Se marcó como pagado por error?</summary>
+              <FormularioAccion accion={quitarPago} className="mt-2 space-y-2">
+                <input type="hidden" name="id" value={p.id} />
+                <div className="space-y-1">
+                  <Label htmlFor="quitar-motivo">Por qué se quita el pago</Label>
+                  <Input id="quitar-motivo" name="motivo" required placeholder="Ej. se marcó por error, el cliente todavía no paga" />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  El pedido vuelve a &quot;Sin pagar&quot; y queda anotado en el historial con tu nombre. Si el cliente paga
+                  después con su enlace de Wompi, se marca pagado solo. Si ya tiene factura electrónica, primero anulala en
+                  Facturación.
+                </p>
+                <BotonGuardar variant="outline">Quitar el pago</BotonGuardar>
+              </FormularioAccion>
+            </details>
           ) : null}
           {p.forma_pago === "contra_entrega" && !p.pagado_en ? (
             <p className="text-xs text-muted-foreground">Al marcarlo como entregado se registra cobrado en efectivo.</p>

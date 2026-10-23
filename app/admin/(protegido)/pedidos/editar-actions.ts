@@ -253,3 +253,63 @@ export async function registrarDevolucion(_prev: EstadoAccion, form: FormData): 
   refrescar(id);
   return ok(`Devolución de ${usd2(monto)} registrada`);
 }
+
+/**
+ * Quitar el pago de un pedido que se marcó como pagado por error. El pedido vuelve a "Sin pagar" y sus pagos a
+ * "pendiente" (el enlace de Wompi sigue sirviendo: si el cliente paga después, se marca solo). Si ya tiene factura
+ * electrónica, primero hay que anularla en Facturación.
+ */
+export async function quitarPago(_prev: EstadoAccion, form: FormData): Promise<EstadoAccion> {
+  const { usuario } = await superAdmin();
+  const id = texto(form.get("id"), 40);
+  const motivo = texto(form.get("motivo"), 300);
+  if (!motivo) return falla("Escribí por qué se quita el pago (por ejemplo: se marcó por error, el cliente no ha pagado).");
+  const sb = createServiceClient();
+  const { data: p } = await sb.from("pedidos").select("id, estado, pagado_en, pagos(id, monto, estado)").eq("id", id).single();
+  if (!p) return falla("No se encontró el pedido.");
+  const pagos = (p.pagos ?? []) as { id: string; monto: number; estado: string }[];
+  if (!p.pagado_en && !pagos.some((x) => x.estado === "aprobado")) return falla("Este pedido no está marcado como pagado.");
+  if (pagos.some((x) => x.estado === "aprobado" && Number(x.monto) < 0))
+    return falla("Este pedido tiene una devolución registrada; no se puede quitar el pago desde aquí. Escribime y lo vemos.");
+  const { data: dte } = await sb
+    .from("dte_documentos")
+    .select("numero_control, estado")
+    .eq("pedido_id", id)
+    .eq("prueba", false)
+    .in("estado", ["pendiente", "procesado", "contingencia"])
+    .limit(1)
+    .maybeSingle();
+  if (dte)
+    return falla(
+      `Este pedido ya tiene factura electrónica (${dte.numero_control ?? "en proceso"}). Primero anulala en Facturación y después quitá el pago.`
+    );
+
+  const { error } = await sb.from("pedidos").update({ pagado_en: null }).eq("id", id);
+  if (error) return falla(`No se pudo quitar el pago: ${error.message}`);
+  await sb.from("pagos").update({ estado: "pendiente" }).eq("pedido_id", id).eq("estado", "aprobado");
+
+  // Puntos Nera ganados con este pedido (solo si ya estaba entregado y pagado): se anulan
+  const { data: movs } = await sb.from("puntos_movimientos").select("tipo, puntos, cliente_id").eq("pedido_id", id);
+  const ganados = (movs ?? []).find((m) => m.tipo === "ganados");
+  let puntos = "";
+  if (ganados && !(movs ?? []).some((m) => m.tipo === "anulados")) {
+    await sb.from("puntos_movimientos").insert({
+      cliente_id: ganados.cliente_id,
+      pedido_id: id,
+      tipo: "anulados",
+      puntos: -ganados.puntos,
+      nota: "Se quitó el pago del pedido",
+      usuario,
+    });
+    puntos = ` Se anularon los ${ganados.puntos} puntos que había ganado.`;
+  }
+  await sb.from("pedido_eventos").insert({
+    pedido_id: id,
+    estado_anterior: p.estado,
+    estado_nuevo: p.estado,
+    nota: `Pago quitado: ${motivo}`,
+    usuario,
+  });
+  refrescar(id);
+  return ok(`Listo: el pedido quedó sin pagar.${puntos}`);
+}

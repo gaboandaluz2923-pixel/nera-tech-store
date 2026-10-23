@@ -291,6 +291,10 @@ Confirmado, En camino, Entregado), si está **Pagado** o **Sin pagar**, y si toc
 2. **Pago**: forma de pago y si ya está pagado. Los pagos con tarjeta se marcan solos cuando Wompi los
    aprueba. Para transferencia o tasa 0%, cuando confirmes el pago tocá **Marcar como pagado** (podés
    anotar la referencia). En contra entrega, al marcar **entregado** queda cobrado solo.
+   **¿Se marcó como pagado por error?** (solo administradores, abajo de la tarjeta Pago): escribí el motivo y tocá
+   **Quitar el pago**. El pedido vuelve a "Sin pagar", queda anotado en el historial con tu nombre y, si había ganado
+   puntos Nera, se anulan. Si es con tarjeta, el enlace de Wompi sigue sirviendo y se marca solo cuando pague. Si el
+   pedido ya tiene factura electrónica, primero anulala en Facturación.
 3. **Factura electrónica**: dice si es consumidor final o crédito fiscal (con NIT, NRC, razón social y
    giro que dio el cliente) y si ya toca emitirla. Emitila en tu sistema de facturación, escribí el
    código de generación o número de control, subí el PDF y tocá **Guardar factura**. Desde ese momento
