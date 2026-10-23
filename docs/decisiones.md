@@ -162,3 +162,14 @@ frecuentes y meta descripción con datos oficiales de cada marca (`supabase/cont
 `scripts/fichas-completar.mjs`, que solo llena campos vacíos). Fotos oficiales nuevas para Insta360 Bullet Time, timbre
 eufy 1080p (kit E8220) y cable Anker 542 (A80B1H21, liso "Bio-Based"). Siguen sin foto, para que Angel las tome: Gomobile
 F18, audífonos con cable Infinix (modelo por confirmar), Kieslect KS3E (Ks3 Elite por confirmar) y los 3 tarros de cables Infinix.
+
+## 23 oct 2026 — Next.js 16.4.0 → 16.4.3 (seguridad)
+- La compilación se detuvo por avisos de seguridad críticos de Next.js 16.0.0–16.4.0 (ejecución remota de código en la
+  optimización de imágenes con SVG y en funciones `use cache`; caída del servicio con Server Actions).
+- Gabriel aprobó actualizar a 16.4.3 (misma versión mayor; `next` y `eslint-config-next`). Probado: tienda, panel,
+  `npm audit --omit=dev` sin vulnerabilidades.
+
+## 23 oct 2026 — Corregir costos de compras recibidas
+- Migración 0018: `inv_corregir_costos_compra` recalcula lotes, kardex y costo de ventas ya hechas al corregir
+  "Otros costos" o el costo c/u de una línea en una compra recibida.
+
