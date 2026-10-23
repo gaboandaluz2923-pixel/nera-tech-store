@@ -173,3 +173,10 @@ F18, audífonos con cable Infinix (modelo por confirmar), Kieslect KS3E (Ks3 Eli
 - Migración 0018: `inv_corregir_costos_compra` recalcula lotes, kardex y costo de ventas ya hechas al corregir
   "Otros costos" o el costo c/u de una línea en una compra recibida.
 
+## 23 oct 2026 — Garantía por tipo de producto
+- Pedido de Gabriel: accesorios 6 meses, celulares 12. Gabriel eligió que tablets, televisores, consolas y energía
+  también lleven 12 (son equipos). Accesorios = audífonos, cargadores, protección (cases), bocinas, relojes, cámaras y otros.
+- Configuración → Garantía tiene los dos plazos; la ficha, la portada, la página Garantía, los correos y la búsqueda
+  de IMEI usan el de cada producto (migración 0019, `lib/tienda/garantia.ts`). Las fichas de accesorios pasaron de
+  "Garantía de 12 meses" a "Garantía de 6 meses".
+

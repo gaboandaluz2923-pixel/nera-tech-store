@@ -30,7 +30,7 @@ export function PrepararCampana({
   const [tipo, setTipo] = useState<TipoCampana>("quincena");
   const [ids, setIds] = useState<string[]>(sugeridos.quincena);
   const [asunto, setAsunto] = useState<string>(tipos.quincena.asunto);
-  const [previa, setPrevia] = useState("Pagás al recibir · Garantía de 12 meses");
+  const [previa, setPrevia] = useState("Pagás al recibir · Garantía por escrito");
   const [titulo, setTitulo] = useState<string>(tipos.quincena.titulo);
   const [intro, setIntro] = useState<string>(tipos.quincena.intro);
   const [cierre, setCierre] = useState<string>(tipos.quincena.cierre);

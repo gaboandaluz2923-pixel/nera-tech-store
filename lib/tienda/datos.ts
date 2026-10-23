@@ -87,7 +87,10 @@ export type ProductoDetalle = ProductoResumen & {
 };
 
 export type Garantia = {
+  /** Celulares (meses) */
   plazo_meses: number;
+  /** Accesorios y todo lo que no es celular (meses); si falta, 6 */
+  plazo_meses_accesorios?: number;
   resumen: string;
   cambio_inmediato_dias?: number;
   cubre: string[];

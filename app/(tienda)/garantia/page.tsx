@@ -3,11 +3,12 @@ import { Check, ShieldCheck, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { IconoWhatsApp } from "@/components/tienda/icono-whatsapp";
 import { configTienda } from "@/lib/tienda/datos";
+import { mesesAccesorio, mesesCelular } from "@/lib/tienda/garantia";
 import { enlaceWhatsAppA } from "@/lib/whatsapp";
 
 export const metadata: Metadata = {
   title: "Garantía",
-  description: "Garantía Nera Tech de 12 meses por escrito: qué cubre, qué no cubre y cómo reclamarla.",
+  description: "Garantía Nera Tech por escrito: 12 meses en celulares y equipos, 6 en accesorios. Qué cubre, qué no cubre y cómo reclamarla.",
   alternates: { canonical: "/garantia" },
 };
 
@@ -19,8 +20,18 @@ export default async function PaginaGarantia() {
     <div className="mx-auto max-w-3xl px-4 pt-6 pb-16">
       <div className="flex items-center gap-3">
         <ShieldCheck className="size-9 text-marca" aria-hidden />
-        <h1 className="text-2xl font-bold sm:text-3xl">Garantía de {g?.plazo_meses ?? 12} meses</h1>
+        <h1 className="text-2xl font-bold sm:text-3xl">Garantía Nera Tech</h1>
       </div>
+      <dl className="mt-4 grid grid-cols-2 gap-3">
+        <div className="rounded-xl border p-4">
+          <dt className="text-sm text-muted-foreground">Celulares, tablets, TV, consolas y energía</dt>
+          <dd className="text-2xl font-bold">{mesesCelular(g)} meses</dd>
+        </div>
+        <div className="rounded-xl border p-4">
+          <dt className="text-sm text-muted-foreground">Accesorios: audífonos, cargadores, cases, bocinas, relojes y cámaras</dt>
+          <dd className="text-2xl font-bold">{mesesAccesorio(g)} meses</dd>
+        </div>
+      </dl>
       <p className="mt-3 text-lg text-muted-foreground">
         {g?.resumen ?? "Todos nuestros equipos tienen garantía Nera Tech por defectos de fábrica."}
       </p>

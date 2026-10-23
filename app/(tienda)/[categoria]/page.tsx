@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ListadoFiltrable } from "@/components/tienda/listado-filtrable";
 import { BarraConfianza } from "@/components/tienda/confianza";
+import { mesesGarantia } from "@/lib/tienda/garantia";
 import { catalogo, configTienda } from "@/lib/tienda/datos";
 import { CATEGORIAS } from "@/lib/tienda/formato";
 
@@ -105,7 +106,7 @@ async function Listado({ params }: { params: PageProps<"/[categoria]">["params"]
         )}
       </div>
       <div className="mt-12">
-        <BarraConfianza condicion={cat.slug === "open-box" ? "open_box" : "nuevo"} />
+        <BarraConfianza condicion={cat.slug === "open-box" ? "open_box" : "nuevo"} mesesGarantia={mesesGarantia(c.garantia, cat.slug)} />
       </div>
     </>
   );

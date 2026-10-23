@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { Check, ShieldCheck, X } from "lucide-react";
 import { BarraConfianza } from "@/components/tienda/confianza";
+import { mesesGarantia } from "@/lib/tienda/garantia";
 import { CompraProducto } from "@/components/tienda/compra-producto";
 import { Galeria } from "@/components/tienda/galeria";
 import { TarjetaProducto } from "@/components/tienda/tarjeta-producto";
@@ -257,7 +258,7 @@ async function Ficha({ params }: { params: PageProps<"/producto/[slug]">["params
             <div className="mt-3 flex items-start gap-3 rounded-xl border p-4 text-sm">
               <ShieldCheck className="mt-0.5 size-5 shrink-0 text-marca" aria-hidden />
               <p>
-                <span className="font-semibold">Garantía de {g.plazo_meses} meses.</span>{" "}
+                <span className="font-semibold">Garantía de {mesesGarantia(g, p.categoria)} meses.</span>{" "}
                 {g.cambio_inmediato_dias ? `Si falla en los primeros ${g.cambio_inmediato_dias} días, te lo cambiamos por uno nuevo. ` : ""}
                 <Link href="/garantia" className="font-medium text-primary underline">
                   Qué cubre
@@ -369,7 +370,7 @@ async function Ficha({ params }: { params: PageProps<"/producto/[slug]">["params
       ) : null}
 
       <div className="mt-12">
-        <BarraConfianza condicion={p.condicion} />
+        <BarraConfianza condicion={p.condicion} mesesGarantia={mesesGarantia(c.garantia, p.categoria)} />
       </div>
     </>
   );

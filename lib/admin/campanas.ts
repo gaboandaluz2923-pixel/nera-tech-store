@@ -14,7 +14,7 @@ export const TIPOS_CAMPANA = {
     nombre: "Oferta de quincena",
     asunto: "Llegó la quincena: tu próximo celular a mejor precio",
     titulo: "Llegó la quincena 🎉",
-    intro: "Estos son los precios de esta quincena. Pagás al recibir, con garantía de 12 meses por escrito.",
+    intro: "Estos son los precios de esta quincena. Pagás al recibir, con garantía por escrito (12 meses en celulares y equipos, 6 en accesorios).",
     cierre: "Si tenés dudas sobre cuál te conviene, escribinos por WhatsApp y te ayudamos a elegir.",
   },
   bodega: {

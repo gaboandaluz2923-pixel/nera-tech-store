@@ -1,6 +1,8 @@
 // Plantillas de los correos de pedidos. HTML sencillo con tablas y estilos en línea
 // (así se ve bien en Gmail, Outlook y el teléfono). Todo el texto en español de El Salvador.
 
+import { MESES_ACCESORIO, MESES_CELULAR } from "@/lib/tienda/garantia";
+
 export type DatosPedidoCorreo = {
   numero: number;
   nombre: string;
@@ -421,7 +423,7 @@ ${x.etiquetas.map((e) => `<span style="display:inline-block;margin:0 4px 6px 0;p
 <a href="${esc(x.enlace)}" style="display:inline-block;padding:10px 18px;border-radius:10px;background:${NARANJA};font-size:15px;font-weight:bold;color:#ffffff;text-decoration:none">Ver y comprar</a>
 </td></tr></table>`;
   const confianza = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 4px;background:#f7f7f8;border-radius:12px"><tr><td style="padding:12px 14px;font-size:13px;line-height:1.6;color:#333;text-align:center">
-✔ Pagás al recibir &nbsp;·&nbsp; ✔ Garantía de 12 meses &nbsp;·&nbsp; ✔ Envío a todo el país</td></tr></table>`;
+✔ Pagás al recibir &nbsp;·&nbsp; ✔ Garantía: ${MESES_CELULAR} meses en celulares y equipos, ${MESES_ACCESORIO} en accesorios &nbsp;·&nbsp; ✔ Envío a todo el país</td></tr></table>`;
   const cuerpo =
     c.intro
       .split(/\n{2,}/)
@@ -444,6 +446,6 @@ ${x.etiquetas.map((e) => `<span style="display:inline-block;margin:0 4px 6px 0;p
     c.productos
       .map((x) => `${x.nombre}: ${x.desde ? "desde " : ""}${usd(x.precio)} (${usd(x.precioEfectivo)} en efectivo)\n${x.enlace}`)
       .join("\n\n") +
-    `\n\n${c.cierre}\n\nPagás al recibir · Garantía de 12 meses · Envío a todo el país\n${c.enlaceTienda}\n\nNo quiero recibir más correos: {{ unsubscribe }}`;
+    `\n\n${c.cierre}\n\nPagás al recibir · Garantía: ${MESES_CELULAR} meses en celulares y equipos, ${MESES_ACCESORIO} en accesorios · Envío a todo el país\n${c.enlaceTienda}\n\nNo quiero recibir más correos: {{ unsubscribe }}`;
   return { asunto: c.asunto, html, texto };
 }

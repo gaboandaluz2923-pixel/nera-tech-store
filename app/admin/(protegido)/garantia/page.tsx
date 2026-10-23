@@ -36,6 +36,7 @@ type Resultado = {
   cliente_telefono: string | null;
   vendida_en: string | null;
   garantia_hasta: string | null;
+  garantia_meses: number | null;
 };
 
 async function Resultados({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
@@ -133,7 +134,7 @@ async function Resultados({ searchParams }: { searchParams: Promise<{ q?: string
                     {r.garantia_hasta
                       ? `${vigente ? "Vigente" : "Vencida"} · hasta ${fechaCorta(`${r.garantia_hasta.slice(0, 10)}T12:00:00`)}`
                       : r.estado === "historial"
-                        ? "12 meses desde la fecha de su factura"
+                        ? `${r.garantia_meses ?? 12} meses desde la fecha de su factura`
                         : "Empieza al venderse"}
                   </dd>
                 </div>

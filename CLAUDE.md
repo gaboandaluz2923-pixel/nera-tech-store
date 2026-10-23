@@ -139,7 +139,8 @@ Reglas de negocio:
 - Tasa 0%: hasta 12 meses con tarjetas de Banco Agrícola, BAC o Cuscatlán, solo por WhatsApp
 - Cuentas para transferencia: Banco Agrícola y Banco de América Central (tipo, número y titular los carga
   Gabriel en el panel; nunca escribirlos en el código ni en el chat)
-- Garantía: 12 meses desde la compra; cubre defectos de fabricación y fallas de funcionamiento normal; no cubre
+- Garantía: 12 meses en celulares y equipos (tablets, TV, consolas, energía) y 6 meses en accesorios (audífonos,
+  cargadores, cases, bocinas, relojes, cámaras), desde la compra (`lib/tienda/garantia.ts` y `garantia_meses()` en la base); cubre defectos de fabricación y fallas de funcionamiento normal; no cubre
   daños físicos, líquidos, maltrato, equipos manipulados por terceros; no transferible ni válida para reventa;
   se reclama con factura original, DUI y el equipo
 - Pie de página: "San Salvador, El Salvador · NIT 0623-090426-116-2" (sin dirección exacta)

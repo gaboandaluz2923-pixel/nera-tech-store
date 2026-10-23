@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { BannerCampana } from "@/components/tienda/banner-campana";
 import { BarraConfianza } from "@/components/tienda/confianza";
+import { mesesAccesorio, mesesCelular, mesesGarantia, textoPlazos } from "@/lib/tienda/garantia";
 import { TarjetaProducto } from "@/components/tienda/tarjeta-producto";
 import { IconoWhatsApp } from "@/components/tienda/whatsapp-flotante";
 import { campanaDestacada, catalogo, configTienda } from "@/lib/tienda/datos";
@@ -88,7 +89,7 @@ export default async function Inicio() {
             p={campana.destacado}
             descuentoSinTarjeta={c.descuentoSinTarjeta}
             mesesTasaCero={meses}
-            mesesGarantia={c.garantia?.plazo_meses ?? 12}
+            mesesGarantia={mesesGarantia(c.garantia, campana.destacado.categoria)}
             whatsapp={c.whatsapp}
           />
           {campana.otros.length ? (
@@ -116,8 +117,8 @@ export default async function Inicio() {
             Celulares nuevos al mejor precio, entregados en tu puerta.
           </h1>
           <p className="mt-4 max-w-xl text-white/75 sm:text-lg">
-            Equipos sellados con garantía de {c.garantia?.plazo_meses ?? 12}{" "}
-            meses. Pagás al recibir {dondeContraEntrega(c.contraEntrega)};
+            Equipos sellados con garantía de {mesesCelular(c.garantia)} meses ({mesesAccesorio(c.garantia)} en
+            accesorios). Pagás al recibir {dondeContraEntrega(c.contraEntrega)};
             también con tarjeta, transferencia o tasa 0%.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
@@ -154,7 +155,11 @@ export default async function Inicio() {
         </section>
       )}
 
-      <BarraConfianza mesesGarantia={c.garantia?.plazo_meses ?? 12} />
+      <BarraConfianza
+        mesesGarantia={mesesCelular(c.garantia)}
+        hasta
+        textoGarantia={`Por escrito: ${textoPlazos(c.garantia)}`}
+      />
 
       {/* 2. Categorías */}
       {categorias.length > 1 ? (

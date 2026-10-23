@@ -87,7 +87,8 @@ Datos del negocio que ve el cliente. Cada recuadro muestra lo que está guardado
 - **Datos para el pie de página**: nombre, NIT, dirección y correo. Hoy: "San Salvador, El Salvador ·
   NIT 0623-090426-116-2" (sin dirección exacta, a propósito).
 - **Garantía**: meses, días de cambio inmediato y las listas de qué cubre, qué no y cómo reclamar
-  (una cosa por línea). Hoy sigue la carta de garantía de Nera Tech: 12 meses, sin cambio inmediato (0 días),
+  (una cosa por línea). Hoy sigue la carta de garantía de Nera Tech: 12 meses en celulares y equipos (tablets, TV, consolas, energía) y 6 en
+  accesorios (audífonos, cargadores, cases, bocinas, relojes, cámaras; cada plazo tiene su campo), sin cambio inmediato (0 días),
   no cubre daños físicos, líquidos, maltrato, equipos manipulados por terceros ni reventa; para reclamar se
   presenta factura original, DUI y el equipo.
 
@@ -487,7 +488,7 @@ Lo mismo con un precio especial en un pedido manual («Sí, venderlo así»).
 ## Garantía (buscar IMEI o serie)
 Menú **Garantía (IMEI)** (todo el equipo). Escribí o escaneá el IMEI (está en la caja o marcando \*#06# en el
 teléfono) o el número de serie. Dice si el equipo **es nuestro**, su condición, en qué pedido y a qué cliente se
-vendió, de qué proveedor y factura vino, y si la garantía está **vigente** (12 meses desde la entrega) o **vencida**.
+vendió, de qué proveedor y factura vino, y si la garantía está **vigente** (desde la entrega: 12 meses en celulares y equipos, 6 en accesorios) o **vencida**.
 - **Entra a garantía**: anotá la falla que reporta el cliente; la unidad queda "En garantía".
 - **Sale de garantía**: anotá qué se hizo (reparado, cambiado…).
 - Si dice que **no está registrado**, pedile la factura y buscalo en Clientes por nombre o teléfono.

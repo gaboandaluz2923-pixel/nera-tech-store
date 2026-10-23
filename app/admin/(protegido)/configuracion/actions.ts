@@ -117,11 +117,15 @@ export async function guardarConfiguracion(_prev: EstadoAccion, form: FormData):
     }
     case "garantia_texto": {
       const plazo = Math.round(numero(form.get("plazo_meses")));
+      const plazoAcc = Math.round(numero(form.get("plazo_meses_accesorios")));
       const dias = Math.round(numero(form.get("cambio_inmediato_dias")) || 0);
-      if (!(plazo >= 1)) return falla("El plazo de garantía debe ser de al menos 1 mes.");
+      if (!(plazo >= 1) || !(plazoAcc >= 1)) return falla("El plazo de garantía debe ser de al menos 1 mes.");
       valor = {
         plazo_meses: plazo,
-        resumen: texto(form.get("resumen")) || `${plazo} meses de garantía Nera Tech por defectos de fábrica.`,
+        plazo_meses_accesorios: plazoAcc,
+        resumen:
+          texto(form.get("resumen")) ||
+          `Garantía Nera Tech por defectos de fábrica: ${plazo} meses en celulares y equipos, ${plazoAcc} en accesorios.`,
         cambio_inmediato_dias: dias,
         cubre: lineas(form.get("cubre")),
         no_cubre: lineas(form.get("no_cubre")),

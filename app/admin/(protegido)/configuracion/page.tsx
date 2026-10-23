@@ -356,7 +356,8 @@ async function DatosNegocio() {
         descripcion="Texto de la página Garantía y del recuadro de garantía en cada ficha."
         vista={
           <Datos>
-            <Dato etiqueta="Meses de garantía">{g.plazo_meses ? `${g.plazo_meses} meses` : null}</Dato>
+            <Dato etiqueta="Celulares y equipos">{g.plazo_meses ? `${g.plazo_meses} meses` : null}</Dato>
+            <Dato etiqueta="Accesorios">{`${g.plazo_meses_accesorios ?? 6} meses`}</Dato>
             <Dato etiqueta="Días para cambio inmediato">{g.cambio_inmediato_dias ? `${g.cambio_inmediato_dias} días` : "Sin cambio inmediato"}</Dato>
             <Dato etiqueta="Resumen" ancho>
               {g.resumen}
@@ -377,7 +378,14 @@ async function DatosNegocio() {
         }
       >
         <div className="grid gap-3 sm:grid-cols-2">
-          <Campo nombre="plazo_meses" etiqueta="Meses de garantía" valor={g.plazo_meses} tipo="number" />
+          <Campo nombre="plazo_meses" etiqueta="Meses de garantía: celulares y equipos" valor={g.plazo_meses} tipo="number" />
+          <Campo
+            nombre="plazo_meses_accesorios"
+            etiqueta="Meses de garantía: accesorios"
+            valor={g.plazo_meses_accesorios ?? 6}
+            tipo="number"
+            ayuda="Equipos (12 en general): celulares, tablets, TV, consolas y energía. Accesorios: audífonos, cargadores, cases, bocinas, relojes, cámaras y lo demás."
+          />
           <Campo
             nombre="cambio_inmediato_dias"
             etiqueta="Días para cambio inmediato"
