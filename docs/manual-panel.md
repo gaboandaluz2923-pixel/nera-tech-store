@@ -467,6 +467,11 @@ unidades se mueven lento (más de 30 días en bodega sin ventas en 30 días).
      Registrarlos"** (en amarillo). Tocalo, pegá o escaneá los IMEI (uno por línea) y **Registrar IMEI**: quedan
      en esa compra con su costo. También aparecen en Inventario como "Faltan IMEI". Registralos antes de entregar
      el equipo: sin IMEI no se puede comprobar en una garantía que la unidad es nuestra.
+   - **Corregir un costo ya recibido**: en la compra recibida, cada producto tiene **Corregir costo** (costo c/u y si
+     lo escribiste con o sin IVA), y en **Datos de la factura → Editar** se corrige **Otros costos** (solo flete,
+     aduana o envío pagado aparte; nunca el total de la factura). Al guardar se recalcula el costo de todo lo que
+     entró con esa compra, el kardex y, si ya vendiste alguna unidad, el costo de esa venta. Precios lo muestra al
+     instante en "En bodega".
 5. **Marcar pagada** con la fecha cuando le pagués al proveedor. **Anular** solo si ninguna unidad de esa compra se
    vendió (marcá la casilla de confirmación).
 La lista **Compras** filtra **Por pagar** y **Sin recibir**. Los archivos de la factura quedan guardados (privados).

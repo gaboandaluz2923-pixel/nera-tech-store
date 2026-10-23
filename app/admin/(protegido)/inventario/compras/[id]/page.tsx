@@ -74,6 +74,37 @@ const ESTADO = { borrador: "Sin recibir (todavía no entra a bodega)", recibida:
 /** Cómo está guardado el costo de las líneas según el documento */
 const IVA_DEL_COSTO: Record<Documento, string> = { ccf: "sin IVA", factura: "con IVA", sin_iva: "sin IVA (no lleva)" };
 
+/** Compra ya recibida: solo se corrige el costo c/u (lo demás ya entró a bodega) */
+function CamposCostoRecibida({ compraId, linea, documento }: { compraId: string; linea: Linea; documento: Documento }) {
+  return (
+    <>
+      <input type="hidden" name="compra_id" value={compraId} />
+      <input type="hidden" name="linea_id" value={linea.id} />
+      <p className="text-sm text-muted-foreground">
+        La compra ya entró a bodega: aquí solo se corrige el costo. Se recalcula lo que está en bodega y, si ya vendiste
+        alguna, el costo de esa venta.
+      </p>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <Label htmlFor={`costo-${linea.id}`}>Costo c/u</Label>
+          <Input id={`costo-${linea.id}`} name="costo_unitario" inputMode="decimal" required defaultValue={String(Number(linea.costo_unitario))} />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor={`iva-${linea.id}`}>El costo que escribiste</Label>
+          {documento === "sin_iva" ? (
+            <p className="flex h-9 items-center text-sm text-muted-foreground">Sin IVA (no lleva)</p>
+          ) : (
+            <select id={`iva-${linea.id}`} name="costo_iva" defaultValue={documento === "factura" ? "con" : "sin"} className={SELECT}>
+              <option value="sin">SIN IVA (+IVA)</option>
+              <option value="con">CON IVA incluido</option>
+            </select>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
 function CamposLinea({
   compraId,
   linea,
@@ -375,7 +406,8 @@ async function Detalle({
               <FilaEditable
                 key={l.id}
                 accion={guardarLineaCompra}
-                puedeEditar={borrador}
+                puedeEditar={c.estado !== "anulada"}
+                textoEditar={borrador ? undefined : "Corregir costo"}
                 vista={
                   <div className="space-y-1 text-sm">
                     <p className="font-medium">
@@ -434,7 +466,11 @@ async function Detalle({
                   </div>
                 }
               >
-                <CamposLinea compraId={c.id} linea={l} variantes={variantes} documento={c.documento} />
+                {borrador ? (
+                  <CamposLinea compraId={c.id} linea={l} variantes={variantes} documento={c.documento} />
+                ) : (
+                  <CamposCostoRecibida compraId={c.id} linea={l} documento={c.documento} />
+                )}
               </FilaEditable>
             );
           })}
@@ -525,6 +561,16 @@ async function Detalle({
               <option value="30" />
             </datalist>
           </div>
+          {!borrador && c.estado === "recibida" ? (
+            <div className="space-y-1">
+              <Label htmlFor="e-otros">Otros costos (USD)</Label>
+              <Input id="e-otros" name="otros_costos" inputMode="decimal" defaultValue={String(Number(c.otros_costos))} />
+              <p className="text-xs text-muted-foreground">
+                Solo flete, aduana o envío que pagaste aparte (no el total de la factura). Si lo cambiás, se recalcula el costo de
+                todo lo que entró con esta compra.
+              </p>
+            </div>
+          ) : null}
           {borrador ? (
             <>
               <div className="space-y-1">

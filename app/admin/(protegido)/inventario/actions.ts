@@ -174,7 +174,7 @@ export async function crearCompra(_prev: EstadoAccion, form: FormData): Promise<
 export async function guardarCompra(_prev: EstadoAccion, form: FormData): Promise<EstadoAccion> {
   const id = texto(form.get("id"));
   const { supabase } = await superAdmin();
-  const { data: c } = await supabase.from("compras").select("estado").eq("id", id).single();
+  const { data: c } = await supabase.from("compras").select("estado, otros_costos").eq("id", id).single();
   if (!c) return falla("No se encontró la compra.");
   const condicion = texto(form.get("condicion")) === "credito" ? "credito" : "contado";
   const dias = condicion === "credito" ? Math.round(numero(form.get("dias_credito"))) : 0;
@@ -197,9 +197,20 @@ export async function guardarCompra(_prev: EstadoAccion, form: FormData): Promis
   }
   const { error } = await supabase.from("compras").update(cambios).eq("id", id);
   if (error) return falla(`No se pudo guardar: ${error.message}`);
+  // Ya recibida: corregir "Otros costos" recalcula el costo de lo que entró a bodega
+  let extra = "";
+  if (c.estado === "recibida" && form.has("otros_costos")) {
+    const otros = Math.round(Math.max(0, numero(form.get("otros_costos"))) * 100) / 100;
+    if (otros !== Number(c.otros_costos)) {
+      const { data: ventas, error: e2 } = await supabase.rpc("inv_corregir_costos_compra", { p_compra: id, p_otros: otros });
+      if (e2) return falla(mensajeBase(e2.message));
+      extra = ` · costos de bodega recalculados${ventas ? ` (y ${ventas} ${ventas === 1 ? "venta" : "ventas"})` : ""}`;
+    }
+  }
   await recalcularTotales(supabase, id);
-  refrescar(id);
-  return ok("Compra guardada");
+  refrescar(id, Boolean(extra));
+  revalidatePath("/admin/precios");
+  return ok("Compra guardada" + extra);
 }
 
 export async function subirArchivoCompra(_prev: EstadoAccion, form: FormData): Promise<EstadoAccion> {
@@ -254,13 +265,12 @@ export async function guardarLineaCompra(_prev: EstadoAccion, form: FormData): P
   const { supabase, compra } = await compraBorrador(compraId);
   if (!compra) return falla("No se encontró la compra.");
   const d = datosLinea(form);
-  if (compra.estado !== "borrador") {
-    // Ya recibida: solo se pueden completar los identificadores desde Inventario → variante
-    return falla("La compra ya fue recibida. Los IMEI que falten se registran en Inventario → la variante.");
-  }
-  if (!d.descripcion && !d.variante_id) return falla("Escribí qué producto es.");
-  if (d.cantidad <= 0) return falla("La cantidad debe ser mayor que cero.");
+  if (compra.estado === "anulada") return falla("La compra está anulada.");
+  const recibida = compra.estado === "recibida";
+  if (!recibida && !d.descripcion && !d.variante_id) return falla("Escribí qué producto es.");
+  if (!recibida && d.cantidad <= 0) return falla("La cantidad debe ser mayor que cero.");
   if (d.costo_unitario < 0) return falla("El costo no puede ser negativo.");
+  if (recibida && !texto(form.get("costo_unitario"))) return falla("Escribí el costo de cada unidad.");
   // El costo se guarda como lo pide el documento: sin IVA en crédito fiscal (el IVA se recupera) y con IVA en factura
   // de consumidor final. Si el proveedor lo dio al revés, se convierte aquí.
   const escrito = d.costo_unitario;
@@ -272,6 +282,19 @@ export async function guardarLineaCompra(_prev: EstadoAccion, form: FormData): P
   } else if (compra.documento === "factura" && texto(form.get("costo_iva")) === "sin") {
     d.costo_unitario = Math.round(escrito * 1.13 * 10000) / 10000;
     conversion = ` ($${escrito.toFixed(2)} + IVA → $${d.costo_unitario.toFixed(2)} con IVA, porque es factura de consumidor final)`;
+  }
+  if (recibida) {
+    // Ya recibida: solo se corrige el costo c/u; se recalcula lo que entró a bodega (y las ventas que ya salieron)
+    if (!lineaId) return falla("La compra ya fue recibida: no se le agregan productos.");
+    const { data: ventas, error } = await supabase.rpc("inv_corregir_costos_compra", {
+      p_compra: compraId,
+      p_costos: [{ linea: lineaId, costo: d.costo_unitario }],
+    });
+    if (error) return falla(mensajeBase(error.message));
+    await recalcularTotales(supabase, compraId);
+    refrescar(compraId, true);
+    revalidatePath("/admin/precios");
+    return ok(`Costo corregido${conversion}${ventas ? ` · ${ventas} ${ventas === 1 ? "venta recalculada" : "ventas recalculadas"}` : ""}`);
   }
   if (d.identificadores.length > d.cantidad)
     return falla(`Pegaste ${d.identificadores.length} identificadores para ${d.cantidad} unidades.`);
