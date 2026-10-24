@@ -270,7 +270,7 @@ async function Contenido({ searchParams }: { searchParams: Promise<Filtros> }) {
               <th className="p-2">Proveedores (existencia)</th>
               <th className="p-2 text-right">Costo puesto (con IVA)</th>
               <th className="p-2 text-right">Precio sugerido</th>
-              <th className="p-2">Tu precio de venta</th>
+              <th className="p-2">Tu precio de venta (con tarjeta)</th>
               <th className="p-2 text-right">Margen neto (lo que te queda)</th>
             </tr>
           </thead>

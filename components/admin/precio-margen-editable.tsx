@@ -63,8 +63,16 @@ export function PrecioMargenEditable({
 
   if (!editando) {
     return (
-      <div className="flex items-center justify-end gap-2">
-        <span className={`tabular-nums ${valor ? "font-semibold" : "text-amber-700"}`}>{valor ? `$${valor.toFixed(2)}` : "Sin precio"}</span>
+      <div className="flex items-start justify-end gap-2">
+        <span className="text-right">
+          <span className={`block tabular-nums ${valor ? "font-semibold" : "text-amber-700"}`}>{valor ? `$${valor.toFixed(2)}` : "Sin precio"}</span>
+          {valor ? (
+            <span className="block text-xs whitespace-nowrap text-muted-foreground">
+              con tarjeta
+              <span className="block tabular-nums">efectivo ${(Math.round(valor * (1 - descuentoPct / 100) * 100) / 100).toFixed(2)}</span>
+            </span>
+          ) : null}
+        </span>
         <Button type="button" size="icon-sm" variant="ghost" onClick={abrir} aria-label={`Editar ${etiqueta}`} title="Editar precio o margen">
           <Pencil className="size-3.5" aria-hidden />
         </Button>

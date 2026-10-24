@@ -172,7 +172,8 @@ Una fila por configuración (modelo + memoria; los colores van juntos).
   aparece cuando recibís la compra en bodega o cuando le ponés proveedor).
 - **Precio con margen objetivo**: lo que tendrías que cobrar para el margen de la categoría
   (celulares 10%, accesorios 15–25%), redondeado a precios terminados en 5 o 9.
-- **Tu precio de venta**: se ve el precio (o "Sin precio" en naranja). Tocá el lápiz y salen dos campos juntos:
+- **Tu precio de venta (con tarjeta)**: se ve el precio publicado, que es el de tarjeta (o "Sin precio" en naranja);
+  debajo dice "con tarjeta" y el precio en efectivo (con el descuento sin tarjeta). Tocá el lápiz y salen dos campos juntos:
   **$** (el precio publicado, con tarjeta) y **%** (el margen **neto** en efectivo con paquetera). Si escribís el
   precio, el margen se calcula solo; si escribís el margen, el precio se calcula solo, exacto con centavos. Debajo
   dice el margen neto con tarjeta en la web, o avisa en rojo si en efectivo pierde dinero. **Guardar** aplica el
