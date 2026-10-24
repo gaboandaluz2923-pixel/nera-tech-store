@@ -29,11 +29,16 @@ const VISTAS = [
 async function Contenido({ searchParams }: { searchParams: Promise<{ ver?: string; q?: string }> }) {
   const { ver = "activos", q = "" } = await searchParams;
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("pedidos")
-    .select("id, numero, estado, forma_pago, total, created_at, canal, entrega, pagado_en, confirmado_en, entregado_en, factura_estado, dinero_recibido_en")
-    .order("created_at", { ascending: false })
-    .limit(500);
+  const columnas = "id, numero, estado, forma_pago, total, created_at, canal, entrega, pagado_en, confirmado_en, entregado_en, factura_estado";
+  const leer = (extra: string) =>
+    supabase
+      .from("pedidos")
+      .select(columnas + extra)
+      .order("created_at", { ascending: false })
+      .limit(500);
+  // Sin la migración 0020 todavía no existe dinero_recibido_en: la lista sigue funcionando sin esa vista
+  let { data, error } = await leer(", dinero_recibido_en");
+  if (error) ({ data, error } = await leer(""));
   if (error) throw error;
   const todos = (data ?? []) as unknown as Fila[];
   const vista = VISTAS.find((v) => v.id === ver) ?? VISTAS[0];
