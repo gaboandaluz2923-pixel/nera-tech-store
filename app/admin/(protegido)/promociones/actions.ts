@@ -143,7 +143,9 @@ export async function crearCombo(_prev: EstadoAccion, form: FormData): Promise<E
   const { data: precios } = await supabase.from("variantes").select("id, precio, producto_id").in("id", items.map((i) => i.variante_id));
   if ((precios ?? []).some((v) => v.producto_id === principal)) return falla("El producto principal no puede ser también accesorio del combo.");
   const valor = items.reduce((s, i) => s + Number(precios?.find((v) => v.id === i.variante_id)?.precio ?? 0) * i.cantidad, 0);
-  if (ahorro >= valor) return falla(`El ahorro debe ser menor que lo que cuestan los accesorios ($${valor.toFixed(2)}).`);
+  // Igual al precio de los accesorios = accesorios gratis (más no se puede: el combo no baja el precio del celular)
+  if (ahorro > valor + 0.004)
+    return falla(`El ahorro no puede pasar de lo que cuestan los accesorios ($${valor.toFixed(2)}; con eso quedan gratis).`);
   const { data, error } = await supabase
     .from("bundles")
     .insert({ nombre, producto_principal_id: principal, descuento: Math.round(ahorro * 100) / 100, activo: true })

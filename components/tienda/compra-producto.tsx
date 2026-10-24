@@ -392,7 +392,9 @@ export function CompraProducto(props: Props) {
           </h2>
           {p.combos.slice(0, 2).map((c) => {
             const normal = elegida.precio + c.items.reduce((s, i) => s + i.precio * i.cantidad, 0);
-            const ahorro = Math.min(c.ahorro, c.items.reduce((s, i) => s + i.precio * i.cantidad, 0));
+            const valorItems = c.items.reduce((s, i) => s + i.precio * i.cantidad, 0);
+            const ahorro = Math.min(c.ahorro, valorItems);
+            const gratis = valorItems > 0 && ahorro >= valorItems - 0.004;
             return (
               <div key={c.id} className="rounded-xl border-2 border-dashed border-marca/50 bg-marca/5 p-3">
                 <div className="flex items-center gap-1.5">
@@ -412,7 +414,9 @@ export function CompraProducto(props: Props) {
                 <p className="mt-1 text-sm">
                   <strong>{usd2(normal - ahorro)}</strong>{" "}
                   <span className="text-muted-foreground line-through">{usd2(normal)}</span>{" "}
-                  <span className="font-semibold text-green-700">ahorrás {usd2(ahorro)}</span>
+                  <span className="font-semibold text-green-700">
+                    {gratis ? `${c.items.length === 1 ? "¡De regalo!" : "¡Accesorios de regalo!"} Ahorrás ${usd2(ahorro)}` : `ahorrás ${usd2(ahorro)}`}
+                  </span>
                 </p>
                 <Button size="sm" variant="outline" className="mt-2" onClick={() => comprarCombo(c)}>
                   Agregar combo

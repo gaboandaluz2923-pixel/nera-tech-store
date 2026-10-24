@@ -637,7 +637,8 @@ oferta dice si está **activa**, **programada**, **terminada** o **apagada**.
 **2. Combos "Completá tu equipo"**
 Un combo es un celular (cualquier color o memoria) + 1 a 3 accesorios, con un ahorro en dólares. Elegí el
 nombre, el producto principal, los accesorios (con cantidad) y el ahorro, y tocá **Crear combo**. El ahorro
-tiene que ser menor que lo que cuestan los accesorios. En la ficha del celular aparece el recuadro "Completá
+puede llegar hasta lo que cuestan los accesorios: si es igual, el accesorio queda **gratis** (ej. "Note 17 +
+audífonos de regalo": ahorro = precio de los audífonos) y la ficha dice "¡De regalo!". En la ficha del celular aparece el recuadro "Completá
 tu equipo y ahorrá" con **Agregar combo** (agrega el celular elegido y los accesorios). En el carrito, si el
 cliente lleva el celular pero le falta un accesorio del combo, se le ofrece; el descuento aparece como
 "Combo Kit audio Hot 70 −$5.00". Cada combo de la lista se puede cambiar de ahorro o apagar.
