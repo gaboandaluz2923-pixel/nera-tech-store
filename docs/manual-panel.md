@@ -50,6 +50,9 @@ operador no se pueden leer costos ni cambiar precios por ningún lado.
   cancelados ni devueltos, de la tienda y de los manuales. No muestra costos ni ganancia (esos están en Analítica).
 - **Por confirmar** y **Por entregar**: los pedidos que hay que atender; tocá uno para abrirlo.
 - **+ Nuevo pedido**: para una venta que entró por WhatsApp, redes, llamada o en persona.
+- **Dinero por recibir** (solo administradores): lo que ya se le cobró al cliente pero todavía no entró al banco,
+  separado por quién lo tiene (la paquetera, cada motorista, Wompi, cada banco de tasa 0%, transferencias por
+  confirmar), ya sin las comisiones. **Ver los pedidos** abre la lista Pedidos → *Dinero por recibir*.
 - Los administradores ven abajo **Avance del proyecto** (las fases).
 
 ## Configuración
@@ -91,6 +94,11 @@ Datos del negocio que ve el cliente. Cada recuadro muestra lo que está guardado
   accesorios (audífonos, cargadores, cases, bocinas, relojes, cámaras; cada plazo tiene su campo), sin cambio inmediato (0 días),
   no cubre daños físicos, líquidos, maltrato, equipos manipulados por terceros ni reventa; para reclamar se
   presenta factura original, DUI y el equipo.
+- **Costos de envío y cobro** (privado, no se ve en la tienda): envío de la paquetera ($3.75), paquetería por
+  pedido ($1.50), comisión de contra entrega (2.5%), comisión de Wompi (5.5%), tasa 0% general (9%), una tabla de
+  tasa 0% por banco a 3, 6 y 12 meses (una línea por banco: `Banco | % 3 meses | % 6 | % 12`) y **Quién entrega**
+  (una línea por repartidor: `Nombre | paquetera o motorista | tarifa`; la tarifa vacía si varía, como el motorista
+  de San Salvador). Se usa para el margen neto en Precios y en el cierre de cada pedido.
 
 Si después de **Guardar** la página muestra "This page couldn't load", tocá **Reload**: lo guardado sí quedó
 (pasó solo mientras Claude manejaba el navegador; si te pasa a vos, avisale a Claude).
@@ -165,16 +173,23 @@ Una fila por configuración (modelo + memoria; los colores van juntos).
 - **Precio con margen objetivo**: lo que tendrías que cobrar para el margen de la categoría
   (celulares 10%, accesorios 15–25%), redondeado a precios terminados en 5 o 9.
 - **Tu precio de venta**: se ve el precio (o "Sin precio" en naranja). Tocá el lápiz y salen dos campos juntos:
-  **$** (el precio publicado, con tarjeta) y **%** (el margen en efectivo). Si escribís el precio, el margen se
-  calcula solo; si escribís el margen, el precio se calcula solo, exacto con centavos. Debajo dice el margen con
-  tarjeta, o avisa en rojo si en efectivo queda bajo el costo. **Guardar** aplica el precio a todos los colores de
-  esa configuración y queda en el historial. **Usar** aplica el sugerido.
-- **Margen en efectivo** = (precio − descuento sin tarjeta − costo) ÷ (precio − descuento sin tarjeta). El
-  descuento es el de Configuración (hoy 9%). En rojo si es menos de 5%. Debajo, en gris, el margen con tarjeta.
-- **Contribución** = lo que te deja una venta enviada por paquetera antes de pauta. **ROAS mínimo** =
-  cuánto tenés que vender por cada dólar de pauta para no perder.
+  **$** (el precio publicado, con tarjeta) y **%** (el margen **neto** en efectivo con paquetera). Si escribís el
+  precio, el margen se calcula solo; si escribís el margen, el precio se calcula solo, exacto con centavos. Debajo
+  dice el margen neto con tarjeta en la web, o avisa en rojo si en efectivo pierde dinero. **Guardar** aplica el
+  precio a todos los colores de esa configuración y queda en el historial. **Usar** aplica el sugerido.
+- **Margen neto (lo que te queda)**: una línea por forma de cobro, con el % y los dólares que te quedan de una
+  unidad enviada por paquetera:
+  - *Efectivo (paquetera)*: precio con el descuento sin tarjeta + envío que paga el cliente − 2.5% de comisión de
+    contra entrega − $3.75 de la paquetera − $1.50 de paquetería − costo con IVA.
+  - *Transferencia*: igual, sin comisión.
+  - *Tarjeta en la web*: precio completo + envío − 5.5% de Wompi − $3.75 − $1.50 − costo.
+  - *Tasa 0%*: precio completo + envío − el % del banco y plazo más caro (hoy 9%) − $3.75 − $1.50 − costo.
+  El % es sobre lo que cobrás. En rojo si es menos de 5%. Pasá el mouse sobre una línea para ver la cuenta. Los
+  montos y porcentajes se cambian en **Configuración → Costos de envío y cobro**. **ROAS mínimo** = cuánto tenés que
+  vender por cada dólar de pauta para no perder (con efectivo).
 - Filtros: buscar por modelo, por categoría, solo los que están en 2 o más proveedores, solo los que
-  cambiaron de precio, o los que todavía no tienen precio de venta.
+  cambiaron de precio, los que todavía no tienen precio de venta o los de **margen neto bajo** (menos de 5% con
+  alguna forma de cobro).
 
 ## Catálogo
 Aquí se completa cómo se ve cada producto en la tienda.
@@ -321,6 +336,30 @@ con **Editar** en el recuadro de factura (código y PDF).
 el estado, cómo pagar (cuentas para transferencia, botón para reintentar la tarjeta, WhatsApp para tasa
 0%), y la factura cuando la subís. Puede entrar con Google para ver todos sus pedidos en **Mis pedidos**;
 aparecen solos los que hizo con el mismo correo, y puede agregar otros con número de pedido y teléfono.
+
+## Pedidos → Cierre y margen neto (solo administradores)
+En cada pedido, debajo de **Pago**, el recuadro **Cierre y margen neto** dice cómo está el dinero:
+- **Por cobrar**: el cliente todavía no paga.
+- **Cobrado, por recibir** (amarillo): ya se cobró, pero el dinero lo tiene la paquetera, el motorista, Wompi o el
+  banco. Dice quién lo tiene.
+- **Recibido y conciliado** (verde): ya entró al banco; muestra cuánto, cuándo y la referencia.
+
+También muestra **cuánto debe entrar al banco** (lo cobrado menos la comisión; en contra entrega con paquetera,
+menos sus $3.75 y su 2.5%, porque te deposita ya descontado; con motorista entra todo y a él se le paga aparte) y el
+**margen neto**: estimado mientras no entra el dinero y **real** cuando lo conciliás (lo que entró − costo de los
+productos con IVA − paquetería − la entrega si no la descontó la paquetera).
+
+Tocá **Editar** para anotar:
+1. **Quién lo entregó**: la paquetera, un motorista o "Lo recogió el cliente" (la lista se arma en Configuración →
+   Costos de envío y cobro → Quién entrega).
+2. **Cuánto costó la entrega**: si lo dejás vacío se usa la tarifa (la paquetera $3.75). Para un motorista escribí
+   lo que le pagaste ese viaje ($2 a $10).
+3. Si fue **tasa 0%**: el banco y el plazo (cada uno tiene su comisión).
+4. **Dinero recibido en el banco**: cuando entre el depósito, escribí el **monto exacto**, la fecha y la referencia.
+   Al guardar queda **Recibido y conciliado** con tu nombre; si no cuadra con lo esperado, avisa cuánto de más o de
+   menos entró. Si te equivocaste, Editar → borrá el monto → Guardar y vuelve a "por recibir".
+
+La lista **Pedidos** tiene la vista **Dinero por recibir** con todos los pedidos cobrados que todavía no conciliaste.
 
 ## Pedidos → Editar pedido (solo administradores)
 En el pedido, el recuadro **Productos** tiene el botón **Editar pedido**. Sirve para corregir un pedido: cambiar

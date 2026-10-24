@@ -9,7 +9,7 @@ import { COMISION_PAQUETERA, COSTO_ENVIO_FIJO } from "@/lib/precios";
 // - Una venta cuenta el mes en que se ENTREGÓ (entregado_en). Los precios incluyen IVA: IVA = total × 13/113.
 // - Costo de lo vendido = el costo que guardó cada línea al salir de bodega (o el del proveedor).
 // - Envío y cobro: lo anotado en Gastos (envíos y comisiones); si ese mes no hay, se estima como en Analítica
-//   ($1.75 por pedido + 2.5% de lo cobrado).
+//   ($5.25 por pedido: envío $3.75 + paquetería $1.50, + 2.5% de lo cobrado).
 // - Un gasto con crédito fiscal cuesta su monto sin IVA (el IVA se recupera); sin crédito fiscal cuesta el total.
 // - Flujo de caja: entra lo cobrado (pagado_en de cada pedido) y sale lo pagado (compras, gastos y pauta).
 

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/server";
 import { tablaPrecios, type FilaPrecio } from "@/lib/admin/precios-tabla";
 import { pct, roasMinimo, usd } from "@/lib/precios";
+import { NOMBRE_COBRO, type FormaCobro } from "@/lib/costos-cobro";
 import { BotonGuardar, FormularioAccion } from "@/components/admin/formulario-accion";
 import { PrecioMargenEditable } from "@/components/admin/precio-margen-editable";
 import { anotarPrecioObservado, fijarPrecio } from "./actions";
@@ -29,8 +30,7 @@ function Cambio({ valor }: { valor: number | null }) {
 }
 
 function FilaTabla({ f }: { f: FilaPrecio }) {
-  // En rojo si pagando sin tarjeta deja menos de 5% (el mínimo que usamos para los precios)
-  const margenBajo = f.margenEfectivo !== null && f.margenEfectivo < 0.05;
+  // En rojo si el margen neto de esa forma de cobro es menos de 5%
   return (
     <tr className="border-t align-top">
       <td className="p-2">
@@ -96,7 +96,8 @@ function FilaTabla({ f }: { f: FilaPrecio }) {
               <span className="text-right">
                 <span className="block font-semibold tabular-nums">{usd(f.sugerencia.precio)}</span>
                 <span className="block text-xs text-muted-foreground">
-                  deja {usd(f.sugerencia.contribucion)} · {ROTACION[f.sugerencia.rotacion]}
+                  {f.netoSugerido ? `deja ${usd(f.netoSugerido.neto)} en efectivo` : `deja ${usd(f.sugerencia.contribucion)}`} ·{" "}
+                  {ROTACION[f.sugerencia.rotacion]}
                 </span>
               </span>
               {f.precioVenta !== f.sugerencia.precio ? (
@@ -164,18 +165,34 @@ function FilaTabla({ f }: { f: FilaPrecio }) {
           descuentoPct={f.descuentoSinTarjetaPct}
           sugerido={f.precioObjetivo}
           etiqueta={`Precio de venta de ${f.producto} ${f.memoria}`}
+          envioCobrado={f.envioCobrado}
+          cobro={f.cobro}
         />
         {f.precioVaria ? <p className="mt-1 text-xs text-amber-700">Los colores tienen precios distintos</p> : null}
       </td>
-      <td className="p-2 text-right tabular-nums">
-        <div className={margenBajo ? "text-red-600 dark:text-red-400" : ""}>{pct(f.margenEfectivo)}</div>
-        {f.margen !== null ? <div className="text-xs text-muted-foreground">tarjeta {pct(f.margen)}</div> : null}
-      </td>
-      <td className="p-2 text-right tabular-nums">
-        <div>{usd(f.contribucion)}</div>
-        {f.contribucion && f.precioVenta ? (
-          <div className="text-xs text-muted-foreground">
-            ROAS mín. {roasMinimo(f.precioVenta, f.contribucion) ?? "—"}x
+      <td className="p-2">
+        {f.netos ? (
+          <table className="ml-auto text-xs tabular-nums">
+            <tbody>
+              {(Object.keys(NOMBRE_COBRO) as FormaCobro[]).map((k) => {
+                const n = f.netos![k];
+                const bajo = n.pct !== null && n.pct < 0.05;
+                return (
+                  <tr key={k} title={`Cobrás ${usd(n.cobrado)} − comisión ${usd(n.comision)} − envío y paquetería ${usd(n.envio)} − costo ${usd(n.costo)}`}>
+                    <td className="pr-2 text-muted-foreground">{NOMBRE_COBRO[k]}</td>
+                    <td className={`pr-2 text-right font-medium ${bajo ? "text-red-600 dark:text-red-400" : ""}`}>{pct(n.pct)}</td>
+                    <td className={`text-right ${n.neto < 0 ? "text-red-600 dark:text-red-400" : ""}`}>{usd(n.neto)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        ) : (
+          <span className="block text-right text-muted-foreground">—</span>
+        )}
+        {f.netos && f.precioVenta && f.netos.efectivo.neto > 0 ? (
+          <div className="mt-1 text-right text-xs text-muted-foreground">
+            ROAS mín. {roasMinimo(f.netos.efectivo.cobrado, f.netos.efectivo.neto) ?? "—"}x
           </div>
         ) : null}
       </td>
@@ -206,6 +223,8 @@ async function Contenido({ searchParams }: { searchParams: Promise<Filtros> }) {
     if (filtros.vista === "cambios" && !f.cambio) return false;
     if (filtros.vista === "sin-precio" && f.precioVenta) return false;
     if (filtros.vista === "sugerido" && (!f.sugerencia || f.sugerencia.precio === f.precioVenta)) return false;
+    if (filtros.vista === "margen-bajo" && !(f.netos && Object.values(f.netos).some((n) => n.pct !== null && n.pct < 0.05)))
+      return false;
     return true;
   });
 
@@ -235,6 +254,7 @@ async function Contenido({ searchParams }: { searchParams: Promise<Filtros> }) {
           <option value="cambios">Con cambio de precio</option>
           <option value="sin-precio">Sin precio de venta</option>
           <option value="sugerido">Sugerido distinto de tu precio</option>
+          <option value="margen-bajo">Margen neto bajo (menos de 5%)</option>
         </select>
         <Button type="submit" variant="outline">
           Filtrar
@@ -251,8 +271,7 @@ async function Contenido({ searchParams }: { searchParams: Promise<Filtros> }) {
               <th className="p-2 text-right">Costo puesto (con IVA)</th>
               <th className="p-2 text-right">Precio sugerido</th>
               <th className="p-2">Tu precio de venta</th>
-              <th className="p-2 text-right">Margen en efectivo</th>
-              <th className="p-2 text-right">Contribución</th>
+              <th className="p-2 text-right">Margen neto (lo que te queda)</th>
             </tr>
           </thead>
           <tbody>
@@ -263,12 +282,13 @@ async function Contenido({ searchParams }: { searchParams: Promise<Filtros> }) {
         </table>
       </div>
       <p className="text-xs text-muted-foreground">
-        En negrita el mejor proveedor (menor costo puesto con existencia). Tachado = sin existencia. Margen en
-        efectivo = lo que queda si el cliente paga sin tarjeta (precio menos el descuento de Configuración), sobre lo
-        que cobrás; en rojo si es menos de 5%. Con el lápiz podés escribir el precio o el margen: el otro se calcula
-        solo. Contribución
-        = precio + $5 de envío − costo − $1.75 de paquetería y seguro − 2.5% de comisión. ROAS mínimo = lo que
-        necesitás vender por cada dólar de pauta para no perder. El precio sugerido combina tu costo, el margen
+        En negrita el mejor proveedor (menor costo puesto con existencia). Tachado = sin existencia. Margen neto = lo
+        que te queda de cada venta según cómo paga el cliente: lo que cobrás (efectivo y transferencia con el descuento
+        sin tarjeta) más el envío que paga, menos la comisión (contra entrega, Wompi o la tasa 0% más cara), el envío de
+        la paquetera, la paquetería y el costo con IVA; en % sobre lo que cobrás, en rojo si es menos de 5%. Los
+        valores se cambian en Configuración → Costos de envío y cobro. Pasá el mouse sobre una fila para ver la cuenta.
+        Con el lápiz podés escribir el precio o el margen neto en efectivo: el otro se calcula solo. ROAS mínimo = lo
+        que necesitás vender por cada dólar de pauta para no perder (con efectivo). El precio sugerido combina tu costo, el margen
         objetivo de la categoría, los precios de mercado que anotaste en los últimos 30 días y cuánto se vendió;
         nunca baja del mínimo sin pérdida y solo se aplica si tocás <strong>Usar</strong>.
       </p>

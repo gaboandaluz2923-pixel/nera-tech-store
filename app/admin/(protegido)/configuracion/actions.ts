@@ -6,6 +6,7 @@ import { superAdmin } from "@/lib/admin/sesion";
 import { ETIQUETA_CATALOGO } from "@/lib/tienda/datos";
 import { DESCUENTO_SIN_TARJETA } from "@/lib/tienda/formato";
 import { ErrorWompi, datosNegocio, tokenWompi } from "@/lib/wompi";
+import type { CostosCobro, Repartidor } from "@/lib/costos-cobro";
 import { configCorreo, enviarCorreo } from "@/lib/correo";
 
 // Datos del negocio que usa la tienda (WhatsApp, envío, contra entrega, tasa 0%, pie de página, garantía).
@@ -132,6 +133,43 @@ export async function guardarConfiguracion(_prev: EstadoAccion, form: FormData):
         como_reclamar: lineas(form.get("como_reclamar")),
         nota: texto(form.get("nota")),
       };
+      break;
+    }
+    case "costos_cobro": {
+      const n = (k: string) => numero(form.get(k));
+      const montos = {
+        envio_paquetera: n("envio_paquetera"),
+        paqueteria: n("paqueteria"),
+        contra_entrega_pct: n("contra_entrega_pct"),
+        wompi_pct: n("wompi_pct"),
+        tasa_cero_pct: n("tasa_cero_pct"),
+      };
+      if (Object.values(montos).some((x) => !(x >= 0)) || montos.contra_entrega_pct > 50 || montos.wompi_pct > 50 || montos.tasa_cero_pct > 50)
+        return falla("Revisá los montos y porcentajes (números de 0 en adelante; los % hasta 50).");
+      // "Banco Agrícola | 9 | 9 | 9" = 3, 6 y 12 meses
+      const bancos = lineas(form.get("bancos")).map((l) => {
+        const [banco, ...pcts] = l.split("|").map((x) => x.trim());
+        const plazos: Record<string, number> = {};
+        ["3", "6", "12"].forEach((m, i) => {
+          const v = Number((pcts[i] ?? "").replace(/[%\s]/g, ""));
+          if (pcts[i] && Number.isFinite(v) && v >= 0) plazos[m] = v;
+        });
+        return { banco, plazos };
+      });
+      if (bancos.some((b) => !b.banco)) return falla("Cada banco va en una línea así: Banco | % a 3 meses | % a 6 | % a 12");
+      // "Nombre | paquetera o motorista | tarifa (vacío si varía)"
+      const repartidores: Repartidor[] = lineas(form.get("repartidores")).map((l) => {
+        const [nombre, tipo, tarifa] = l.split("|").map((x) => x.trim());
+        const t = Number((tarifa ?? "").replace(/[$\s]/g, ""));
+        return {
+          nombre,
+          tipo: /moto/i.test(tipo ?? "") ? "motorista" : "paquetera",
+          tarifa: tarifa && Number.isFinite(t) && t >= 0 ? t : null,
+        };
+      });
+      if (!repartidores.length || repartidores.some((r) => !r.nombre))
+        return falla("Escribí al menos un repartidor así: Nombre | paquetera o motorista | tarifa");
+      valor = { ...montos, tasa_cero_bancos: bancos, repartidores } satisfies CostosCobro;
       break;
     }
     default:

@@ -13,6 +13,7 @@ import {
 } from "@/lib/precios";
 import { resumirMercado, sugerirPrecio, type Mercado, type Sugerencia } from "@/lib/pricing";
 import { configTienda } from "@/lib/tienda/datos";
+import { leerCostosCobro, margenNeto, type CostosCobro, type FormaCobro, type Neto } from "@/lib/costos-cobro";
 
 export type Oferta = {
   proveedor: string;
@@ -57,6 +58,12 @@ export type FilaPrecio = {
   observados: { precio: number; fuente: string; fecha: string }[];
   unidades30: number;
   sugerencia: Sugerencia | null;
+  /** Margen neto a tu precio con cada forma de cobro (resta costo con IVA, envío, paquetería y comisión) */
+  netos: Record<FormaCobro, Neto> | null;
+  /** Margen neto en efectivo al precio sugerido */
+  netoSugerido: Neto | null;
+  envioCobrado: number;
+  cobro: CostosCobro;
 };
 
 type Vinculo = {
@@ -97,7 +104,18 @@ type Observado = { producto_id: string; ram_gb: number | null; almacenamiento_gb
 
 export async function tablaPrecios(supabase: SupabaseClient): Promise<FilaPrecio[]> {
   const hace30 = new Date(Date.now() - 30 * 86_400_000);
-  const pct = (await configTienda()).descuentoSinTarjeta;
+  const config = await configTienda();
+  const pct = config.descuentoSinTarjeta;
+  const envioCobrado = Number(config.envio?.costo ?? 5);
+  const { data: cfgCobro } = await supabase.from("configuracion").select("valor").eq("clave", "costos_cobro").maybeSingle();
+  const cobro = leerCostosCobro(cfgCobro?.valor);
+  const netosDe = (precio: number, costo: number) =>
+    Object.fromEntries(
+      (["efectivo", "transferencia", "tarjeta", "tasa_cero"] as FormaCobro[]).map((f) => [
+        f,
+        margenNeto(f, { precio, costo, envioCobrado, descuentoPct: pct }, cobro),
+      ])
+    ) as Record<FormaCobro, Neto>;
   const [vinculos, variantes, productos, proveedores, observadosR, ventasR, conProveedorR, lotesR] = await Promise.all([
     todo<Vinculo>((a, b) =>
       supabase
@@ -252,6 +270,9 @@ export async function tablaPrecios(supabase: SupabaseClient): Promise<FilaPrecio
     const precioVenta = precios.length ? Math.max(...precios) : null;
     const margenObjetivoPct = Number(prod.categorias?.margen_objetivo_pct ?? 10);
 
+    const sugerencia = mejor
+      ? sugerirPrecio({ costo: mejor.costo, margenObjetivoPct: Number(prod.categorias?.margen_objetivo_pct ?? 10), mercado, unidades30, descuentoSinTarjetaPct: pct })
+      : null;
     filas.push({
       clave,
       productoId: prod.id,
@@ -286,9 +307,14 @@ export async function tablaPrecios(supabase: SupabaseClient): Promise<FilaPrecio
       mercado,
       observados: obs.slice(0, 6).map((o) => ({ precio: Number(o.precio), fuente: o.fuente, fecha: o.fecha })),
       unidades30,
-      sugerencia: mejor
-        ? sugerirPrecio({ costo: mejor.costo, margenObjetivoPct: Number(prod.categorias?.margen_objetivo_pct ?? 10), mercado, unidades30, descuentoSinTarjetaPct: pct })
-        : null,
+      sugerencia,
+      netos: mejor && precioVenta ? netosDe(precioVenta, mejor.costo) : null,
+      netoSugerido:
+        mejor && sugerencia
+          ? margenNeto("efectivo", { precio: sugerencia.precio, costo: mejor.costo, envioCobrado, descuentoPct: pct }, cobro)
+          : null,
+      envioCobrado,
+      cobro,
     });
   }
 

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { CANAL, esperandoPago, porFacturar, type PedidoBase } from "@/lib/admin/pedidos";
 import { createClient } from "@/lib/supabase/server";
+import { estadoDinero } from "@/lib/admin/cierre-pedido";
 import { ESTADO_PEDIDO, FORMA_PAGO, fechaHora, usd2 } from "@/lib/tienda/formato";
 
 type Fila = PedidoBase & {
@@ -11,6 +12,7 @@ type Fila = PedidoBase & {
   created_at: string;
   canal: string;
   entrega: { nombre: string; municipio: string; telefono: string };
+  dinero_recibido_en: string | null;
 };
 
 const VISTAS = [
@@ -18,6 +20,7 @@ const VISTAS = [
   { id: "por-confirmar", texto: "Por confirmar", filtro: (p: Fila) => p.estado === "pendiente_confirmar" },
   { id: "esperando-pago", texto: "Esperando pago", filtro: (p: Fila) => esperandoPago(p) },
   { id: "por-facturar", texto: "Por facturar", filtro: (p: Fila) => porFacturar(p) },
+  { id: "por-recibir", texto: "Dinero por recibir", filtro: (p: Fila) => estadoDinero(p) === "por_recibir" },
   { id: "entregados", texto: "Entregados", filtro: (p: Fila) => p.estado === "entregado" },
   { id: "cancelados", texto: "Cancelados", filtro: (p: Fila) => p.estado === "cancelado" || p.estado === "devuelto" },
   { id: "todos", texto: "Todos", filtro: () => true },
@@ -28,7 +31,7 @@ async function Contenido({ searchParams }: { searchParams: Promise<{ ver?: strin
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("pedidos")
-    .select("id, numero, estado, forma_pago, total, created_at, canal, entrega, pagado_en, confirmado_en, entregado_en, factura_estado")
+    .select("id, numero, estado, forma_pago, total, created_at, canal, entrega, pagado_en, confirmado_en, entregado_en, factura_estado, dinero_recibido_en")
     .order("created_at", { ascending: false })
     .limit(500);
   if (error) throw error;

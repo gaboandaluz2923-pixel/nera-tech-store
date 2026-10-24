@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { createClient } from "@/lib/supabase/server";
 import { leerPorcentajeSinTarjeta, usd2 } from "@/lib/tienda/formato";
+import { leerCostosCobro } from "@/lib/costos-cobro";
 import { correoDePrueba, guardarConfiguracion, probarWompi } from "./actions";
 
 // Datos del negocio que usa la tienda (se editan aquí) y estado de las variables de entorno
@@ -92,6 +93,7 @@ async function DatosNegocio() {
   const t = c.tasa_cero ?? {};
   const n = c.negocio ?? {};
   const g = c.garantia_texto ?? {};
+  const cc = leerCostosCobro(c.costos_cobro);
   const pct = leerPorcentajeSinTarjeta(c.descuento_sin_tarjeta);
   // Contra entrega: formato viejo (lista) o nuevo ({ municipios, todo_el_pais, maximo })
   const ce = Array.isArray(c.municipios_contra_entrega)
@@ -244,6 +246,74 @@ async function DatosNegocio() {
           <Campo nombre="meses" etiqueta="Hasta cuántos meses" valor={t.meses} tipo="number" />
           <Campo nombre="banco" etiqueta="Con qué tarjetas (opcional)" valor={t.banco} placeholder="Ej. tarjetas de crédito Banco Agrícola" />
         </div>
+      </Seccion>
+
+      <Seccion
+        clave="costos_cobro"
+        titulo="Costos de envío y cobro"
+        descripcion="Lo que te cuesta entregar y cobrar cada pedido. Se usa para el margen neto en Precios y en cada pedido. Privado: no se ve en la tienda."
+        vista={
+          <div className="space-y-3">
+            <Datos>
+              <Dato etiqueta="Envío de la paquetera">{usd2(cc.envio_paquetera)}</Dato>
+              <Dato etiqueta="Paquetería (empaque) por pedido">{usd2(cc.paqueteria)}</Dato>
+              <Dato etiqueta="Comisión contra entrega">{`${cc.contra_entrega_pct}% de lo cobrado`}</Dato>
+              <Dato etiqueta="Comisión tarjeta en la web (Wompi)">{`${cc.wompi_pct}%`}</Dato>
+              <Dato etiqueta="Tasa 0% (si no hay dato del banco)">{`${cc.tasa_cero_pct}%`}</Dato>
+            </Datos>
+            <table className="w-full text-sm">
+              <thead className="text-xs text-muted-foreground">
+                <tr>
+                  <th className="py-1 text-left font-normal">Tasa 0% por banco</th>
+                  <th className="py-1 text-right font-normal">3 meses</th>
+                  <th className="py-1 text-right font-normal">6 meses</th>
+                  <th className="py-1 text-right font-normal">12 meses</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cc.tasa_cero_bancos.map((b) => (
+                  <tr key={b.banco} className="border-t">
+                    <td className="py-1">{b.banco}</td>
+                    {["3", "6", "12"].map((m) => (
+                      <td key={m} className="py-1 text-right tabular-nums">
+                        {b.plazos[m] !== undefined ? `${b.plazos[m]}%` : "—"}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <Dato etiqueta="Quién entrega" ancho>
+              <Lineas
+                items={cc.repartidores.map(
+                  (r) => `${r.nombre} · ${r.tipo === "motorista" ? "motorista" : "paquetera"} · ${r.tarifa !== null ? usd2(r.tarifa) : "tarifa variable"}`
+                )}
+              />
+            </Dato>
+          </div>
+        }
+      >
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Campo nombre="envio_paquetera" etiqueta="Envío de la paquetera (USD)" valor={cc.envio_paquetera} ayuda="Lo que la paquetera se queda por cada envío." />
+          <Campo nombre="paqueteria" etiqueta="Paquetería por pedido (USD)" valor={cc.paqueteria} ayuda="Empaque, bolsa, cinta." />
+          <Campo nombre="contra_entrega_pct" etiqueta="Comisión contra entrega (%)" valor={cc.contra_entrega_pct} ayuda="Lo que la paquetera descuenta de lo que cobró en efectivo." />
+          <Campo nombre="wompi_pct" etiqueta="Comisión tarjeta en la web, Wompi (%)" valor={cc.wompi_pct} />
+          <Campo nombre="tasa_cero_pct" etiqueta="Tasa 0% general (%)" valor={cc.tasa_cero_pct} ayuda="Se usa si el banco o el plazo no tienen su %." />
+        </div>
+        <Campo
+          nombre="bancos"
+          etiqueta="Tasa 0% por banco (un banco por línea: Banco | % a 3 meses | % a 6 | % a 12)"
+          valor={cc.tasa_cero_bancos.map((b) => [b.banco, b.plazos["3"] ?? "", b.plazos["6"] ?? "", b.plazos["12"] ?? ""].join(" | ")).join("\n")}
+          largo
+          filas={4}
+        />
+        <Campo
+          nombre="repartidores"
+          etiqueta="Quién entrega (uno por línea: Nombre | paquetera o motorista | tarifa; vacía si varía)"
+          valor={cc.repartidores.map((r) => [r.nombre, r.tipo, r.tarifa ?? ""].join(" | ")).join("\n")}
+          largo
+          filas={4}
+        />
       </Seccion>
 
       <Seccion

@@ -78,7 +78,13 @@ Reglas de negocio:
 - Costo puesto = precio de lista + (costos fijos del lote del proveedor ÷ unidades);
   para Miami incluye transportadora, flete, seguro, DAI e IVA 13% sobre CIF.
 - Mejor proveedor = menor costo puesto entre los que tienen stock; empate → mayor plazo de crédito.
-- Contribución = precio + envío cobrado − costo puesto − 1.75 − 2.5% × (precio + envío cobrado).
+- Contribución = precio + envío cobrado − costo puesto − 5.25 (paquetera $3.75 + paquetería $1.50) − 2.5% × (precio + envío cobrado).
+- Margen neto por forma de cobro y cierre de cada pedido (`lib/costos-cobro.ts`, `lib/admin/cierre-pedido.ts`;
+  valores en `configuracion.costos_cobro`): efectivo con paquetera (precio − descuento sin tarjeta + envío − 2.5% −
+  $3.75 − $1.50 − costo con IVA; la paquetera deposita ya descontado), transferencia (sin comisión), tarjeta en la web
+  (Wompi 5.5%, sin descuento), tasa 0% (% por banco y plazo, ~9%). Motorista: tarifa variable por viaje, sin comisión,
+  deposita todo. Estado del dinero (calculado): por cobrar → cobrado, por recibir → recibido y conciliado (monto real
+  que entró al banco en `pedidos.dinero_recibido`).
 - Precio sugerido = f(costo puesto, margen objetivo por categoría, min/max/moda observados,
   rotación); siempre con explicación en texto; nunca se aplica sin aprobación humana.
 - Stock mostrado en la ficha = stock real; si es 0, la ficha ofrece "Avisame cuando haya".

@@ -11,8 +11,9 @@ export type CostosProveedor = {
   unidades_lote: number;
 };
 
-// Costos fijos por envío que paga Nera Tech (paquetería $0.75 + seguro $1)
-export const COSTO_ENVIO_FIJO = 1.75;
+// Costos fijos por envío que paga Nera Tech: envío de la paquetera $3.75 + paquetería (empaque) $1.50
+// (24 oct 2026; los valores vivos están en Configuración → Costos de envío y cobro, ver lib/costos-cobro.ts)
+export const COSTO_ENVIO_FIJO = 5.25;
 // Comisión de la paquetera sobre lo cobrado al cliente
 export const COMISION_PAQUETERA = 0.025;
 // Envío que se cobra al cliente por defecto

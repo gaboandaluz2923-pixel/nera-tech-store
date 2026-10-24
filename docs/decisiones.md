@@ -180,3 +180,14 @@ F18, audífonos con cable Infinix (modelo por confirmar), Kieslect KS3E (Ks3 Eli
   de IMEI usan el de cada producto (migración 0019, `lib/tienda/garantia.ts`). Las fichas de accesorios pasaron de
   "Garantía de 12 meses" a "Garantía de 6 meses".
 
+## 24 oct 2026 — Costos de envío y cobro, margen neto y cierre de pedidos
+- Datos de Gabriel: paquetera $3.75 por envío + 2.5% de comisión de contra entrega (los descuenta del depósito),
+  paquetería $1.50 por pedido; Wompi 5.5% (supuesto); tasa 0% ~9% según banco y plazo (Agrícola, BAC, Cuscatlán;
+  supuesto 9% en todos); motorista de San Salvador de $2 a $10 por viaje, sin comisión, deposita todo.
+- Precios muestra el margen neto con cada forma de cobro (el de tarjeta ya resta su comisión: antes se veía más alto
+  que el de efectivo y no era cierto). El lápiz edita el margen neto en efectivo con paquetera.
+- Cada pedido tiene "Cierre y margen neto": quién entregó y cuánto costó, banco y plazo de tasa 0%, lo que entró
+  exacto al banco (fecha y referencia) y el margen neto real. Estado del dinero calculado, aparte del estado del
+  pedido. Inicio muestra el dinero por recibir por quién lo tiene. Migración 0020.
+- COSTO_ENVIO_FIJO pasó de $1.75 a $5.25 (afecta sugerido, tope de descuentos y estimados de Analítica y Finanzas).
+

@@ -75,7 +75,7 @@ async function Resumen({ mes }: { mes: string }) {
             etiqueta="Envío y cobro"
             valor={er.envioCobro}
             negativo
-            nota={er.envioCobroEstimado ? "Estimado: $1.75 por pedido + 2.5% (anotalo en Gastos para el real)" : "Lo anotado en Gastos"}
+            nota={er.envioCobroEstimado ? "Estimado: $5.25 por pedido (envío + paquetería) + 2.5% (anotalo en Gastos para el real)" : "Lo anotado en Gastos"}
           />
           <Fila etiqueta="Pauta (anuncios)" valor={er.pauta} negativo nota="Lo anotado cada semana en Analítica" />
           {er.gastosPorCategoria.map((g) => (

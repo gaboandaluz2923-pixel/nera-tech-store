@@ -5,9 +5,10 @@ import { Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { margenEfectivo, precioParaMargenEfectivo } from "@/lib/precios";
+import { margenNeto, precioParaMargenNeto, type CostosCobro } from "@/lib/costos-cobro";
 
-// Precio de venta en la tabla de Precios, junto con su margen en efectivo.
+// Precio de venta en la tabla de Precios, junto con su margen NETO en efectivo (paquetera: ya resta envío,
+// paquetería y comisión de contra entrega; ver lib/costos-cobro.ts).
 // Se ve como texto; el lápiz abre dos campos enlazados: si cambiás el precio se recalcula el margen,
 // y si cambiás el margen se recalcula el precio (exacto, con centavos). "Guardar" cambia el precio.
 
@@ -25,6 +26,8 @@ export function PrecioMargenEditable({
   descuentoPct,
   sugerido,
   etiqueta,
+  envioCobrado,
+  cobro,
 }: {
   accion: (form: FormData) => Promise<void>;
   ocultos: Record<string, string>;
@@ -35,10 +38,16 @@ export function PrecioMargenEditable({
   descuentoPct: number;
   sugerido: number | null;
   etiqueta: string;
+  /** Lo que paga el cliente por el envío */
+  envioCobrado: number;
+  /** Costos de envío y cobro (Configuración) */
+  cobro: CostosCobro;
 }) {
+  const neto = (forma: "efectivo" | "tarjeta", p: number) =>
+    margenNeto(forma, { precio: p, costo: costo ?? 0, envioCobrado, descuentoPct }, cobro);
   const margenDe = (p: number | null) => {
-    if (p === null || costo === null) return null;
-    const m = margenEfectivo(p, costo, descuentoPct);
+    if (p === null || costo === null || !(p > 0)) return null;
+    const m = neto("efectivo", p).pct;
     return m === null ? null : Math.round(m * 1000) / 10; // en %, un decimal
   };
   const [editando, setEditando] = useState(false);
@@ -64,8 +73,9 @@ export function PrecioMargenEditable({
   }
 
   const precioNum = leer(precio);
-  const tarjeta = precioNum !== null && costo !== null && precioNum > 0 ? ((precioNum - costo) / precioNum) * 100 : null;
-  const bajoCosto = precioNum !== null && costo !== null && precioNum * (1 - descuentoPct / 100) < costo;
+  const tarjetaNeto = precioNum !== null && costo !== null && precioNum > 0 ? neto("tarjeta", precioNum).pct : null;
+  const tarjeta = tarjetaNeto === null ? null : tarjetaNeto * 100;
+  const bajoCosto = precioNum !== null && costo !== null && precioNum > 0 && neto("efectivo", precioNum).neto < 0;
 
   return (
     <form
@@ -121,22 +131,23 @@ export function PrecioMargenEditable({
             onChange={(e) => {
               setMargen(e.target.value);
               const m = leer(e.target.value);
-              if (m !== null && costo !== null) setPrecio(aTexto(precioParaMargenEfectivo(costo, m, descuentoPct), 2));
+              if (m !== null && costo !== null)
+                setPrecio(aTexto(precioParaMargenNeto("efectivo", m, { costo, envioCobrado, descuentoPct }, cobro), 2));
             }}
             disabled={costo === null}
             className="h-8 w-16 text-right tabular-nums"
-            aria-label={`Margen en efectivo de ${etiqueta}`}
-            title={costo === null ? "Sin costo de proveedor: no se puede calcular el margen" : "Margen si paga sin tarjeta"}
+            aria-label={`Margen neto en efectivo de ${etiqueta}`}
+            title={costo === null ? "Sin costo: no se puede calcular el margen" : "Margen neto si paga en efectivo al recibir (paquetera)"}
           />
           %
         </label>
       </div>
       <p className={`text-xs ${bajoCosto ? "text-red-600 dark:text-red-400" : "text-muted-foreground"}`}>
         {bajoCosto
-          ? "En efectivo queda bajo el costo"
+          ? "En efectivo pierde dinero (con envío y comisión)"
           : tarjeta !== null
-            ? `Margen en efectivo · con tarjeta ${tarjeta.toFixed(1)}%`
-            : "Margen en efectivo"}
+            ? `Margen neto en efectivo · tarjeta web ${tarjeta.toFixed(1)}%`
+            : "Margen neto en efectivo"}
       </p>
       <div className="flex gap-1">
         <Button type="submit" size="sm" disabled={pendiente}>

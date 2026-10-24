@@ -313,3 +313,50 @@ export async function quitarPago(_prev: EstadoAccion, form: FormData): Promise<E
   refrescar(id);
   return ok(`Listo: el pedido quedó sin pagar.${puntos}`);
 }
+
+/**
+ * Cierre del pedido (solo administradores): quién lo entregó y cuánto costó, banco y plazo de tasa 0% y cuánto entró
+ * al banco. Con el monto recibido el pedido queda "Recibido y conciliado" y muestra su margen neto real.
+ */
+export async function guardarCierre(_prev: EstadoAccion, form: FormData): Promise<EstadoAccion> {
+  const { usuario } = await superAdmin();
+  const id = texto(form.get("id"), 40);
+  const sb = createServiceClient();
+  const { data: p } = await sb.from("pedidos").select("id, estado, forma_pago, dinero_recibido_en").eq("id", id).single();
+  if (!p) return falla("No se encontró el pedido.");
+  const dinero = (k: string) => {
+    const t = texto(form.get(k), 20).replace(/[$,\s]/g, "");
+    if (!t) return null;
+    const n = Number(t);
+    return Number.isFinite(n) && n >= 0 ? r2(n) : NaN;
+  };
+  const costo = dinero("entrega_costo");
+  const recibido = dinero("dinero_recibido");
+  if (Number.isNaN(costo) || Number.isNaN(recibido)) return falla("Revisá los montos (solo números, sin negativos).");
+  const fecha = texto(form.get("dinero_recibido_en"), 10);
+  if (recibido !== null && !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return falla("Escribí la fecha en que entró el dinero al banco.");
+  const plazo = Number(texto(form.get("tasa_cero_plazo"), 3)) || null;
+  const cambios: Record<string, unknown> = {
+    entrega_servicio: texto(form.get("entrega_servicio"), 80) || null,
+    entrega_costo: costo,
+    tasa_cero_banco: p.forma_pago === "tasa_cero" ? texto(form.get("tasa_cero_banco"), 60) || null : null,
+    tasa_cero_plazo: p.forma_pago === "tasa_cero" ? plazo : null,
+    dinero_recibido: recibido,
+    dinero_recibido_en: recibido !== null ? fecha : null,
+    dinero_referencia: recibido !== null ? texto(form.get("dinero_referencia"), 80) || null : null,
+    conciliado_por: recibido !== null ? usuario : null,
+    conciliado_en: recibido !== null ? new Date().toISOString() : null,
+  };
+  const { error } = await sb.from("pedidos").update(cambios).eq("id", id);
+  if (error) return falla(`No se pudo guardar: ${error.message}`);
+  const nota =
+    recibido !== null
+      ? `Dinero recibido en el banco: ${usd2(recibido)} el ${fecha}${cambios.dinero_referencia ? ` (ref. ${cambios.dinero_referencia})` : ""}.`
+      : p.dinero_recibido_en
+        ? "Se quitó la conciliación del dinero."
+        : `Cierre: entregó ${cambios.entrega_servicio ?? "—"}${costo !== null ? ` (${usd2(costo)})` : ""}.`;
+  await sb.from("pedido_eventos").insert({ pedido_id: id, estado_anterior: p.estado, estado_nuevo: p.estado, nota, usuario });
+  refrescar(id);
+  revalidatePath("/admin");
+  return ok(recibido !== null ? "Listo: dinero recibido y conciliado" : "Cierre guardado");
+}

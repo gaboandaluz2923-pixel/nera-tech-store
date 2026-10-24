@@ -19,6 +19,7 @@ import { nombresEquipo, quien } from "@/lib/admin/historial";
 import { asignarUnidad } from "../../inventario/actions";
 import { createClient } from "@/lib/supabase/server";
 import { FacturaPedido, facturacionPropiaActiva } from "@/components/admin/factura-pedido";
+import { CierrePedido } from "@/components/admin/cierre-pedido";
 import { rolActual } from "@/lib/admin/sesion";
 import { ESTADO_PEDIDO, FORMA_PAGO, fechaHora, usd2 } from "@/lib/tienda/formato";
 import { enlaceWhatsAppA } from "@/lib/whatsapp";
@@ -340,6 +341,9 @@ async function Detalle({ params }: { params: PageProps<"/admin/pedidos/[id]">["p
           ) : null}
         </CardContent>
       </Card>
+
+      {/* Cierre: quién entregó, cuánto entró al banco y margen neto real (solo administradores) */}
+      {esAdmin ? <CierrePedido pedidoId={p.id} /> : null}
 
       {/* Factura */}
       <Card>

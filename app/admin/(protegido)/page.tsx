@@ -6,6 +6,7 @@ import { rolActual } from "@/lib/admin/sesion";
 import { inicioDeHoySV } from "@/lib/admin/pedidos";
 import { diasParaVencer, porPagar, textoVencimiento } from "@/lib/admin/inventario";
 import { createClient } from "@/lib/supabase/server";
+import { dineroPorRecibir } from "@/lib/admin/cierre-pedido";
 import { ESTADO_PEDIDO, fechaHora, usd2 } from "@/lib/tienda/formato";
 
 // Inicio del panel: cuántos pedidos y ventas llevamos (lo ve todo el equipo; no incluye costos ni ganancia)
@@ -208,6 +209,44 @@ async function PorPagar() {
   );
 }
 
+/** Dinero cobrado que todavía no entra al banco, por quién lo tiene (paquetera, motorista, Wompi, banco) */
+async function PorRecibir() {
+  const { rol } = await rolActual();
+  if (rol !== "super_admin") return null;
+  const grupos = await dineroPorRecibir().catch(() => []);
+  if (!grupos.length) return null;
+  const total = grupos.reduce((s, g) => s + g.esperado, 0);
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Dinero por recibir: {usd2(total)}</CardTitle>
+        <CardDescription>
+          Cobrado al cliente pero todavía no conciliado en el banco (ya descontadas las comisiones). Al entrar, anotalo en
+          el pedido → Cierre y margen neto.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ul className="divide-y rounded-lg border text-sm">
+          {grupos.map((g) => (
+            <li key={g.quien} className="flex items-center gap-3 p-3">
+              <span className="flex-1">
+                {g.quien}
+                <span className="block text-xs text-muted-foreground">
+                  {g.pedidos} {g.pedidos === 1 ? "pedido" : "pedidos"}
+                </span>
+              </span>
+              <span className="font-semibold tabular-nums">{usd2(g.esperado)}</span>
+            </li>
+          ))}
+        </ul>
+        <Link href="/admin/pedidos?ver=por-recibir" className="mt-2 inline-flex items-center gap-1 text-sm text-primary underline">
+          Ver los pedidos <ChevronRight className="size-4" aria-hidden />
+        </Link>
+      </CardContent>
+    </Card>
+  );
+}
+
 async function Avance() {
   const { rol } = await rolActual();
   if (rol !== "super_admin") return null;
@@ -237,6 +276,9 @@ export default function InicioAdmin({ searchParams }: PageProps<"/admin">) {
       </Suspense>
       <Suspense fallback={<p className="text-sm text-muted-foreground">Cargando…</p>}>
         <Resumen />
+      </Suspense>
+      <Suspense fallback={null}>
+        <PorRecibir />
       </Suspense>
       <Suspense fallback={null}>
         <PorPagar />
