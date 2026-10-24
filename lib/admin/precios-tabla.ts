@@ -22,6 +22,8 @@ export type Oferta = {
   stock: number | null; // null = el proveedor no informa existencia
   disponible: boolean;
   sugerido: number | null;
+  /** Bodega con crédito fiscal: costo de la factura sin IVA (al costo mostrado ya se le sumó el 13%) */
+  sinIva?: number | null;
 };
 
 export type FilaPrecio = {
@@ -230,6 +232,10 @@ export async function tablaPrecios(supabase: SupabaseClient): Promise<FilaPrecio
         stock: enBodega.reduce((s, l) => s + l.cantidad, 0),
         disponible: true,
         sugerido: null,
+        sinIva:
+          primerLote.compra_lineas?.compras?.documento === "ccf"
+            ? Math.round(Number(primerLote.costo_unitario) * 100) / 100
+            : null,
       });
     }
     const mejor = ofertas.find((o) => o.disponible) ?? null;

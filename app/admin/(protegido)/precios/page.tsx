@@ -81,7 +81,14 @@ function FilaTabla({ f }: { f: FilaPrecio }) {
           ))}
         </ul>
       </td>
-      <td className="p-2 text-right tabular-nums">{usd(f.mejor?.costo)}</td>
+      <td className="p-2 text-right tabular-nums">
+        <div>{usd(f.mejor?.costo)}</div>
+        {f.mejor ? (
+          <div className="text-xs text-muted-foreground">
+            {f.mejor.sinIva ? `${usd(f.mejor.sinIva)} + IVA` : "IVA incluido"}
+          </div>
+        ) : null}
+      </td>
       <td className="w-64 p-2 align-top">
         {f.sugerencia ? (
           <div className="space-y-1">
@@ -241,7 +248,7 @@ async function Contenido({ searchParams }: { searchParams: Promise<Filtros> }) {
             <tr>
               <th className="p-2">Producto</th>
               <th className="p-2">Proveedores (existencia)</th>
-              <th className="p-2 text-right">Costo puesto</th>
+              <th className="p-2 text-right">Costo puesto (con IVA)</th>
               <th className="p-2 text-right">Precio sugerido</th>
               <th className="p-2">Tu precio de venta</th>
               <th className="p-2 text-right">Margen en efectivo</th>
