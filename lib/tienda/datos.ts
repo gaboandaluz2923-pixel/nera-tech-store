@@ -498,6 +498,19 @@ export async function campanaDestacada(): Promise<{
   return null;
 }
 
+/** Combos vigentes para el inicio: producto publicado y con existencia + su mejor combo (el de más ahorro) */
+export type ComboInicio = { producto: ProductoResumen; combo: ComboTienda };
+export async function combosDestacados(): Promise<ComboInicio[]> {
+  "use cache";
+  cacheTag(ETIQUETA_CATALOGO);
+  const leido = await leerCatalogo();
+  vida(leido);
+  return leido.lista
+    .filter((p) => p.disponibilidad !== "agotado" && p.combos.length)
+    .map((p) => ({ producto: aResumen(p), combo: p.combos[0] }))
+    .sort((a, b) => b.combo.ahorro - a.combo.ahorro || a.producto.precioDesde - b.producto.precioDesde);
+}
+
 export async function catalogo(): Promise<ProductoResumen[]> {
   "use cache";
   cacheTag(ETIQUETA_CATALOGO);

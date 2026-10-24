@@ -642,6 +642,11 @@ audífonos de regalo": ahorro = precio de los audífonos) y la ficha dice "¡De 
 tu equipo y ahorrá" con **Agregar combo** (agrega el celular elegido y los accesorios). En el carrito, si el
 cliente lleva el celular pero le falta un accesorio del combo, se le ofrece; el descuento aparece como
 "Combo Kit audio Hot 70 −$5.00". Cada combo de la lista se puede cambiar de ahorro o apagar.
+**En el inicio**: todos los combos activos (con el celular publicado y con existencia) salen solos debajo del banner
+de la campaña, en la sección **"Llevátelo con regalo"** (si todos regalan el accesorio) o **"Combos: completá tu
+equipo"**. Cada tarjeta muestra el celular + el accesorio tachado, "¡De regalo!" o "Ahorrás $X", el precio desde (y
+en efectivo) y **Ver combo**, que abre la ficha justo en el recuadro del combo. Para quitarlo del inicio, apagá el
+combo.
 
 **3. Cupones**
 Código (3 a 20 letras, números o guiones; se guarda en mayúsculas), tipo (% de descuento, monto fijo o envío

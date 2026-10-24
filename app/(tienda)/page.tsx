@@ -6,7 +6,8 @@ import { BarraConfianza } from "@/components/tienda/confianza";
 import { mesesAccesorio, mesesCelular, mesesGarantia, textoPlazos } from "@/lib/tienda/garantia";
 import { TarjetaProducto } from "@/components/tienda/tarjeta-producto";
 import { IconoWhatsApp } from "@/components/tienda/whatsapp-flotante";
-import { campanaDestacada, catalogo, configTienda } from "@/lib/tienda/datos";
+import { campanaDestacada, catalogo, combosDestacados, configTienda } from "@/lib/tienda/datos";
+import { CombosInicio } from "@/components/tienda/combos-inicio";
 import { CATEGORIAS, dondeContraEntrega } from "@/lib/tienda/formato";
 import { enlaceWhatsAppA } from "@/lib/whatsapp";
 import { SITE_URL } from "@/lib/url-sitio";
@@ -18,10 +19,11 @@ const REDES = [
 ];
 
 export default async function Inicio() {
-  const [productos, c, campana] = await Promise.all([
+  const [productos, c, campana, combos] = await Promise.all([
     catalogo(),
     configTienda(),
     campanaDestacada(),
+    combosDestacados(),
   ]);
   const meses = c.tasaCero.meses;
   const disponibles = productos.filter((p) => p.disponibilidad !== "agotado");
@@ -92,6 +94,7 @@ export default async function Inicio() {
             mesesGarantia={mesesGarantia(c.garantia, campana.destacado.categoria)}
             whatsapp={c.whatsapp}
           />
+          <CombosInicio combos={combos} descuentoSinTarjeta={c.descuentoSinTarjeta} />
           {campana.otros.length ? (
             <section aria-labelledby="t-campana-mas">
               <h2 id="t-campana-mas" className="mb-1 text-xl font-bold">
@@ -154,6 +157,7 @@ export default async function Inicio() {
           </div>
         </section>
       )}
+      {!campana ? <CombosInicio combos={combos} descuentoSinTarjeta={c.descuentoSinTarjeta} /> : null}
 
       <BarraConfianza
         mesesGarantia={mesesCelular(c.garantia)}
