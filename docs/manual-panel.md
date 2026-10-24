@@ -641,7 +641,16 @@ puede llegar hasta lo que cuestan los accesorios: si es igual, el accesorio qued
 audífonos de regalo": ahorro = precio de los audífonos) y la ficha dice "¡De regalo!". En la ficha del celular aparece el recuadro "Completá
 tu equipo y ahorrá" con **Agregar combo** (agrega el celular elegido y los accesorios). En el carrito, si el
 cliente lleva el celular pero le falta un accesorio del combo, se le ofrece; el descuento aparece como
-"Combo Kit audio Hot 70 −$5.00". Cada combo de la lista se puede cambiar de ahorro o apagar.
+"Combo Kit audio Hot 70 −$5.00".
+
+**Precio y margen de cada combo**: debajo de cada combo hay una tabla, una fila por memoria del celular, con el
+**precio del combo** (con tarjeta: celular + accesorios − ahorro), el precio en efectivo, el **costo con IVA** (fijo:
+celular + accesorios, del mejor proveedor o de bodega) y el **margen neto** con cada forma de cobro (efectivo con
+paquetera, transferencia, tarjeta en la web y tasa 0%), contando **un solo envío y una paquetería** para todo el combo.
+En rojo si deja menos de 5% o pierde. **Editar** abre los precios de venta del celular (por memoria) y de los
+accesorios, el ahorro (el enlace **Accesorios de regalo** pone el ahorro igual al precio de los accesorios) y
+**Activo**; la tabla se recalcula mientras escribís. **Guardar** guarda el ahorro y, si cambiaste un precio, lo cambia
+en toda la tienda (igual que en Precios, queda en el historial de precios con razón "combo").
 **En el inicio**: todos los combos activos (con el celular publicado y con existencia) salen solos debajo del banner
 de la campaña, en la sección **"Llevátelo con regalo"** (si todos regalan el accesorio) o **"Combos: completá tu
 equipo"**. Cada tarjeta muestra el celular + el accesorio tachado, "¡De regalo!" o "Ahorrás $X", el precio desde (y

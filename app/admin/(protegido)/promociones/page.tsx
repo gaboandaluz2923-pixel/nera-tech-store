@@ -9,7 +9,9 @@ import { superAdmin } from "@/lib/admin/sesion";
 import { campanasBrevo } from "@/lib/brevo-campanas";
 import { createClient } from "@/lib/supabase/server";
 import { fechaHora, usd2 } from "@/lib/tienda/formato";
-import { cambiarCupon, crearCampanaEnvio, crearCombo, crearCupon, crearOferta, guardarCombo } from "./actions";
+import { cambiarCupon, crearCampanaEnvio, crearCombo, crearCupon, crearOferta, guardarCombo, guardarComboPrecios } from "./actions";
+import { tablaPrecios } from "@/lib/admin/precios-tabla";
+import { CamposCombo, TablaCombo, type DatosCombo } from "@/components/admin/combo-precios";
 import { estadoOferta } from "./util";
 
 // Promociones: campañas de correo de Brevo, ofertas con fecha, combos "Completá tu equipo" y cupones.
@@ -20,8 +22,19 @@ type Combo = {
   nombre: string;
   descuento: number;
   activo: boolean;
+  producto_principal_id: string;
   productos: { nombre: string } | null;
-  bundle_items: { cantidad: number; variantes: { precio: number; color: string | null; productos: { nombre: string } | null } | null }[];
+  bundle_items: {
+    cantidad: number;
+    variantes: {
+      precio: number;
+      color: string | null;
+      producto_id: string;
+      ram_gb: number | null;
+      almacenamiento_gb: number | null;
+      productos: { nombre: string } | null;
+    } | null;
+  }[];
 };
 type Cupon = {
   id: string;
@@ -71,7 +84,9 @@ async function Contenido() {
       .order("created_at", { ascending: false }),
     supabase
       .from("bundles")
-      .select("id, nombre, descuento, activo, productos(nombre), bundle_items(cantidad, variantes(precio, color, productos(nombre)))")
+      .select(
+        "id, nombre, descuento, activo, producto_principal_id, productos(nombre), bundle_items(cantidad, variantes(precio, color, producto_id, ram_gb, almacenamiento_gb, productos(nombre)))"
+      )
       .order("created_at", { ascending: false }),
     supabase
       .from("cupones")
@@ -94,6 +109,44 @@ async function Contenido() {
   for (const r of [ofertasR, combosR, cuponesR, productosR]) if (r.error) throw r.error;
   const ofertas = (ofertasR.data ?? []) as unknown as Oferta[];
   const combos = (combosR.data ?? []) as unknown as Combo[];
+  // Precio y margen de cada combo: costos con IVA y precios por memoria, igual que en Precios
+  const filasPrecio = combos.length ? await tablaPrecios(supabase) : [];
+  const fila = (productoId: string, ram: number | null, alm: number | null) =>
+    filasPrecio.find((f) => f.productoId === productoId && f.ramGb === ram && f.almacenamientoGb === alm);
+  const datosCombo = (c: Combo): DatosCombo | null => {
+    const base = filasPrecio[0];
+    if (!base) return null;
+    const configs = filasPrecio
+      .filter((f) => f.productoId === c.producto_principal_id && (f.precioVenta ?? 0) > 0)
+      .map((f) => ({ productoId: f.productoId, ram: f.ramGb, alm: f.almacenamientoGb, memoria: f.memoria, precio: f.precioVenta ?? 0, costo: f.mejor?.costo ?? null }));
+    if (!configs.length) return null;
+    return {
+      id: c.id,
+      nombre: c.nombre,
+      activo: c.activo,
+      ahorro: Number(c.descuento),
+      principal: { nombre: c.productos?.nombre ?? "", configs },
+      items: c.bundle_items
+        .filter((i) => i.variantes)
+        .map((i) => {
+          const v = i.variantes!;
+          const f = fila(v.producto_id, v.ram_gb, v.almacenamiento_gb);
+          return {
+            productoId: v.producto_id,
+            ram: v.ram_gb,
+            alm: v.almacenamiento_gb,
+            memoria: f?.memoria ?? "",
+            nombre: [v.productos?.nombre, v.color].filter(Boolean).join(" "),
+            cantidad: i.cantidad,
+            precio: Number(v.precio),
+            costo: f?.mejor?.costo ?? null,
+          };
+        }),
+      envioCobrado: base.envioCobrado,
+      descuentoPct: base.descuentoSinTarjetaPct,
+      cobro: base.cobro,
+    };
+  };
   const cupones = (cuponesR.data ?? []) as unknown as Cupon[];
   const productos = (productosR.data ?? []) as unknown as Producto[];
   const usos = new Map<string, number>();
@@ -224,42 +277,51 @@ async function Contenido() {
             <ul className="divide-y rounded-lg border">
               {combos.map((c) => {
                 const valor = c.bundle_items.reduce((s, i) => s + Number(i.variantes?.precio ?? 0) * i.cantidad, 0);
+                const d = datosCombo(c);
+                const resumen = (
+                  <div className="space-y-2">
+                    <p className="font-medium">
+                      {c.nombre}
+                      {!c.activo ? <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">apagado</span> : null}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {c.productos?.nombre} +{" "}
+                      {c.bundle_items
+                        .map((i) => `${i.cantidad > 1 ? `${i.cantidad} × ` : ""}${[i.variantes?.productos?.nombre, i.variantes?.color].filter(Boolean).join(" ")}`)
+                        .join(" + ")}
+                    </p>
+                    <p className="text-sm">
+                      Ahorro <strong>{usd2(Number(c.descuento))}</strong>
+                      <span className="text-xs text-muted-foreground">
+                        {" "}
+                        · accesorios a precio normal: {usd2(valor)}
+                        {Number(c.descuento) >= valor - 0.004 ? " (de regalo)" : ""}
+                      </span>
+                    </p>
+                    {d ? <TablaCombo d={d} /> : <p className="text-xs text-amber-700">El celular no tiene precio de venta: ponéselo en Precios para ver el margen.</p>}
+                  </div>
+                );
                 return (
                   <li key={c.id} className="p-3">
-                    <FilaEditable
-                      accion={guardarCombo}
-                      className=""
-                      vista={
-                        <div>
-                          <p className="font-medium">
-                            {c.nombre}
-                            {!c.activo ? <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">apagado</span> : null}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {c.productos?.nombre} +{" "}
-                            {c.bundle_items
-                              .map((i) => `${i.cantidad > 1 ? `${i.cantidad} × ` : ""}${[i.variantes?.productos?.nombre, i.variantes?.color].filter(Boolean).join(" ")}`)
-                              .join(" + ")}
-                          </p>
-                          <p className="text-sm">
-                            Ahorro <strong>{usd2(Number(c.descuento))}</strong>
-                            <span className="text-xs text-muted-foreground"> · accesorios a precio normal: {usd2(valor)}</span>
-                          </p>
+                    {d ? (
+                      <FilaEditable accion={guardarComboPrecios} className="" vista={resumen}>
+                        <CamposCombo d={d} />
+                      </FilaEditable>
+                    ) : (
+                      <FilaEditable accion={guardarCombo} className="" vista={resumen}>
+                        <input type="hidden" name="id" value={c.id} />
+                        <p className="font-medium">{c.nombre}</p>
+                        <div className="flex flex-wrap items-end gap-3">
+                          <div className="w-28 space-y-1">
+                            <Label htmlFor={`cb-${c.id}`}>Ahorro ($)</Label>
+                            <Input id={`cb-${c.id}`} name="descuento" inputMode="decimal" defaultValue={Number(c.descuento).toFixed(2)} />
+                          </div>
+                          <label className="flex h-9 items-center gap-2 text-sm">
+                            <input type="checkbox" name="activo" defaultChecked={c.activo} className="size-4" /> Activo
+                          </label>
                         </div>
-                      }
-                    >
-                      <input type="hidden" name="id" value={c.id} />
-                      <p className="font-medium">{c.nombre}</p>
-                      <div className="flex flex-wrap items-end gap-3">
-                        <div className="w-28 space-y-1">
-                          <Label htmlFor={`cb-${c.id}`}>Ahorro ($)</Label>
-                          <Input id={`cb-${c.id}`} name="descuento" inputMode="decimal" defaultValue={Number(c.descuento).toFixed(2)} />
-                        </div>
-                        <label className="flex h-9 items-center gap-2 text-sm">
-                          <input type="checkbox" name="activo" defaultChecked={c.activo} className="size-4" /> Activo
-                        </label>
-                      </div>
-                    </FilaEditable>
+                      </FilaEditable>
+                    )}
                   </li>
                 );
               })}

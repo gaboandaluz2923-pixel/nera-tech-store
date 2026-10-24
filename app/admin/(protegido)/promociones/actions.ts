@@ -1,5 +1,6 @@
 "use server";
 
+import { fijarPrecio } from "../precios/actions";
 import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import type { EstadoAccion } from "@/components/admin/formulario-accion";
@@ -159,6 +160,59 @@ export async function crearCombo(_prev: EstadoAccion, form: FormData): Promise<E
   }
   refrescar();
   return ok("Combo creado y activo. Ya aparece en la ficha y en el carrito.");
+}
+
+/**
+ * Guardar un combo desde su editor con precios: el ahorro, si está activo y, si cambiaron, los precios de venta del
+ * celular (por memoria) y de los accesorios (cambian en toda la tienda, como en Precios).
+ */
+export async function guardarComboPrecios(_prev: EstadoAccion, form: FormData): Promise<EstadoAccion> {
+  const id = texto(form.get("id"));
+  const ahorro = numero(form.get("descuento"));
+  const activo = form.get("activo") === "on";
+  if (!(ahorro !== null && ahorro > 0)) return falla("El ahorro debe ser mayor que cero.");
+  let precios: { productoId: string; ram: number | null; alm: number | null; precio: number }[] = [];
+  try {
+    precios = JSON.parse(texto(form.get("precios")) || "[]");
+  } catch {
+    return falla("No se pudieron leer los precios.");
+  }
+  if (precios.some((p) => !(Number(p.precio) > 0))) return falla("Revisá los precios: tienen que ser mayores que cero.");
+  const { supabase } = await superAdmin();
+  const { data: b } = await supabase
+    .from("bundles")
+    .select("id, bundle_items(cantidad, variantes(precio, producto_id, ram_gb, almacenamiento_gb))")
+    .eq("id", id)
+    .single();
+  if (!b) return falla("No se encontró el combo.");
+  // El ahorro no puede pasar de lo que cuestan los accesorios (con los precios nuevos)
+  const items = (b.bundle_items ?? []) as unknown as {
+    cantidad: number;
+    variantes: { precio: number; producto_id: string; ram_gb: number | null; almacenamiento_gb: number | null } | null;
+  }[];
+  const valor = items.reduce((s, i) => {
+    const v = i.variantes;
+    if (!v) return s;
+    const nuevo = precios.find((p) => p.productoId === v.producto_id && (p.ram ?? null) === v.ram_gb && (p.alm ?? null) === v.almacenamiento_gb);
+    return s + Number(nuevo?.precio ?? v.precio) * i.cantidad;
+  }, 0);
+  if (ahorro > valor + 0.004)
+    return falla(`El ahorro no puede pasar de lo que cuestan los accesorios ($${valor.toFixed(2)}; con eso quedan gratis).`);
+  for (const p of precios) {
+    const f = new FormData();
+    f.set("productoId", p.productoId);
+    f.set("ram", p.ram === null || p.ram === undefined ? "" : String(p.ram));
+    f.set("alm", p.alm === null || p.alm === undefined ? "" : String(p.alm));
+    f.set("precio", Number(p.precio).toFixed(2));
+    f.set("razon", "combo");
+    await fijarPrecio(f);
+  }
+  const { error } = await supabase.from("bundles").update({ descuento: Math.round(ahorro * 100) / 100, activo }).eq("id", id);
+  if (error) return falla(`No se pudo guardar: ${error.message}`);
+  refrescar();
+  return ok(
+    `${activo ? "Combo guardado" : "Combo apagado: ya no se ofrece en la tienda"}${precios.length ? ` · ${precios.length} ${precios.length === 1 ? "precio cambiado" : "precios cambiados"}` : ""}.`
+  );
 }
 
 export async function guardarCombo(_prev: EstadoAccion, form: FormData): Promise<EstadoAccion> {
