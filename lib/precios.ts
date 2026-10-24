@@ -39,6 +39,17 @@ export function costoPuesto(precioLista: number, p: CostosProveedor): number {
   return r2(precioLista + transporte + flete + seguro);
 }
 
+/**
+ * Costo de bodega con IVA incluido, para compararlo con el precio de venta (que lleva IVA).
+ * En crédito fiscal el lote se guarda sin IVA (el IVA se recupera en la contabilidad); en Precios se le suma el 13%
+ * para que el margen se calcule igual que con las listas de los proveedores, que vienen con IVA incluido.
+ * En factura de consumidor final el lote ya trae el IVA; lo demás (inicial, ajustes) queda como se escribió.
+ */
+export const IVA = 0.13;
+export function costoBodegaConIva(costoLote: number, documento: string | null | undefined): number {
+  return r2(documento === "ccf" ? costoLote * (1 + IVA) : costoLote);
+}
+
 /** Contribución por unidad enviada por paquetera (antes de pauta). */
 export function contribucion(
   precioVenta: number,

@@ -4,6 +4,7 @@ import { todo } from "@/lib/admin/catalogo";
 import { formatoAlmacenamiento } from "@/lib/listas/normalizar";
 import {
   contribucion,
+  costoBodegaConIva,
   costoPuesto,
   margen,
   margenEfectivo,
@@ -81,7 +82,14 @@ type Producto = {
 };
 type Proveedor = CostosProveedor & { id: string; nombre: string; plazo_credito_dias: number };
 
-type Lote = { variante_id: string; cantidad: number; costo_unitario: number | null; fecha: string; created_at: string };
+type Lote = {
+  variante_id: string;
+  cantidad: number;
+  costo_unitario: number | null;
+  fecha: string;
+  created_at: string;
+  compra_lineas: { compras: { documento: string } | null } | null;
+};
 
 type Observado = { producto_id: string; ram_gb: number | null; almacenamiento_gb: number | null; precio: number; fuente: string; fecha: string };
 
@@ -126,7 +134,7 @@ export async function tablaPrecios(supabase: SupabaseClient): Promise<FilaPrecio
     todo<Lote>((a, b) =>
       supabase
         .from("lotes")
-        .select("variante_id, cantidad, costo_unitario, fecha, created_at")
+        .select("variante_id, cantidad, costo_unitario, fecha, created_at, compra_lineas(compras(documento))")
         .gt("cantidad", 0)
         .order("fecha")
         .order("created_at")
@@ -212,7 +220,8 @@ export async function tablaPrecios(supabase: SupabaseClient): Promise<FilaPrecio
       .filter((l) => l.costo_unitario !== null)
       .sort((a, b) => a.fecha.localeCompare(b.fecha) || a.created_at.localeCompare(b.created_at))[0];
     if (primerLote) {
-      const costo = Math.round(Number(primerLote.costo_unitario) * 100) / 100;
+      // Con IVA incluido, igual que las listas de los proveedores y el precio de venta
+      const costo = costoBodegaConIva(Number(primerLote.costo_unitario), primerLote.compra_lineas?.compras?.documento);
       ofertas.unshift({
         proveedor: "En bodega",
         precio: costo,

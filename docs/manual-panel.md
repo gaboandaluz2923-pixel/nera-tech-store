@@ -156,7 +156,9 @@ Una fila por configuración (modelo + memoria; los colores van juntos).
   existencia que informa el proveedor. Tachado = sin existencia. ▲▼ = cambio contra su lista anterior.
   "sug." = precio sugerido por el proveedor (Idecom lo manda).
   **En bodega** = lo que ya compraste y tenés guardado: su costo es el real del lote más viejo (el próximo que
-  sale) y, si hay, manda sobre los proveedores para calcular margen y sugerido.
+  sale) y, si hay, manda sobre los proveedores para calcular margen y sugerido. En Precios se muestra **con IVA
+  incluido**, igual que las listas de los proveedores y tu precio de venta: si la compra fue con crédito fiscal se le
+  suma el 13% (en Compras e Inventario sigue sin IVA, porque ese IVA se recupera).
 - Aparecen los productos que se le pueden comprar a un proveedor, los que tienen unidades en bodega y los
   creados con **+ Nuevo producto** aunque todavía no tengan proveedor (en ese caso sin costo ni margen: el margen
   aparece cuando recibís la compra en bodega o cuando le ponés proveedor).

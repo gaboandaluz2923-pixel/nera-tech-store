@@ -1,6 +1,6 @@
 import "server-only";
 import { createServiceClient } from "@/lib/supabase/server";
-import { COMISION_PAQUETERA, COSTO_ENVIO_FIJO, costoPuesto, type CostosProveedor } from "@/lib/precios";
+import { COMISION_PAQUETERA, COSTO_ENVIO_FIJO, costoBodegaConIva, costoPuesto, type CostosProveedor } from "@/lib/precios";
 
 // Costo puesto de las variantes de un pedido, para que ningún descuento deje el pedido
 // por debajo del costo (decisión de Gabriel, fase 4). Se calcula igual que en Precios:
@@ -27,13 +27,15 @@ export async function costoEnBodega(ids: string[]): Promise<Map<string, number>>
   if (!ids.length) return costos;
   const { data, error } = await createServiceClient()
     .from("lotes")
-    .select("variante_id, costo_unitario")
+    .select("variante_id, costo_unitario, compra_lineas(compras(documento))")
     .in("variante_id", ids)
     .gt("cantidad", 0)
     .not("costo_unitario", "is", null);
   if (error) return costos; // antes de la migración 0009 no hay lotes
   for (const l of data ?? []) {
-    const c = Math.round(Number(l.costo_unitario) * 100) / 100;
+    // Con IVA incluido (como el precio de venta y las listas de los proveedores)
+    const doc = (l.compra_lineas as unknown as { compras: { documento: string } | null } | null)?.compras?.documento;
+    const c = costoBodegaConIva(Number(l.costo_unitario), doc);
     costos.set(l.variante_id as string, Math.max(costos.get(l.variante_id as string) ?? 0, c));
   }
   return costos;
