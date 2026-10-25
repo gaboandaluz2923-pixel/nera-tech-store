@@ -208,5 +208,5 @@ F18, audífonos con cable Infinix (modelo por confirmar), Kieslect KS3E (Ks3 Eli
 - Mínimo sin pérdida (`minimoSinPerdida(costo, pct, envioCobrado)`): cuenta el envío que paga el cliente ($5), salvo
   que el producto esté en una campaña de envío gratis vigente (`lib/admin/envio-gratis.ts`). Antes asumía siempre
   envío gratis y marcaba como pérdida accesorios baratos que sí cobran envío (Gabriel, audífonos Type-C).
-- Ficha: "¿Preferís comprar por WhatsApp? Pedilo aquí" pasa a botón naranja (pedido de Gabriel, aunque haya dos
-  botones naranjas). El mensaje de WhatsApp de comprar y de tasa 0% lleva el enlace de la ficha.
+- Ficha: "¿Preferís comprar por WhatsApp? Pedilo aquí" pasa a botón verde WhatsApp (#1DA851, pedido de Gabriel);
+  Comprar sigue siendo el único naranja. El mensaje de WhatsApp de comprar y de tasa 0% lleva el enlace de la ficha.

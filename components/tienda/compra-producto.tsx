@@ -395,7 +395,7 @@ export function CompraProducto(props: Props) {
             ) : null}
             <Button
               size="lg"
-              className="h-auto min-h-12 w-full gap-2 py-2 text-base text-balance whitespace-normal"
+              className="h-auto min-h-12 w-full gap-2 bg-[#1DA851] py-2 text-base text-balance whitespace-normal text-white hover:bg-[#178F44]"
               nativeButton={false}
               render={<a href={enlaceComprar} target="_blank" rel="noopener noreferrer" />}
             >
