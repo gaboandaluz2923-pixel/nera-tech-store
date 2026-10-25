@@ -470,7 +470,10 @@ mismo cliente.
 Menú **Inventario**. Arriba: unidades en bodega, cuánto valen al costo, cuánto se debe a proveedores y cuántas
 unidades se mueven lento (más de 30 días en bodega sin ventas en 30 días).
 - **Avisos**: cuántos IMEI o números de serie faltan por registrar, y los productos que se venden **bajo el costo**
-  de lo que hay en bodega (con el enlace para revisar el precio).
+  de lo que hay en bodega (con el enlace para revisar el precio). "Con pérdida" quiere decir que, pagando en efectivo
+  con el descuento sin tarjeta, no alcanza para el costo, la paquetera ($3.75), la paquetería ($1.50) y la comisión
+  de contra entrega, contando que el cliente paga los $5 de envío. Si el producto está en una campaña de envío
+  gratis vigente, la cuenta se hace sin envío (el aviso dice en qué campaña está).
 - **Facturas por pagar**: de la que vence primero a la última, con "Vence en 3 días", "Vence hoy" o "Vencida hace…".
   También salen en **Inicio** cuando faltan 3 días o menos.
 - **En bodega**: cada variante con sus unidades, días en bodega, última venta y costo; lo más viejo arriba (es lo que
@@ -576,7 +579,8 @@ La columna **Precio sugerido** ya no es solo "costo + margen". Combina:
 - los **precios de mercado** que anotaste en los últimos 30 días (mínimo, máximo y el más común);
 - cuánto se **vendió** esa configuración en 30 días: con 5 o más es "se vende rápido" y la sugerencia se acerca
   al mercado; sin ventas, se queda en tu margen o baja un poco para moverlo.
-Nunca baja del **mínimo sin pérdida** (aun pagando en efectivo con 6% y sin cobrar envío). Debajo dice cuánto
+Nunca baja del **mínimo sin pérdida** (pagando en efectivo con el descuento sin tarjeta y cobrando el envío normal
+de $5; si el producto está en una campaña de envío gratis vigente, sin cobrar envío). Debajo dice cuánto
 deja de contribución. **Por qué** abre la explicación en palabras y los precios anotados. **Usar** aplica el
 sugerido a todos los colores de esa memoria y queda en el historial como "sugerido aprobado"; si dice "= tu
 precio", ya está aplicado. El filtro **Sugerido distinto de tu precio** muestra solo lo que conviene revisar.
@@ -638,7 +642,11 @@ octubre"; las tarjetas del listado dicen "Oferta −$X". Al terminar, el precio 
 oferta dice si está **activa**, **programada**, **terminada** o **apagada**.
 
 **2. Combos "Completá tu equipo"**
-Un combo es un celular (cualquier color o memoria) + 1 a 3 accesorios, con un ahorro en dólares. Elegí el
+Un combo es un celular + 1 a 3 accesorios, con un ahorro en dólares. El celular puede ser **cualquier memoria**
+o **solo una memoria** (ej. "Xiaomi Redmi Note 17 · solo 6 GB + 256 GB"): así el combo vale únicamente para esa
+versión, la ficha abre directo en ella, y en las otras memorias dice "🎁 (combo): en la versión de 6 GB + 256 GB"
+con un botón **Ver 6 GB + 256 GB**. Los celulares ocultos también aparecen en la lista, marcados "(oculto)": el combo
+se ve en la tienda cuando publiqués el celular. Elegí el
 nombre, el producto principal, los accesorios (con cantidad), el ahorro y, si querés, cuándo **empieza** y cuándo
 **termina** (vacío = sin límite; horas de El Salvador), y tocá **Crear combo**.
 Cada combo de la lista dice si está **activo**, **programado** (todavía no empieza), **terminado** o **apagado**, y su

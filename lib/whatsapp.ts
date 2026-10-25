@@ -23,6 +23,8 @@ export function mensajeProducto(opts: {
   precio: number;
   cuota?: { meses: number; monto: number };
   codigoPagina: string;
+  /** Enlace a la ficha del producto: va al final del mensaje para que el equipo vea exactamente qué quiere */
+  enlace?: string;
 }) {
   const precio = `$${opts.precio.toFixed(2)}`;
   const base: Record<IntencionWhatsApp, string> = {
@@ -33,5 +35,5 @@ export function mensajeProducto(opts: {
     comprar: `Hola, quiero comprar el ${opts.nombre} a ${precio}.`,
     pedido: `Hola, acabo de hacer un pedido en la web.`,
   };
-  return `${base[opts.intencion]} [${opts.codigoPagina}]`;
+  return `${base[opts.intencion]}${opts.enlace ? `\n${opts.enlace}` : ""} [${opts.codigoPagina}]`;
 }

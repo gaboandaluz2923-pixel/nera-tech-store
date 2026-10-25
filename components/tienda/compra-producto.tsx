@@ -10,6 +10,7 @@ import {
 } from "@/app/(tienda)/producto/[slug]/actions";
 import type { ComboTienda, VarianteTienda } from "@/lib/tienda/datos";
 import { FechaEntrega } from "./fecha-entrega";
+import { varianteEnCombo } from "@/lib/tienda/combos";
 import {
   TEXTO_DISPONIBILIDAD,
   cuota,
@@ -40,6 +41,8 @@ type Props = {
   campana?: { nombre: string; fin: string | null } | null;
   /** % de descuento al pagar en efectivo o transferencia (Configuración) */
   descuentoSinTarjeta: number;
+  /** Dirección completa de esta ficha (va en el mensaje de WhatsApp) */
+  enlace?: string;
 };
 
 const PUNTO_DISP = {
@@ -99,7 +102,11 @@ export function CompraProducto(props: Props) {
     const disponibles = p.variantes.filter(
       (v) => v.disponibilidad !== "agotado",
     );
-    const base = enBodega.length ? enBodega : disponibles.length ? disponibles : p.variantes;
+    let base = enBodega.length ? enBodega : disponibles.length ? disponibles : p.variantes;
+    // Si hay un combo para una memoria exacta (ej. el regalo del 6 + 256), arranca en esa versión
+    const conCombo = p.combos.find((c) => c.memoria);
+    const delCombo = conCombo ? disponibles.filter((v) => varianteEnCombo(conCombo, v)) : [];
+    if (delCombo.length) base = delCombo.some((v) => v.disponibilidad === "bodega") ? delCombo.filter((v) => v.disponibilidad === "bodega") : delCombo;
     const minimo = Math.min(...base.map((v) => v.precio));
     const baratas = base.filter((v) => v.precio === minimo);
     return (
@@ -179,6 +186,7 @@ export function CompraProducto(props: Props) {
       nombre: nombreCompleto,
       precio: elegida.precio,
       codigoPagina: "ficha",
+      enlace: p.enlace,
     }),
   );
   const enlaceTasaCero = enlaceWhatsAppA(
@@ -189,6 +197,7 @@ export function CompraProducto(props: Props) {
       precio: elegida.precio,
       cuota: { meses: p.mesesTasaCero, monto: mensualidad },
       codigoPagina: "ficha",
+      enlace: p.enlace,
     }),
   );
   const enlacePregunta = enlaceWhatsAppA(
@@ -205,9 +214,18 @@ export function CompraProducto(props: Props) {
     medir("agregar_carrito", { productoId: p.productoId, varianteId: elegida.id, nombre: nombreCompleto, valor: elegida.precio });
     abrirCarrito();
   };
+  // Combos para la memoria elegida; los de otra memoria se avisan con un botón para cambiar
+  const combosElegida = p.combos.filter((c) => varianteEnCombo(c, elegida));
+  const versionDe = (c: ComboTienda) =>
+    p.variantes
+      .filter((v) => v.disponibilidad !== "agotado" && varianteEnCombo(c, v))
+      .sort((a, b) => Number(b.color === elegida.color) - Number(a.color === elegida.color))[0] ?? null;
+  const combosOtraMemoria = p.combos.filter((c) => !varianteEnCombo(c, elegida) && versionDe(c));
   const comprarCombo = (c: ComboTienda) => {
-    agregarAlCarrito(elegida.id);
-    medir("clic_bundle", { productoId: p.productoId, varianteId: elegida.id, nombre: c.nombre, combo: c.id });
+    const v = varianteEnCombo(c, elegida) ? elegida : versionDe(c);
+    if (!v) return;
+    agregarAlCarrito(v.id);
+    medir("clic_bundle", { productoId: p.productoId, varianteId: v.id, nombre: c.nombre, combo: c.id });
     c.items.forEach((i) => agregarAlCarrito(i.varianteId, i.cantidad));
     abrirCarrito();
   };
@@ -375,26 +393,41 @@ export function CompraProducto(props: Props) {
                 Quiero tasa 0% en {p.mesesTasaCero} cuotas
               </Button>
             ) : null}
-            <a
-              href={enlaceComprar}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-1.5 py-1 text-sm font-medium text-muted-foreground hover:text-foreground"
+            <Button
+              size="lg"
+              className="h-auto min-h-12 w-full gap-2 py-2 text-base text-balance whitespace-normal"
+              nativeButton={false}
+              render={<a href={enlaceComprar} target="_blank" rel="noopener noreferrer" />}
             >
-              <IconoWhatsApp className="size-4" />
-              ¿Preferís comprar por WhatsApp?
-            </a>
+              <IconoWhatsApp className="size-5 shrink-0" />
+              <span className="text-center leading-tight">
+                ¿Preferís comprar por WhatsApp? <span className="whitespace-nowrap font-semibold">Pedilo aquí</span>
+              </span>
+            </Button>
           </div>
         )}
       </div>
 
       {/* Combos "Completá tu equipo" */}
-      {!agotada && p.combos.length ? (
+      {!agotada && (combosElegida.length || combosOtraMemoria.length) ? (
         <section aria-labelledby="t-combos" className="space-y-2">
           <h2 id="t-combos" className="text-sm font-semibold">
             Completá tu equipo y ahorrá
           </h2>
-          {p.combos.slice(0, 2).map((c) => {
+          {combosOtraMemoria.slice(0, 2).map((c) => {
+            const v = versionDe(c)!;
+            return (
+              <p key={c.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-marca/50 bg-marca/5 p-2.5 text-sm">
+                <span className="flex-1">
+                  🎁 <strong>{c.nombre}</strong>: en la versión de {v.memoria ?? "otra memoria"}
+                </span>
+                <Button size="sm" variant="outline" onClick={() => setElegida(v)}>
+                  Ver {v.memoria ?? "esa versión"}
+                </Button>
+              </p>
+            );
+          })}
+          {combosElegida.slice(0, 2).map((c) => {
             const normal = elegida.precio + c.items.reduce((s, i) => s + i.precio * i.cantidad, 0);
             const valorItems = c.items.reduce((s, i) => s + i.precio * i.cantidad, 0);
             const ahorro = Math.min(c.ahorro, valorItems);

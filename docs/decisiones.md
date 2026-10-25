@@ -201,3 +201,12 @@ F18, audífonos con cable Infinix (modelo por confirmar), Kieslect KS3E (Ks3 Eli
 - Precios indica si cada producto se ve en la tienda.
 - Estudio de mercado semanal (tarea programada, lunes 7:52 a. m.): solo reporta, no cambia nada.
 
+
+## 24 oct 2026 — Combos por memoria, mínimo sin pérdida con envío cobrado y botón de WhatsApp
+- Combos por memoria exacta (migración 0022: bundles.principal_ram_gb / principal_almacenamiento_gb; vacío = cualquier
+  memoria). El descuento del carrito solo aplica a la memoria del combo. Pedido de Gabriel (Redmi Note 17 6+256).
+- Mínimo sin pérdida (`minimoSinPerdida(costo, pct, envioCobrado)`): cuenta el envío que paga el cliente ($5), salvo
+  que el producto esté en una campaña de envío gratis vigente (`lib/admin/envio-gratis.ts`). Antes asumía siempre
+  envío gratis y marcaba como pérdida accesorios baratos que sí cobran envío (Gabriel, audífonos Type-C).
+- Ficha: "¿Preferís comprar por WhatsApp? Pedilo aquí" pasa a botón naranja (pedido de Gabriel, aunque haya dos
+  botones naranjas). El mensaje de WhatsApp de comprar y de tasa 0% lleva el enlace de la ficha.

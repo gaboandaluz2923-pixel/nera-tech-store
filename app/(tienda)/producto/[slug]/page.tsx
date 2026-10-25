@@ -221,6 +221,7 @@ async function Ficha({ params }: { params: PageProps<"/producto/[slug]">["params
               envioGratisDesde={c.envio.gratis_desde}
               campana={p.campana ? { nombre: p.campana.nombre, fin: p.campana.fin } : null}
               descuentoSinTarjeta={c.descuentoSinTarjeta}
+              enlace={`${SITE_URL}/producto/${p.slug}`}
             />
           </div>
 
