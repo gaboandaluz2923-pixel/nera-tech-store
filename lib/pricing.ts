@@ -12,9 +12,15 @@ export type Sugerencia = { precio: number; contribucion: number; rotacion: Rotac
 /** Unidades vendidas en 30 días → rotación. */
 export const rotacionDe = (unidades30: number): Rotacion => (unidades30 >= 5 ? "rapida" : unidades30 >= 1 ? "normal" : "lenta");
 
-/** Precio más bajo que no pierde dinero aunque paguen en efectivo con el descuento sin tarjeta (pct) y sin cobrar envío. */
-export function minimoSinPerdida(costo: number, pct: number): number {
-  return Math.ceil(((costo + COSTO_ENVIO_FIJO) / ((1 - COMISION_PAQUETERA) * (1 - pct / 100))) * 100) / 100;
+/**
+ * Precio más bajo que no pierde dinero aunque paguen en efectivo con el descuento sin tarjeta (pct).
+ * envioCobrado = lo que el cliente paga de envío ($5 normalmente; 0 si el producto está en una campaña de envío gratis).
+ * Sin ese dato se asume el peor caso: envío gratis.
+ * Cuenta: (precio × (1 − pct) + envío cobrado) × (1 − 2.5%) − costo − $5.25 ≥ 0.
+ */
+export function minimoSinPerdida(costo: number, pct: number, envioCobrado = 0): number {
+  const precio = ((costo + COSTO_ENVIO_FIJO) / (1 - COMISION_PAQUETERA) - envioCobrado) / (1 - pct / 100);
+  return Math.max(0.01, Math.ceil(precio * 100) / 100);
 }
 
 /** Redondeo comercial hacia ABAJO (para quedar por debajo del mercado): .99 bajo $30; 9 o 5 desde $30. */
@@ -43,10 +49,13 @@ export function sugerirPrecio(e: {
   unidades30: number;
   /** % de descuento sin tarjeta vigente (Configuración) */
   descuentoSinTarjetaPct: number;
+  /** Envío que paga el cliente con este producto (0 si está en una campaña de envío gratis) */
+  envioCobrado?: number;
 }): Sugerencia {
   const { costo, margenObjetivoPct: m, mercado } = e;
   const rotacion = rotacionDe(e.unidades30);
-  const piso = redondeoComercial(minimoSinPerdida(costo, e.descuentoSinTarjetaPct));
+  const envio = e.envioCobrado ?? 0;
+  const piso = redondeoComercial(minimoSinPerdida(costo, e.descuentoSinTarjetaPct, envio));
   const objetivo = precioConMargen(costo, m);
   const txt: string[] = [`Costo puesto ${usd(costo)}. Con tu margen objetivo de ${m}% el precio sería ${usd(objetivo)}.`];
   const vendidas = `${e.unidades30} ${e.unidades30 === 1 ? "unidad vendida" : "unidades vendidas"} en 30 días`;
@@ -91,7 +100,11 @@ export function sugerirPrecio(e: {
 
   if (precio < piso) {
     precio = piso;
-    txt.push(`No baja de ${usd(piso)}: debajo de eso se pierde dinero con el ${e.descuentoSinTarjetaPct}% de efectivo y sin cobrar envío.`);
+    txt.push(
+      `No baja de ${usd(piso)}: debajo de eso se pierde dinero con el ${e.descuentoSinTarjetaPct}% de efectivo${
+        envio > 0 ? ` (cobrando ${usd(envio)} de envío)` : " y sin cobrar envío"
+      }.`
+    );
   }
   const contrib = contribucion(precio, costo);
   txt.push(`Sugerido ${usd(precio)}: deja ${usd(contrib)} de contribución por unidad (con envío de $5).`);

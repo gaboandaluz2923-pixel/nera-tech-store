@@ -1,5 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { productosConEnvioGratis } from "@/lib/admin/envio-gratis";
 import { todo } from "@/lib/admin/catalogo";
 import { formatoAlmacenamiento } from "@/lib/listas/normalizar";
 import {
@@ -120,6 +121,7 @@ export async function tablaPrecios(supabase: SupabaseClient): Promise<FilaPrecio
         margenNeto(f, { precio, costo, envioCobrado, descuentoPct: pct }, cobro),
       ])
     ) as Record<FormaCobro, Neto>;
+  const envioGratis = await productosConEnvioGratis(supabase);
   const [vinculos, variantes, productos, proveedores, observadosR, ventasR, conProveedorR, lotesR] = await Promise.all([
     todo<Vinculo>((a, b) =>
       supabase
@@ -284,7 +286,7 @@ export async function tablaPrecios(supabase: SupabaseClient): Promise<FilaPrecio
             ? "sin_precio"
             : "si";
     const sugerencia = mejor
-      ? sugerirPrecio({ costo: mejor.costo, margenObjetivoPct: Number(prod.categorias?.margen_objetivo_pct ?? 10), mercado, unidades30, descuentoSinTarjetaPct: pct })
+      ? sugerirPrecio({ costo: mejor.costo, margenObjetivoPct: Number(prod.categorias?.margen_objetivo_pct ?? 10), mercado, unidades30, descuentoSinTarjetaPct: pct, envioCobrado: envioGratis.has(prod.id) ? 0 : envioCobrado })
       : null;
     filas.push({
       clave,

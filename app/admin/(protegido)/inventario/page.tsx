@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { DIAS_LENTO, leerInventario, porPagar, textoVencimiento, diasParaVencer } from "@/lib/admin/inventario";
 import { superAdmin } from "@/lib/admin/sesion";
 import { minimoSinPerdida } from "@/lib/pricing";
+import { productosConEnvioGratis } from "@/lib/admin/envio-gratis";
 import { preciosDeOferta } from "@/lib/tienda/calculo";
 import { configTienda } from "@/lib/tienda/datos";
 import { fechaCorta, usd2 } from "@/lib/tienda/formato";
@@ -51,8 +52,9 @@ async function Contenido({ searchParams }: { searchParams: Promise<Params> }) {
   const pagina = leerPagina(sp.pagina);
   const { supabase } = await superAdmin();
   const [filas, cuentas, config] = await Promise.all([leerInventario(supabase), porPagar(supabase), configTienda()]);
-  const ofertas = await preciosDeOferta(filas.map((f) => f.varianteId));
+  const [ofertas, envioGratis] = await Promise.all([preciosDeOferta(filas.map((f) => f.varianteId)), productosConEnvioGratis(supabase)]);
   const pct = config.descuentoSinTarjeta;
+  const envioNormal = Number(config.envio?.costo ?? 0);
 
   const unidades = filas.reduce((s, f) => s + f.enBodega, 0);
   const valor = filas.reduce((s, f) => s + f.valor, 0);
@@ -62,8 +64,11 @@ async function Contenido({ searchParams }: { searchParams: Promise<Params> }) {
   const conPerdida = filas
     .map((f) => {
       const precio = Math.min(f.precio, ofertas.get(f.varianteId)?.precio ?? Infinity);
-      const piso = f.costoProximo !== null ? minimoSinPerdida(f.costoProximo, pct) : null;
-      return { ...f, precioVigente: precio, piso };
+      // Si el producto está en una campaña de envío gratis, el cliente no paga envío; si no, paga el envío normal
+      const campana = envioGratis.get(f.productoId) ?? null;
+      const envio = campana ? 0 : envioNormal;
+      const piso = f.costoProximo !== null ? minimoSinPerdida(f.costoProximo, pct, envio) : null;
+      return { ...f, precioVigente: precio, piso, campana, envio };
     })
     .filter((f) => f.piso !== null && f.precioVigente > 0 && f.precioVigente < f.piso);
   const idsPerdida = new Set(conPerdida.map((f) => f.varianteId));
@@ -145,7 +150,9 @@ async function Contenido({ searchParams }: { searchParams: Promise<Params> }) {
                   {f.producto} {f.variante}
                 </b>{" "}
                 se vende a {usd2(f.precioVigente)} y lo que tenés en bodega costó {usd2(f.costoProximo ?? 0)}: con el {pct}% de
-                descuento en efectivo, el envío y la comisión se pierde. Mínimo sin pérdida: {usd2(f.piso ?? 0)}.{" "}
+                descuento en efectivo, la paquetera y la comisión se pierde
+                {f.campana ? ` (está en la campaña de envío gratis "${f.campana}", el cliente no paga envío)` : ` aunque el cliente pague ${usd2(f.envio)} de envío`}
+                . Mínimo sin pérdida: {usd2(f.piso ?? 0)}.{" "}
                 <Link href={`/admin/precios?q=${encodeURIComponent(f.producto)}`} className="font-medium underline">
                   Revisar precio
                 </Link>
