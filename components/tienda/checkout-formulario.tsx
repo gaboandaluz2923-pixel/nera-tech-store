@@ -935,8 +935,11 @@ export function CheckoutFormulario(p: Props) {
           </Button>
           <p className="flex items-start gap-2 text-xs text-muted-foreground">
             <ShieldCheck className="size-4 shrink-0 text-marca" aria-hidden />
-            Garantía Nera Tech por escrito. Usamos tus datos para tu pedido, tu
-            factura y, si no lo desactivás, para enviarte ofertas.
+            Garantía Nera Tech por escrito. Al comprar aceptás los{" "}
+            <a href="/terminos" target="_blank" className="underline">
+              términos
+            </a>
+            . Usamos tus datos para tu pedido, tu factura y, si no lo desactivás, para enviarte ofertas.
           </p>
         </div>
       </aside>

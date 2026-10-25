@@ -191,3 +191,13 @@ F18, audífonos con cable Infinix (modelo por confirmar), Kieslect KS3E (Ks3 Eli
   pedido. Inicio muestra el dinero por recibir por quién lo tiene. Migración 0020.
 - COSTO_ENVIO_FIJO pasó de $1.75 a $5.25 (afecta sugerido, tope de descuentos y estimados de Analítica y Finanzas).
 
+## 24 oct 2026 — Combos editables con fechas, fecha tentativa de entrega y Términos
+- Combos: se editan nombre, celular, accesorios, fechas (bundles.inicio/fin, migración 0021: la tienda solo ve los
+  vigentes) y se pueden eliminar con confirmación. Precio y margen del combo con un solo envío.
+- Fecha tentativa de entrega (`lib/tienda/entrega.ts`): bodega = siguiente día de entrega, proveedor = dos días; nadie
+  entrega en domingo (sábado → lunes / martes; viernes → sábado / lunes). Se calcula en el teléfono del cliente.
+- Nueva página /terminos (texto base para revisar con el abogado): los tiempos de entrega son aproximados y no
+  garantizados porque dependen de aliados logísticos. Enlazada en el pie y en el pago.
+- Precios indica si cada producto se ve en la tienda.
+- Estudio de mercado semanal (tarea programada, lunes 7:52 a. m.): solo reporta, no cambia nada.
+

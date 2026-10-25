@@ -9,10 +9,10 @@ import { superAdmin } from "@/lib/admin/sesion";
 import { campanasBrevo } from "@/lib/brevo-campanas";
 import { createClient } from "@/lib/supabase/server";
 import { fechaHora, usd2 } from "@/lib/tienda/formato";
-import { cambiarCupon, crearCampanaEnvio, crearCombo, crearCupon, crearOferta, guardarCombo, guardarComboPrecios } from "./actions";
+import { cambiarCupon, crearCampanaEnvio, crearCombo, crearCupon, crearOferta, editarCombo, eliminarCombo, guardarComboPrecios } from "./actions";
 import { tablaPrecios } from "@/lib/admin/precios-tabla";
 import { CamposCombo, TablaCombo, type DatosCombo } from "@/components/admin/combo-precios";
-import { estadoOferta } from "./util";
+import { aLocalSV, estadoOferta } from "./util";
 
 // Promociones: campañas de correo de Brevo, ofertas con fecha, combos "Completá tu equipo" y cupones.
 
@@ -22,9 +22,12 @@ type Combo = {
   nombre: string;
   descuento: number;
   activo: boolean;
+  inicio?: string | null;
+  fin?: string | null;
   producto_principal_id: string;
   productos: { nombre: string } | null;
   bundle_items: {
+    variante_id: string;
     cantidad: number;
     variantes: {
       precio: number;
@@ -74,6 +77,108 @@ const describirCupon = (c: Cupon) =>
       ? usd2(Number(c.valor))
       : "Envío gratis";
 
+const SELECT_CB = "h-9 w-full rounded-md border bg-background px-2 text-sm";
+
+/** Campos del combo (crear y editar): nombre, celular, accesorios, fechas y, si se pide, el ahorro */
+function CamposDatosCombo({
+  pre,
+  c,
+  equipos,
+  accesorios,
+  conAhorro,
+}: {
+  pre: string;
+  c?: Combo;
+  equipos: { id: string; nombre: string }[];
+  accesorios: { id: string; nombre: string; precio: number }[];
+  conAhorro: boolean;
+}) {
+  return (
+    <>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="space-y-1">
+          <Label htmlFor={`${pre}-nombre`}>Nombre</Label>
+          <Input id={`${pre}-nombre`} name="nombre" defaultValue={c?.nombre ?? ""} placeholder="Ej. Kit protección A27" />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor={`${pre}-principal`}>Producto principal</Label>
+          <select id={`${pre}-principal`} name="producto_principal_id" defaultValue={c?.producto_principal_id ?? ""} className={SELECT_CB}>
+            <option value="" disabled>
+              Elegí un celular o tablet
+            </option>
+            {c && !equipos.some((e) => e.id === c.producto_principal_id) ? (
+              <option value={c.producto_principal_id}>{c.productos?.nombre ?? "Producto actual"} (oculto)</option>
+            ) : null}
+            {equipos.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nombre}
+              </option>
+            ))}
+          </select>
+        </div>
+        {conAhorro ? (
+          <div className="space-y-1">
+            <Label htmlFor={`${pre}-ahorro`}>Ahorro para el cliente ($)</Label>
+            <Input
+              id={`${pre}-ahorro`}
+              name="descuento"
+              inputMode="decimal"
+              defaultValue={c ? Number(c.descuento).toFixed(2) : ""}
+              placeholder="Ej. 5 (igual al precio del accesorio = de regalo)"
+            />
+          </div>
+        ) : null}
+      </div>
+      <div className="grid gap-3 sm:grid-cols-3">
+        {[1, 2, 3].map((i) => {
+          const it = c?.bundle_items[i - 1];
+          const actualFuera = it && !accesorios.some((a) => a.id === it.variante_id);
+          return (
+            <div key={i} className="space-y-1">
+              <Label htmlFor={`${pre}-item-${i}`}>
+                Accesorio {i}
+                {i > 1 ? " (opcional)" : ""}
+              </Label>
+              <div className="flex gap-1">
+                <select id={`${pre}-item-${i}`} name={`item_${i}`} defaultValue={it?.variante_id ?? ""} className={`${SELECT_CB} min-w-0 flex-1`}>
+                  <option value="">—</option>
+                  {actualFuera ? (
+                    <option value={it.variante_id}>
+                      {[it.variantes?.productos?.nombre, it.variantes?.color].filter(Boolean).join(" · ")} (actual)
+                    </option>
+                  ) : null}
+                  {accesorios.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.nombre} · {usd2(a.precio)}
+                    </option>
+                  ))}
+                </select>
+                <Input name={`cantidad_${i}`} defaultValue={String(it?.cantidad ?? 1)} inputMode="numeric" className="w-12" aria-label={`Cantidad del accesorio ${i}`} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="space-y-1">
+          <Label htmlFor={`${pre}-inicio`}>Empieza (opcional)</Label>
+          <Input id={`${pre}-inicio`} name="inicio" type="datetime-local" defaultValue={aLocalSV(c?.inicio ?? null)} />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor={`${pre}-fin`}>Termina (opcional)</Label>
+          <Input id={`${pre}-fin`} name="fin" type="datetime-local" defaultValue={aLocalSV(c?.fin ?? null)} />
+        </div>
+        {c ? (
+          <label className="flex h-9 items-center gap-2 self-end text-sm">
+            <input type="checkbox" name="activo" defaultChecked={c.activo} className="size-4" /> Activo
+          </label>
+        ) : null}
+      </div>
+      <p className="text-xs text-muted-foreground">Fechas vacías = sin límite. Horas de El Salvador. Al terminar, el combo se quita solo de la tienda.</p>
+    </>
+  );
+}
+
 async function Contenido() {
   const supabase = await createClient();
   const [ofertasR, combosR, cuponesR, usosR, productosR, cumpleR, campanasR] = await Promise.all([
@@ -82,12 +187,13 @@ async function Contenido() {
       .select("id, nombre, inicio, fin, activa, promocion_precios(variante_id)")
       .eq("tipo", "descuento_fecha")
       .order("created_at", { ascending: false }),
-    supabase
-      .from("bundles")
-      .select(
-        "id, nombre, descuento, activo, producto_principal_id, productos(nombre), bundle_items(cantidad, variantes(precio, color, producto_id, ram_gb, almacenamiento_gb, productos(nombre)))"
-      )
-      .order("created_at", { ascending: false }),
+    (async () => {
+      const cols = (fechas: string) =>
+        `id, nombre, descuento, activo, ${fechas}producto_principal_id, productos(nombre), bundle_items(variante_id, cantidad, variantes(precio, color, producto_id, ram_gb, almacenamiento_gb, productos(nombre)))`;
+      const r = await supabase.from("bundles").select(cols("inicio, fin, ")).order("created_at", { ascending: false });
+      // Sin la migración 0021 todavía no hay fechas en los combos
+      return r.error ? await supabase.from("bundles").select(cols("")).order("created_at", { ascending: false }) : r;
+    })(),
     supabase
       .from("cupones")
       .select("id, codigo, tipo, valor, tope, min_pedido, usos_max, por_cliente, inicio, fin, activo, solo_accesorios, descripcion, origen")
@@ -278,50 +384,66 @@ async function Contenido() {
               {combos.map((c) => {
                 const valor = c.bundle_items.reduce((s, i) => s + Number(i.variantes?.precio ?? 0) * i.cantidad, 0);
                 const d = datosCombo(c);
-                const resumen = (
-                  <div className="space-y-2">
-                    <p className="font-medium">
-                      {c.nombre}
-                      {!c.activo ? <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">apagado</span> : null}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {c.productos?.nombre} +{" "}
-                      {c.bundle_items
-                        .map((i) => `${i.cantidad > 1 ? `${i.cantidad} × ` : ""}${[i.variantes?.productos?.nombre, i.variantes?.color].filter(Boolean).join(" ")}`)
-                        .join(" + ")}
-                    </p>
-                    <p className="text-sm">
-                      Ahorro <strong>{usd2(Number(c.descuento))}</strong>
-                      <span className="text-xs text-muted-foreground">
-                        {" "}
-                        · accesorios a precio normal: {usd2(valor)}
-                        {Number(c.descuento) >= valor - 0.004 ? " (de regalo)" : ""}
-                      </span>
-                    </p>
-                    {d ? <TablaCombo d={d} /> : <p className="text-xs text-amber-700">El celular no tiene precio de venta: ponéselo en Precios para ver el margen.</p>}
-                  </div>
-                );
+                const e = estadoOferta({ activa: c.activo, inicio: c.inicio ?? null, fin: c.fin ?? null });
                 return (
-                  <li key={c.id} className="p-3">
+                  <li key={c.id} className="space-y-2 p-3">
+                    <FilaEditable
+                      accion={editarCombo}
+                      className=""
+                      textoEditar="Editar combo"
+                      vista={
+                        <div className="space-y-1">
+                          <p className="font-medium">
+                            {c.nombre}
+                            <span className={`ml-2 rounded-full px-2 py-0.5 text-xs font-medium ${ESTADO_CLASE[e]}`}>{e === "apagada" ? "apagado" : e === "activa" ? "activo" : e === "programada" ? "programado" : "terminado"}</span>
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {c.productos?.nombre} +{" "}
+                            {c.bundle_items
+                              .map((i) => `${i.cantidad > 1 ? `${i.cantidad} × ` : ""}${[i.variantes?.productos?.nombre, i.variantes?.color].filter(Boolean).join(" ")}`)
+                              .join(" + ")}
+                          </p>
+                          <p className="text-sm">
+                            Ahorro <strong>{usd2(Number(c.descuento))}</strong>
+                            <span className="text-xs text-muted-foreground">
+                              {" "}
+                              · accesorios a precio normal: {usd2(valor)}
+                              {Number(c.descuento) >= valor - 0.004 ? " (de regalo)" : ""}
+                            </span>
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {c.inicio || c.fin
+                              ? `Vigencia: ${c.inicio ? `desde ${fechaHora(c.inicio)}` : "ya"}${c.fin ? ` hasta ${fechaHora(c.fin)}` : " sin fecha de fin"}`
+                              : "Sin fechas: vale mientras esté activo"}
+                          </p>
+                        </div>
+                      }
+                    >
+                      <input type="hidden" name="id" value={c.id} />
+                      <CamposDatosCombo pre={`ed-${c.id}`} c={c} equipos={equipos} accesorios={accesorios} conAhorro={!d} />
+                    </FilaEditable>
                     {d ? (
-                      <FilaEditable accion={guardarComboPrecios} className="" vista={resumen}>
+                      <FilaEditable accion={guardarComboPrecios} className="rounded-md border p-2" textoEditar="Editar precios" vista={<TablaCombo d={d} />}>
                         <CamposCombo d={d} />
                       </FilaEditable>
                     ) : (
-                      <FilaEditable accion={guardarCombo} className="" vista={resumen}>
-                        <input type="hidden" name="id" value={c.id} />
-                        <p className="font-medium">{c.nombre}</p>
-                        <div className="flex flex-wrap items-end gap-3">
-                          <div className="w-28 space-y-1">
-                            <Label htmlFor={`cb-${c.id}`}>Ahorro ($)</Label>
-                            <Input id={`cb-${c.id}`} name="descuento" inputMode="decimal" defaultValue={Number(c.descuento).toFixed(2)} />
-                          </div>
-                          <label className="flex h-9 items-center gap-2 text-sm">
-                            <input type="checkbox" name="activo" defaultChecked={c.activo} className="size-4" /> Activo
-                          </label>
-                        </div>
-                      </FilaEditable>
+                      <p className="text-xs text-amber-700">El celular no tiene precio de venta: ponéselo en Precios para ver el margen del combo.</p>
                     )}
+                    <details className="text-sm">
+                      <summary className="cursor-pointer text-muted-foreground">Eliminar este combo</summary>
+                      <FormularioAccion accion={eliminarCombo} className="mt-2 flex flex-wrap items-center gap-3">
+                        <input type="hidden" name="id" value={c.id} />
+                        <label className="flex items-center gap-2">
+                          <input type="checkbox" name="confirmar" className="size-4" /> Sí, quiero eliminarlo (no se puede deshacer)
+                        </label>
+                        <BotonGuardar variant="destructive" size="sm">
+                          Eliminar combo
+                        </BotonGuardar>
+                      </FormularioAccion>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Si solo querés pausarlo, mejor desmarcá Activo en Editar combo. Los pedidos que ya lo usaron no cambian.
+                      </p>
+                    </details>
                   </li>
                 );
               })}
@@ -331,47 +453,7 @@ async function Contenido() {
           )}
           <FilaEditable accion={crearCombo} className="rounded-lg bg-muted/40 p-3" textoEditar="+ Nuevo combo" textoGuardar="Crear combo">
             <p className="text-sm font-semibold">Nuevo combo</p>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="space-y-1">
-                <Label htmlFor="cb-nombre">Nombre</Label>
-                <Input id="cb-nombre" name="nombre" placeholder="Ej. Kit protección A27" />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="cb-principal">Producto principal</Label>
-                <select id="cb-principal" name="producto_principal_id" defaultValue="" className="h-9 w-full rounded-md border bg-background px-2 text-sm">
-                  <option value="" disabled>
-                    Elegí un celular o tablet
-                  </option>
-                  {equipos.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nombre}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="cb-ahorro">Ahorro para el cliente ($)</Label>
-                <Input id="cb-ahorro" name="descuento" inputMode="decimal" placeholder="Ej. 5" />
-              </div>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="space-y-1">
-                  <Label htmlFor={`cb-item-${i}`}>Accesorio {i}{i > 1 ? " (opcional)" : ""}</Label>
-                  <div className="flex gap-1">
-                    <select id={`cb-item-${i}`} name={`item_${i}`} defaultValue="" className="h-9 min-w-0 flex-1 rounded-md border bg-background px-2 text-sm">
-                      <option value="">—</option>
-                      {accesorios.map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {a.nombre} · {usd2(a.precio)}
-                        </option>
-                      ))}
-                    </select>
-                    <Input name={`cantidad_${i}`} defaultValue="1" inputMode="numeric" className="w-12" aria-label={`Cantidad del accesorio ${i}`} />
-                  </div>
-                </div>
-              ))}
-            </div>
+            <CamposDatosCombo pre="cb" equipos={equipos} accesorios={accesorios} conAhorro />
           </FilaEditable>
         </CardContent>
       </Card>

@@ -6,6 +6,7 @@ import { IconoWhatsApp } from "@/components/tienda/whatsapp-flotante";
 import type { CampanaLeida, ProductoDetalle } from "@/lib/tienda/datos";
 import { cuota, finDeOferta, precioConDescuento, usd2 } from "@/lib/tienda/formato";
 import { enlaceWhatsAppA } from "@/lib/whatsapp";
+import { FechaEntrega } from "./fecha-entrega";
 
 // Banner del inicio para una campaña con envío gratis (ej. "Octubre Naranja"): el producto destacado con
 // su precio real en efectivo y con tarjeta, lo que hay en bodega, cuándo termina y los dos llamados
@@ -38,11 +39,12 @@ export function BannerCampana({
   const nombre = p.marca && p.nombre.toLowerCase().startsWith(p.marca.toLowerCase()) ? p.nombre.slice(p.marca.length).trim() : p.nombre;
   const mensaje = `Hola, quiero el ${p.nombre}${v.memoria ? ` ${v.memoria}` : ""} de ${campana.nombre} con envío gratis. [banner]`;
 
-  const chips = [
+  const llegaEnBodega = enBodega.length > 0 && p.unidadesEnBodega > 0;
+  const chips: { icono: typeof Truck; texto: string; fecha?: string }[] = [
     { icono: Truck, texto: "Envío gratis a todo el país" },
-    enBodega.length && p.unidadesEnBodega > 0
-      ? { icono: PackageCheck, texto: `${p.unidadesEnBodega} en bodega · te llega en menos de 24 h` }
-      : { icono: PackageCheck, texto: "Te llega en menos de 48 h" },
+    llegaEnBodega
+      ? { icono: PackageCheck, texto: `${p.unidadesEnBodega} en bodega · te llega en menos de 24 h`, fecha: "bodega" }
+      : { icono: PackageCheck, texto: "Te llega en menos de 48 h", fecha: "proveedor" },
     { icono: ShieldCheck, texto: `Garantía de ${mesesGarantia} meses` },
     { icono: Wallet, texto: "Pagás al recibir" },
   ];
@@ -85,10 +87,13 @@ export function BannerCampana({
           </p>
 
           <ul className="mt-5 grid grid-cols-2 gap-2 text-sm">
-            {chips.map(({ icono: Icono, texto }) => (
+            {chips.map(({ icono: Icono, texto, fecha }) => (
               <li key={texto} className="flex items-start gap-2">
                 <Icono className="mt-0.5 size-4 shrink-0 text-marca" aria-hidden />
-                <span>{texto}</span>
+                <span>
+                  {texto}
+                  {fecha ? <FechaEntrega disponibilidad={fecha} corta prefijo="·" className="text-white/70" /> : null}
+                </span>
               </li>
             ))}
           </ul>

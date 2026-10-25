@@ -212,6 +212,7 @@ type FilaCampana = {
 type FilaComboCat = {
   id: string;
   nombre: string;
+  fin?: string | null;
   producto_principal_id: string;
   descuento: number;
   bundle_items: {
@@ -235,13 +236,13 @@ async function leerCatalogoODaError(): Promise<Omit<Leido, "ok">> {
     // Ofertas vigentes (la base solo deja ver las activas y dentro de sus fechas)
     sb.from("promocion_precios").select("variante_id, precio, promociones(nombre, fin)").limit(5000),
     sb.from("promociones_proximas").select("proximo_inicio").maybeSingle(),
-    sb
-      .from("bundles")
-      .select(
-        "id, nombre, producto_principal_id, descuento, bundle_items(variante_id, cantidad, variantes(id, precio, activo, color, productos(nombre, estado, imagenes(url, alt, orden, principal))))"
-      )
-      .gt("descuento", 0)
-      .limit(500),
+    (async () => {
+      const cols = (fin: string) =>
+        `id, nombre, producto_principal_id, descuento, ${fin}bundle_items(variante_id, cantidad, variantes(id, precio, activo, color, productos(nombre, estado, imagenes(url, alt, orden, principal))))`;
+      const r = await sb.from("bundles").select(cols("fin, ")).gt("descuento", 0).limit(500);
+      // Sin la migración 0021 los combos no tienen fecha de fin
+      return r.error ? await sb.from("bundles").select(cols("")).gt("descuento", 0).limit(500) : r;
+    })(),
     // Campañas con envío gratis vigentes (la base solo deja ver las activas y dentro de sus fechas)
     sb.from("promocion_productos").select("producto_id, orden, promociones(id, nombre, fin, tipo, config)").limit(2000),
   ]);
@@ -285,6 +286,10 @@ async function leerCatalogoODaError(): Promise<Omit<Leido, "ok">> {
       };
     x.productos.push(f.producto_id);
     campanas.set(c.id, x);
+  }
+  // Combos con fecha de fin: la tienda se refresca cuando termina el primero
+  for (const b of (combosR.data ?? []) as unknown as FilaComboCat[]) {
+    if (b.fin) proximoCambio = Math.min(proximoCambio, new Date(b.fin).getTime());
   }
   const segundosHastaCambio = Number.isFinite(proximoCambio) ? Math.max(0, Math.ceil((proximoCambio - ahora) / 1000)) : null;
 

@@ -4,6 +4,7 @@ import type { ProductoResumen } from "@/lib/tienda/datos";
 import { TEXTO_DISPONIBILIDAD, cuota, usd } from "@/lib/tienda/formato";
 import { formatoAlmacenamiento } from "@/lib/listas/normalizar";
 import { BotonComparar } from "./comparar";
+import { FechaEntrega } from "./fecha-entrega";
 
 const ETIQUETAS: Record<string, string> = {
   "mas-pedidos": "Más pedido",
@@ -79,6 +80,7 @@ export function TarjetaProducto({
           ) : null}
           <p className={`mt-1 text-xs font-medium ${agotado ? "text-muted-foreground" : "text-green-700"}`}>
             {TEXTO_DISPONIBILIDAD[p.disponibilidad].corto}
+            <FechaEntrega disponibilidad={p.disponibilidad} corta prefijo="·" className="font-normal" />
           </p>
         </div>
       </Link>

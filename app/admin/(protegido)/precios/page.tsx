@@ -12,6 +12,13 @@ import { BotonGuardar, FormularioAccion } from "@/components/admin/formulario-ac
 import { PrecioMargenEditable } from "@/components/admin/precio-margen-editable";
 import { anotarPrecioObservado, fijarPrecio } from "./actions";
 
+const EN_TIENDA = {
+  si: "Se ve en la tienda",
+  producto_oculto: "Oculto (producto)",
+  variantes_ocultas: "Oculto (variantes)",
+  sin_precio: "No se ve: sin precio",
+} as const;
+
 const ROTACION = { rapida: "se vende rápido", normal: "rotación normal", lenta: "sin ventas en 30 días" } as const;
 
 type Filtros = { q?: string; categoria?: string; vista?: string };
@@ -55,6 +62,14 @@ function FilaTabla({ f }: { f: FilaPrecio }) {
             <div className="text-xs text-muted-foreground">
               {[f.memoria, f.colores.join(", ")].filter(Boolean).join(" · ")}
             </div>
+            <span
+              className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                f.enTienda === "si" ? "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200" : "bg-muted text-muted-foreground"
+              }`}
+              title="Si se ve en la tienda. Se cambia en Catálogo (publicar el producto o marcar Mostrar en la variante)."
+            >
+              {EN_TIENDA[f.enTienda]}
+            </span>
           </div>
         </div>
       </td>
@@ -223,6 +238,8 @@ async function Contenido({ searchParams }: { searchParams: Promise<Filtros> }) {
     if (filtros.vista === "cambios" && !f.cambio) return false;
     if (filtros.vista === "sin-precio" && f.precioVenta) return false;
     if (filtros.vista === "sugerido" && (!f.sugerencia || f.sugerencia.precio === f.precioVenta)) return false;
+    if (filtros.vista === "en-tienda" && f.enTienda !== "si") return false;
+    if (filtros.vista === "ocultos" && f.enTienda === "si") return false;
     if (filtros.vista === "margen-bajo" && !(f.netos && Object.values(f.netos).some((n) => n.pct !== null && n.pct < 0.05)))
       return false;
     return true;
@@ -255,6 +272,8 @@ async function Contenido({ searchParams }: { searchParams: Promise<Filtros> }) {
           <option value="sin-precio">Sin precio de venta</option>
           <option value="sugerido">Sugerido distinto de tu precio</option>
           <option value="margen-bajo">Margen neto bajo (menos de 5%)</option>
+          <option value="en-tienda">Solo los que se ven en la tienda</option>
+          <option value="ocultos">Solo los que no se ven</option>
         </select>
         <Button type="submit" variant="outline">
           Filtrar

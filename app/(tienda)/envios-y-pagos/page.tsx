@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 import { Banknote, CreditCard, Landmark, Percent, Truck, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -78,6 +79,15 @@ export default async function PaginaEnvios() {
             <dd className="font-semibold">Recibilo en menos de 48 horas</dd>
           </div>
         </dl>
+        <p className="mt-3 text-sm text-muted-foreground">
+          No entregamos los domingos: si pedís el sábado, lo de bodega llega el lunes y lo del proveedor el martes; si pedís el
+          viernes, lo de bodega llega el sábado y lo del proveedor el lunes. La fecha que ves en cada producto es aproximada:
+          dependemos de nuestros aliados de envío, así que puede cambiar (ver{" "}
+          <Link href="/terminos" className="underline">
+            Términos
+          </Link>
+          ).
+        </p>
       </section>
 
       <section aria-labelledby="t-pagos" className="mt-10">

@@ -9,6 +9,7 @@ import {
   type EstadoAviso,
 } from "@/app/(tienda)/producto/[slug]/actions";
 import type { ComboTienda, VarianteTienda } from "@/lib/tienda/datos";
+import { FechaEntrega } from "./fecha-entrega";
 import {
   TEXTO_DISPONIBILIDAD,
   cuota,
@@ -338,7 +339,10 @@ export function CompraProducto(props: Props) {
           className={`size-2.5 rounded-full ${PUNTO_DISP[elegida.disponibilidad]}`}
           aria-hidden
         />
-        {TEXTO_DISPONIBILIDAD[elegida.disponibilidad].largo}
+        <span>
+          {TEXTO_DISPONIBILIDAD[elegida.disponibilidad].largo}
+          <FechaEntrega disponibilidad={elegida.disponibilidad} prefijo="· recibilo el" className="font-normal text-muted-foreground" />
+        </span>
       </p>
 
       {/* Acciones */}

@@ -128,38 +128,92 @@ export async function guardarOferta(_prev: EstadoAccion, form: FormData): Promis
 // ---------------------------------------------------------------------------
 // Combos
 // ---------------------------------------------------------------------------
-export async function crearCombo(_prev: EstadoAccion, form: FormData): Promise<EstadoAccion> {
+/** Datos de un combo desde el formulario (crear o editar): nombre, celular, accesorios y fechas */
+async function leerDatosCombo(form: FormData, supabase: Awaited<ReturnType<typeof superAdmin>>["supabase"]) {
   const nombre = texto(form.get("nombre")).slice(0, 80);
   const principal = texto(form.get("producto_principal_id"));
-  const ahorro = numero(form.get("descuento"));
   const items = [1, 2, 3]
     .map((i) => ({ variante_id: texto(form.get(`item_${i}`)), cantidad: Math.max(1, Math.min(3, Number(numero(form.get(`cantidad_${i}`)) ?? 1))) }))
     .filter((i) => i.variante_id);
-  if (nombre.length < 3) return falla("Poné un nombre al combo (ej. Kit protección A27).");
-  if (!principal) return falla("Elegí el producto principal.");
-  if (!items.length) return falla("Elegí al menos un accesorio.");
-  if (new Set(items.map((i) => i.variante_id)).size !== items.length) return falla("Hay un accesorio repetido.");
-  if (!(ahorro !== null && ahorro > 0)) return falla("Escribí cuánto ahorra el cliente con el combo (en dólares).");
-  const { supabase } = await superAdmin();
+  const inicio = fechaSV(form.get("inicio"));
+  const fin = fechaSV(form.get("fin"), true);
+  if (nombre.length < 3) return { error: "Poné un nombre al combo (ej. Kit protección A27)." };
+  if (!principal) return { error: "Elegí el producto principal." };
+  if (!items.length) return { error: "Elegí al menos un accesorio." };
+  if (new Set(items.map((i) => i.variante_id)).size !== items.length) return { error: "Hay un accesorio repetido." };
+  if (inicio === undefined || fin === undefined) return { error: "Revisá las fechas." };
+  if (inicio && fin && new Date(inicio) >= new Date(fin)) return { error: "El combo tiene que terminar después de empezar." };
   const { data: precios } = await supabase.from("variantes").select("id, precio, producto_id").in("id", items.map((i) => i.variante_id));
-  if ((precios ?? []).some((v) => v.producto_id === principal)) return falla("El producto principal no puede ser también accesorio del combo.");
+  if ((precios ?? []).some((v) => v.producto_id === principal)) return { error: "El producto principal no puede ser también accesorio del combo." };
   const valor = items.reduce((s, i) => s + Number(precios?.find((v) => v.id === i.variante_id)?.precio ?? 0) * i.cantidad, 0);
+  return { nombre, principal, items, inicio, fin, valor };
+}
+
+const fechasCombo = (inicio: string | null, fin: string | null) => ({ inicio, fin });
+
+export async function crearCombo(_prev: EstadoAccion, form: FormData): Promise<EstadoAccion> {
+  const ahorro = numero(form.get("descuento"));
+  const { supabase } = await superAdmin();
+  const d = await leerDatosCombo(form, supabase);
+  if ("error" in d) return falla(d.error!);
+  if (!(ahorro !== null && ahorro > 0)) return falla("Escribí cuánto ahorra el cliente con el combo (en dólares).");
   // Igual al precio de los accesorios = accesorios gratis (más no se puede: el combo no baja el precio del celular)
-  if (ahorro > valor + 0.004)
-    return falla(`El ahorro no puede pasar de lo que cuestan los accesorios ($${valor.toFixed(2)}; con eso quedan gratis).`);
+  if (ahorro > d.valor + 0.004)
+    return falla(`El ahorro no puede pasar de lo que cuestan los accesorios ($${d.valor.toFixed(2)}; con eso quedan gratis).`);
+  const fechas = d.inicio || d.fin ? fechasCombo(d.inicio, d.fin) : {};
   const { data, error } = await supabase
     .from("bundles")
-    .insert({ nombre, producto_principal_id: principal, descuento: Math.round(ahorro * 100) / 100, activo: true })
+    .insert({ nombre: d.nombre, producto_principal_id: d.principal, descuento: Math.round(ahorro * 100) / 100, activo: true, ...fechas })
     .select("id")
     .single();
   if (error) return falla(`No se pudo crear: ${error.message}`);
-  const { error: e2 } = await supabase.from("bundle_items").insert(items.map((i) => ({ ...i, bundle_id: data.id })));
+  const { error: e2 } = await supabase.from("bundle_items").insert(d.items.map((i) => ({ ...i, bundle_id: data.id })));
   if (e2) {
     await supabase.from("bundles").update({ activo: false }).eq("id", data.id);
     return falla(`No se pudieron guardar los accesorios: ${e2.message}`);
   }
   refrescar();
-  return ok("Combo creado y activo. Ya aparece en la ficha y en el carrito.");
+  return ok("Combo creado y activo. Ya aparece en la ficha, en el carrito y en el inicio.");
+}
+
+/** Editar un combo: nombre, celular, accesorios, fechas y si está activo (el ahorro y los precios, en "Editar precios") */
+export async function editarCombo(_prev: EstadoAccion, form: FormData): Promise<EstadoAccion> {
+  const id = texto(form.get("id"));
+  const activo = form.get("activo") === "on";
+  const { supabase } = await superAdmin();
+  const d = await leerDatosCombo(form, supabase);
+  if ("error" in d) return falla(d.error!);
+  const { data: actual } = await supabase.from("bundles").select("descuento").eq("id", id).single();
+  if (!actual) return falla("No se encontró el combo.");
+  const escrito = numero(form.get("descuento"));
+  const ahorro = escrito ?? Number(actual.descuento);
+  if (!(ahorro > 0)) return falla("El ahorro debe ser mayor que cero.");
+  if (ahorro > d.valor + 0.004)
+    return falla(
+      `Con estos accesorios el ahorro ($${ahorro.toFixed(2)}) pasa de lo que cuestan ($${d.valor.toFixed(2)}). Bajá el ahorro en "Editar precios" o elegí otros accesorios.`
+    );
+  const { error } = await supabase
+    .from("bundles")
+    .update({ nombre: d.nombre, producto_principal_id: d.principal, descuento: Math.round(ahorro * 100) / 100, activo, inicio: d.inicio, fin: d.fin })
+    .eq("id", id);
+  if (error) return falla(`No se pudo guardar: ${error.message}`);
+  // Accesorios: se reemplazan por los elegidos
+  const { error: e1 } = await supabase.from("bundle_items").delete().eq("bundle_id", id);
+  const { error: e2 } = e1 ? { error: e1 } : await supabase.from("bundle_items").insert(d.items.map((i) => ({ ...i, bundle_id: id })));
+  if (e2) return falla(`Se guardó el combo pero no los accesorios: ${e2.message}. Volvé a guardarlo.`);
+  refrescar();
+  return ok(activo ? "Combo guardado." : "Combo guardado y apagado: no se ofrece en la tienda.");
+}
+
+/** Eliminar un combo (con confirmación). Los pedidos que ya lo usaron conservan su descuento y su nombre. */
+export async function eliminarCombo(_prev: EstadoAccion, form: FormData): Promise<EstadoAccion> {
+  const id = texto(form.get("id"));
+  if (form.get("confirmar") !== "on") return falla("Marcá la casilla para confirmar que querés eliminar el combo.");
+  const { supabase } = await superAdmin();
+  const { error } = await supabase.from("bundles").delete().eq("id", id);
+  if (error) return falla(`No se pudo eliminar: ${error.message}`);
+  refrescar();
+  return ok("Combo eliminado. Los pedidos que lo usaron conservan su descuento.");
 }
 
 /**

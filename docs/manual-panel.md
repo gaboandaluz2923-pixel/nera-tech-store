@@ -160,6 +160,9 @@ Aparece cuando una lista trae equipos que todavía no están en tu catálogo. Si
 Cada fila muestra a la izquierda la **foto principal** del producto en pequeño, para distinguirlo rápido. Si no
 tiene foto sale un cuadro gris con un ícono; tocá la foto (o el cuadro) para abrir el producto en Catálogo y subirla.
 Una fila por configuración (modelo + memoria; los colores van juntos).
+- Debajo del nombre, una etiqueta dice si **se ve en la tienda** (verde) o no: *Oculto (producto)* = el producto no
+  está publicado; *Oculto (variantes)* = ninguna variante de esa memoria tiene marcado Mostrar; *No se ve: sin precio*.
+  Se cambia en Catálogo. El filtro tiene "Solo los que se ven en la tienda" y "Solo los que no se ven".
 - **Proveedores**: en negrita el mejor (menor costo puesto con existencia). Entre paréntesis la
   existencia que informa el proveedor. Tachado = sin existencia. ▲▼ = cambio contra su lista anterior.
   "sug." = precio sugerido por el proveedor (Idecom lo manda).
@@ -636,7 +639,13 @@ oferta dice si está **activa**, **programada**, **terminada** o **apagada**.
 
 **2. Combos "Completá tu equipo"**
 Un combo es un celular (cualquier color o memoria) + 1 a 3 accesorios, con un ahorro en dólares. Elegí el
-nombre, el producto principal, los accesorios (con cantidad) y el ahorro, y tocá **Crear combo**. El ahorro
+nombre, el producto principal, los accesorios (con cantidad), el ahorro y, si querés, cuándo **empieza** y cuándo
+**termina** (vacío = sin límite; horas de El Salvador), y tocá **Crear combo**.
+Cada combo de la lista dice si está **activo**, **programado** (todavía no empieza), **terminado** o **apagado**, y su
+vigencia. **Editar combo** cambia el nombre, el celular, los accesorios, las fechas y **Activo**; **Editar precios**
+cambia el ahorro y los precios (ver abajo). **Eliminar este combo** lo borra (hay que marcar la casilla de
+confirmación; no se puede deshacer; los pedidos que ya lo usaron conservan su descuento). Para pausarlo sin
+borrarlo, desmarcá Activo. Al terminar la fecha, el combo se quita solo de la ficha, del carrito y del inicio. El ahorro
 puede llegar hasta lo que cuestan los accesorios: si es igual, el accesorio queda **gratis** (ej. "Note 17 +
 audífonos de regalo": ahorro = precio de los audífonos) y la ficha dice "¡De regalo!". En la ficha del celular aparece el recuadro "Completá
 tu equipo y ahorrá" con **Agregar combo** (agrega el celular elegido y los accesorios). En el carrito, si el

@@ -22,6 +22,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       images: p.imagen ? [p.imagen.url.startsWith("http") ? p.imagen.url : `${SITE_URL}${p.imagen.url}`] : undefined,
     })),
     { url: `${SITE_URL}/garantia`, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${SITE_URL}/terminos`, changeFrequency: "yearly", priority: 0.3 },
     { url: `${SITE_URL}/envios-y-pagos`, changeFrequency: "monthly", priority: 0.5 },
     { url: `${SITE_URL}/privacidad`, changeFrequency: "yearly", priority: 0.2 },
   ];

@@ -58,6 +58,8 @@ export type FilaPrecio = {
   observados: { precio: number; fuente: string; fecha: string }[];
   unidades30: number;
   sugerencia: Sugerencia | null;
+  /** Si se ve en la tienda: producto publicado y alguna variante de esta memoria visible y con precio */
+  enTienda: "si" | "producto_oculto" | "variantes_ocultas" | "sin_precio";
   /** Margen neto a tu precio con cada forma de cobro (resta costo con IVA, envío, paquetería y comisión) */
   netos: Record<FormaCobro, Neto> | null;
   /** Margen neto en efectivo al precio sugerido */
@@ -77,6 +79,7 @@ type Vinculo = {
 type Variante = {
   id: string;
   producto_id: string;
+  activo: boolean;
   color: string | null;
   ram_gb: number | null;
   almacenamiento_gb: number | null;
@@ -86,6 +89,7 @@ type Producto = {
   id: string;
   nombre: string;
   marca: string;
+  estado: string;
   categorias: { nombre: string; slug: string; margen_objetivo_pct: number } | null;
   imagenes: { url: string; principal: boolean; orden: number }[];
 };
@@ -128,14 +132,14 @@ export async function tablaPrecios(supabase: SupabaseClient): Promise<FilaPrecio
     todo<Variante>((a, b) =>
       supabase
         .from("variantes")
-        .select("id, producto_id, color, ram_gb, almacenamiento_gb, precio")
+        .select("id, producto_id, color, ram_gb, almacenamiento_gb, precio, activo")
         .order("id")
         .range(a, b)
     ),
     todo<Producto>((a, b) =>
       supabase
         .from("productos")
-        .select("id, nombre, marca, categorias(nombre, slug, margen_objetivo_pct), imagenes(url, principal, orden)")
+        .select("id, nombre, marca, estado, categorias(nombre, slug, margen_objetivo_pct), imagenes(url, principal, orden)")
         .order("id")
         .range(a, b)
     ),
@@ -270,6 +274,15 @@ export async function tablaPrecios(supabase: SupabaseClient): Promise<FilaPrecio
     const precioVenta = precios.length ? Math.max(...precios) : null;
     const margenObjetivoPct = Number(prod.categorias?.margen_objetivo_pct ?? 10);
 
+    const visibles = [...g.variantes.values()].filter((v) => v.activo !== false);
+    const enTienda: FilaPrecio["enTienda"] =
+      prod.estado === "oculto"
+        ? "producto_oculto"
+        : !visibles.length
+          ? "variantes_ocultas"
+          : !visibles.some((v) => Number(v.precio) > 0)
+            ? "sin_precio"
+            : "si";
     const sugerencia = mejor
       ? sugerirPrecio({ costo: mejor.costo, margenObjetivoPct: Number(prod.categorias?.margen_objetivo_pct ?? 10), mercado, unidades30, descuentoSinTarjetaPct: pct })
       : null;
@@ -308,6 +321,7 @@ export async function tablaPrecios(supabase: SupabaseClient): Promise<FilaPrecio
       observados: obs.slice(0, 6).map((o) => ({ precio: Number(o.precio), fuente: o.fuente, fecha: o.fecha })),
       unidades30,
       sugerencia,
+      enTienda,
       netos: mejor && precioVenta ? netosDe(precioVenta, mejor.costo) : null,
       netoSugerido:
         mejor && sugerencia
