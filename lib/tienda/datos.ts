@@ -1,6 +1,7 @@
 // Datos de la tienda pública. Todo queda en caché (rápido, ideal para SEO) y se refresca
 // en cuanto el panel cambia algo: las acciones del panel llaman updateTag("catalogo").
 import { cacheLife, cacheTag } from "next/cache";
+import { varianteEnCombo } from "@/lib/tienda/combos";
 import { clientePublico } from "@/lib/supabase/publico";
 import { formatoAlmacenamiento } from "@/lib/listas/normalizar";
 import { leerPorcentajeSinTarjeta, type ReglaContraEntrega } from "@/lib/tienda/formato";
@@ -30,6 +31,8 @@ export type ComboTienda = {
   id: string;
   nombre: string;
   ahorro: number;
+  /** Solo para esta memoria del celular (null = cualquiera) */
+  memoria: { ram: number | null; alm: number | null } | null;
   items: { varianteId: string; nombre: string; cantidad: number; precio: number; imagen: ImagenTienda | null }[];
 };
 
@@ -213,6 +216,8 @@ type FilaComboCat = {
   id: string;
   nombre: string;
   fin?: string | null;
+  principal_ram_gb?: number | null;
+  principal_almacenamiento_gb?: number | null;
   producto_principal_id: string;
   descuento: number;
   bundle_items: {
@@ -239,9 +244,12 @@ async function leerCatalogoODaError(): Promise<Omit<Leido, "ok">> {
     (async () => {
       const cols = (fin: string) =>
         `id, nombre, producto_principal_id, descuento, ${fin}bundle_items(variante_id, cantidad, variantes(id, precio, activo, color, productos(nombre, estado, imagenes(url, alt, orden, principal))))`;
-      const r = await sb.from("bundles").select(cols("fin, ")).gt("descuento", 0).limit(500);
-      // Sin la migración 0021 los combos no tienen fecha de fin
-      return r.error ? await sb.from("bundles").select(cols("")).gt("descuento", 0).limit(500) : r;
+      // Sin las migraciones 0021/0022 los combos no tienen fecha de fin ni memoria exacta
+      for (const extra of ["fin, principal_ram_gb, principal_almacenamiento_gb, ", "fin, "]) {
+        const r = await sb.from("bundles").select(cols(extra)).gt("descuento", 0).limit(500);
+        if (!r.error) return r;
+      }
+      return await sb.from("bundles").select(cols("")).gt("descuento", 0).limit(500);
     })(),
     // Campañas con envío gratis vigentes (la base solo deja ver las activas y dentro de sus fechas)
     sb.from("promocion_productos").select("producto_id, orden, promociones(id, nombre, fin, tipo, config)").limit(2000),
@@ -438,6 +446,10 @@ function combosDe(
       id: b.id,
       nombre: b.nombre,
       ahorro: Number(b.descuento),
+      memoria:
+        b.principal_ram_gb != null || b.principal_almacenamiento_gb != null
+          ? { ram: b.principal_ram_gb ?? null, alm: b.principal_almacenamiento_gb ?? null }
+          : null,
       items: b.bundle_items.map((i) => {
         const v = i.variantes!;
         const img = [...(v.productos?.imagenes ?? [])].sort((a, c) => Number(c.principal) - Number(a.principal) || a.orden - c.orden)[0];
@@ -504,16 +516,29 @@ export async function campanaDestacada(): Promise<{
 }
 
 /** Combos vigentes para el inicio: producto publicado y con existencia + su mejor combo (el de más ahorro) */
-export type ComboInicio = { producto: ProductoResumen; combo: ComboTienda };
+export type ComboInicio = {
+  producto: ProductoResumen;
+  combo: ComboTienda;
+  /** Precio más bajo del celular entre las variantes que entran en el combo (y su memoria, si es una sola) */
+  precioDesde: number;
+  memoria: string | null;
+};
 export async function combosDestacados(): Promise<ComboInicio[]> {
   "use cache";
   cacheTag(ETIQUETA_CATALOGO);
   const leido = await leerCatalogo();
   vida(leido);
-  return leido.lista
-    .filter((p) => p.disponibilidad !== "agotado" && p.combos.length)
-    .map((p) => ({ producto: aResumen(p), combo: p.combos[0] }))
-    .sort((a, b) => b.combo.ahorro - a.combo.ahorro || a.producto.precioDesde - b.producto.precioDesde);
+  const out: ComboInicio[] = [];
+  for (const p of leido.lista.filter((x) => x.disponibilidad !== "agotado" && x.combos.length)) {
+    for (const combo of p.combos) {
+      const vs = p.variantes.filter((v) => v.disponibilidad !== "agotado" && v.precio > 0 && varianteEnCombo(combo, v));
+      if (!vs.length) continue;
+      const memorias = [...new Set(vs.map((v) => v.memoria).filter(Boolean))];
+      out.push({ producto: aResumen(p), combo, precioDesde: Math.min(...vs.map((v) => v.precio)), memoria: memorias.length === 1 ? memorias[0] : null });
+      break; // un combo por producto en el inicio (el de más ahorro)
+    }
+  }
+  return out.sort((a, b) => b.combo.ahorro - a.combo.ahorro || a.precioDesde - b.precioDesde);
 }
 
 export async function catalogo(): Promise<ProductoResumen[]> {

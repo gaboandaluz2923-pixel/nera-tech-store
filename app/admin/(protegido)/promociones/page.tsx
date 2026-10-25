@@ -9,6 +9,7 @@ import { superAdmin } from "@/lib/admin/sesion";
 import { campanasBrevo } from "@/lib/brevo-campanas";
 import { createClient } from "@/lib/supabase/server";
 import { fechaHora, usd2 } from "@/lib/tienda/formato";
+import { formatoAlmacenamiento } from "@/lib/listas/normalizar";
 import { cambiarCupon, crearCampanaEnvio, crearCombo, crearCupon, crearOferta, editarCombo, eliminarCombo, guardarComboPrecios } from "./actions";
 import { tablaPrecios } from "@/lib/admin/precios-tabla";
 import { CamposCombo, TablaCombo, type DatosCombo } from "@/components/admin/combo-precios";
@@ -24,6 +25,8 @@ type Combo = {
   activo: boolean;
   inicio?: string | null;
   fin?: string | null;
+  principal_ram_gb?: number | null;
+  principal_almacenamiento_gb?: number | null;
   producto_principal_id: string;
   productos: { nombre: string } | null;
   bundle_items: {
@@ -60,7 +63,7 @@ type Producto = {
   nombre: string;
   estado: string;
   categorias: { slug: string } | null;
-  variantes: { id: string; color: string | null; precio: number; activo: boolean }[];
+  variantes: { id: string; color: string | null; precio: number; activo: boolean; ram_gb: number | null; almacenamiento_gb: number | null }[];
 };
 
 const ESTADO_CLASE = {
@@ -78,6 +81,7 @@ const describirCupon = (c: Cupon) =>
       : "Envío gratis";
 
 const SELECT_CB = "h-9 w-full rounded-md border bg-background px-2 text-sm";
+const valorPrincipal = (c: Combo) => `${c.producto_principal_id}|${c.principal_ram_gb ?? ""}|${c.principal_almacenamiento_gb ?? ""}`;
 
 /** Campos del combo (crear y editar): nombre, celular, accesorios, fechas y, si se pide, el ahorro */
 function CamposDatosCombo({
@@ -102,12 +106,12 @@ function CamposDatosCombo({
         </div>
         <div className="space-y-1">
           <Label htmlFor={`${pre}-principal`}>Producto principal</Label>
-          <select id={`${pre}-principal`} name="producto_principal_id" defaultValue={c?.producto_principal_id ?? ""} className={SELECT_CB}>
+          <select id={`${pre}-principal`} name="producto_principal_id" defaultValue={c ? valorPrincipal(c) : ""} className={SELECT_CB}>
             <option value="" disabled>
-              Elegí un celular o tablet
+              Elegí un celular o tablet (y la memoria)
             </option>
-            {c && !equipos.some((e) => e.id === c.producto_principal_id) ? (
-              <option value={c.producto_principal_id}>{c.productos?.nombre ?? "Producto actual"} (oculto)</option>
+            {c && !equipos.some((e) => e.id === valorPrincipal(c)) ? (
+              <option value={valorPrincipal(c)}>{c.productos?.nombre ?? "Producto actual"} (actual)</option>
             ) : null}
             {equipos.map((p) => (
               <option key={p.id} value={p.id}>
@@ -190,9 +194,12 @@ async function Contenido() {
     (async () => {
       const cols = (fechas: string) =>
         `id, nombre, descuento, activo, ${fechas}producto_principal_id, productos(nombre), bundle_items(variante_id, cantidad, variantes(precio, color, producto_id, ram_gb, almacenamiento_gb, productos(nombre)))`;
-      const r = await supabase.from("bundles").select(cols("inicio, fin, ")).order("created_at", { ascending: false });
-      // Sin la migración 0021 todavía no hay fechas en los combos
-      return r.error ? await supabase.from("bundles").select(cols("")).order("created_at", { ascending: false }) : r;
+      // Sin las migraciones 0021/0022 todavía no hay fechas ni memoria exacta en los combos
+      for (const extra of ["inicio, fin, principal_ram_gb, principal_almacenamiento_gb, ", "inicio, fin, "]) {
+        const r = await supabase.from("bundles").select(cols(extra)).order("created_at", { ascending: false });
+        if (!r.error) return r;
+      }
+      return await supabase.from("bundles").select(cols("")).order("created_at", { ascending: false });
     })(),
     supabase
       .from("cupones")
@@ -200,7 +207,7 @@ async function Contenido() {
       .eq("origen", "panel")
       .order("created_at", { ascending: false }),
     supabase.from("pedidos").select("cupon_id").not("cupon_id", "is", null).not("estado", "in", "(cancelado,devuelto)").limit(5000),
-    supabase.from("productos").select("id, nombre, estado, categorias(slug), variantes(id, color, precio, activo)").neq("estado", "oculto").order("nombre"),
+    supabase.from("productos").select("id, nombre, estado, categorias(slug), variantes(id, color, precio, activo, ram_gb, almacenamiento_gb)").order("nombre"),
     supabase.from("cupones").select("id", { count: "exact", head: true }).eq("origen", "cumple"),
     supabase
       .from("promociones")
@@ -224,6 +231,11 @@ async function Contenido() {
     if (!base) return null;
     const configs = filasPrecio
       .filter((f) => f.productoId === c.producto_principal_id && (f.precioVenta ?? 0) > 0)
+      .filter(
+        (f) =>
+          c.principal_almacenamiento_gb == null ||
+          ((f.ramGb ?? null) === (c.principal_ram_gb ?? null) && f.almacenamientoGb === c.principal_almacenamiento_gb)
+      )
       .map((f) => ({ productoId: f.productoId, ram: f.ramGb, alm: f.almacenamientoGb, memoria: f.memoria, precio: f.precioVenta ?? 0, costo: f.mejor?.costo ?? null }));
     if (!configs.length) return null;
     return {
@@ -257,8 +269,31 @@ async function Contenido() {
   const productos = (productosR.data ?? []) as unknown as Producto[];
   const usos = new Map<string, number>();
   for (const u of usosR.data ?? []) usos.set(u.cupon_id as string, (usos.get(u.cupon_id as string) ?? 0) + 1);
-  const equipos = productos.filter((p) => ["celulares", "tablets"].includes(p.categorias?.slug ?? ""));
+  // Producto principal del combo: cada celular o tablet (también los ocultos, para dejar el combo listo antes de
+  // publicarlo) con "cualquier memoria" o una memoria exacta. Valor: "producto|ram|almacenamiento".
+  const memoriaTexto = (ram: number | null, alm: number | null) =>
+    alm === null ? "" : ram === null ? formatoAlmacenamiento(alm) : `${ram} GB + ${formatoAlmacenamiento(alm)}`;
+  const equipos = productos
+    .filter((p) => ["celulares", "tablets", "celulares-basicos"].includes(p.categorias?.slug ?? ""))
+    .flatMap((p) => {
+      const oculto = p.estado === "oculto" ? " (oculto)" : "";
+      const mems = [
+        ...new Map(
+          p.variantes.filter((v) => v.almacenamiento_gb !== null).map((v) => [`${v.ram_gb ?? ""}|${v.almacenamiento_gb}`, v])
+        ).values(),
+      ].sort((a, b) => (a.almacenamiento_gb ?? 0) - (b.almacenamiento_gb ?? 0) || (a.ram_gb ?? 0) - (b.ram_gb ?? 0));
+      return [
+        { id: `${p.id}||`, nombre: `${p.nombre}${mems.length > 1 ? " · cualquier memoria" : ""}${oculto}` },
+        ...(mems.length > 1
+          ? mems.map((v) => ({
+              id: `${p.id}|${v.ram_gb ?? ""}|${v.almacenamiento_gb}`,
+              nombre: `${p.nombre} · solo ${memoriaTexto(v.ram_gb, v.almacenamiento_gb)}${oculto}`,
+            }))
+          : []),
+      ];
+    });
   const accesorios = productos
+    .filter((p) => p.estado !== "oculto")
     .filter((p) => !["celulares", "tablets"].includes(p.categorias?.slug ?? ""))
     .flatMap((p) =>
       p.variantes
@@ -398,7 +433,8 @@ async function Contenido() {
                             <span className={`ml-2 rounded-full px-2 py-0.5 text-xs font-medium ${ESTADO_CLASE[e]}`}>{e === "apagada" ? "apagado" : e === "activa" ? "activo" : e === "programada" ? "programado" : "terminado"}</span>
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            {c.productos?.nombre} +{" "}
+                            {c.productos?.nombre}
+                            {c.principal_almacenamiento_gb != null ? ` (solo ${memoriaTexto(c.principal_ram_gb ?? null, c.principal_almacenamiento_gb)})` : ""} +{" "}
                             {c.bundle_items
                               .map((i) => `${i.cantidad > 1 ? `${i.cantidad} × ` : ""}${[i.variantes?.productos?.nombre, i.variantes?.color].filter(Boolean).join(" ")}`)
                               .join(" + ")}

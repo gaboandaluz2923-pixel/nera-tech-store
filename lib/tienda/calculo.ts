@@ -254,6 +254,9 @@ type FilaCombo = {
   id: string;
   nombre: string;
   producto_principal_id: string;
+  /** Memoria exacta del celular (null = cualquiera) */
+  principal_ram_gb?: number | null;
+  principal_almacenamiento_gb?: number | null;
   descuento: number;
   bundle_items: {
     variante_id: string;
@@ -271,11 +274,12 @@ async function aplicarCombos(lineas: LineaCalculada[]): Promise<{ combos: ComboA
   const principales = [...new Set(lineas.map((l) => l.productoId))];
   if (!principales.length) return { combos: [], sugeridos: [] };
   const sb = clientePublico();
-  const { data, error } = await sb
-    .from("bundles")
-    .select("id, nombre, producto_principal_id, descuento, bundle_items(variante_id, cantidad, variantes(id, precio, activo, color, productos(nombre, estado)))")
-    .in("producto_principal_id", principales)
-    .gt("descuento", 0);
+  const cols = (mem: string) =>
+    `id, nombre, producto_principal_id, ${mem}descuento, bundle_items(variante_id, cantidad, variantes(id, precio, activo, color, productos(nombre, estado)))`;
+  const leer = (mem: string) => sb.from("bundles").select(cols(mem)).in("producto_principal_id", principales).gt("descuento", 0);
+  let { data, error } = await leer("principal_ram_gb, principal_almacenamiento_gb, ");
+  // Sin la migración 0022 los combos son para cualquier memoria
+  if (error) ({ data, error } = await leer(""));
   if (error) {
     console.error("No se pudieron leer los combos:", error.message);
     return { combos: [], sugeridos: [] };
@@ -283,17 +287,38 @@ async function aplicarCombos(lineas: LineaCalculada[]): Promise<{ combos: ComboA
   const filas = ((data ?? []) as unknown as FilaCombo[]).filter((b) => b.bundle_items.length);
   if (!filas.length) return { combos: [], sugeridos: [] };
 
-  // Unidades disponibles en el carrito
+  // Unidades disponibles en el carrito (y la memoria de cada una, para los combos de una memoria exacta)
   const porVariante = new Map(lineas.map((l) => [l.varianteId, l.cantidad]));
-  const porProducto = new Map<string, number>();
-  for (const l of lineas) porProducto.set(l.productoId, (porProducto.get(l.productoId) ?? 0) + l.cantidad);
+  const memorias = new Map<string, { ram: number | null; alm: number | null }>();
+  if (filas.some((b) => b.principal_ram_gb != null || b.principal_almacenamiento_gb != null)) {
+    const { data: vs } = await sb.from("variantes").select("id, ram_gb, almacenamiento_gb").in("id", lineas.map((l) => l.varianteId));
+    for (const v of vs ?? []) memorias.set(v.id as string, { ram: v.ram_gb as number | null, alm: v.almacenamiento_gb as number | null });
+  }
+  // Unidades del celular principal que todavía no se usaron en otro combo, por línea
+  const libres = new Map(lineas.map((l) => [l.varianteId, l.cantidad]));
+  const sirve = (b: FilaCombo, l: LineaCalculada) => {
+    if (l.productoId !== b.producto_principal_id) return false;
+    if (b.principal_ram_gb == null && b.principal_almacenamiento_gb == null) return true;
+    const m = memorias.get(l.varianteId);
+    return Boolean(m) && (m!.ram ?? null) === (b.principal_ram_gb ?? null) && (m!.alm ?? null) === (b.principal_almacenamiento_gb ?? null);
+  };
+  const principalesLibres = (b: FilaCombo) => lineas.filter((l) => sirve(b, l)).reduce((s, l) => s + (libres.get(l.varianteId) ?? 0), 0);
+  const usarPrincipales = (b: FilaCombo, n: number) => {
+    for (const l of lineas) {
+      if (n <= 0) break;
+      if (!sirve(b, l)) continue;
+      const toma = Math.min(n, libres.get(l.varianteId) ?? 0);
+      libres.set(l.varianteId, (libres.get(l.varianteId) ?? 0) - toma);
+      n -= toma;
+    }
+  };
   const precioLinea = new Map(lineas.map((l) => [l.varianteId, l.precio]));
 
   const combos: ComboAplicado[] = [];
   const sugeridos: ComboSugerido[] = [];
   const faltantesIds = new Set<string>();
   for (const b of [...filas].sort((a, c) => Number(c.descuento) - Number(a.descuento))) {
-    const principal = porProducto.get(b.producto_principal_id) ?? 0;
+    const principal = principalesLibres(b);
     // Si algún accesorio ya no se vende (oculto, inactivo o agotado), el combo no aplica
     const items = b.bundle_items.filter((i) => i.variantes?.activo && i.variantes.productos && i.variantes.productos.estado !== "agotado");
     if (!items.length || items.length !== b.bundle_items.length) continue;
@@ -303,7 +328,7 @@ async function aplicarCombos(lineas: LineaCalculada[]): Promise<{ combos: ComboA
       const valorItems = items.reduce((s, i) => s + (precioLinea.get(i.variante_id) ?? 0) * i.cantidad, 0);
       const descuento = redondear(Math.min(Number(b.descuento), valorItems) * veces);
       combos.push({ id: b.id, nombre: b.nombre, veces, descuento });
-      porProducto.set(b.producto_principal_id, principal - veces);
+      usarPrincipales(b, veces);
       for (const i of items) porVariante.set(i.variante_id, (porVariante.get(i.variante_id) ?? 0) - i.cantidad * veces);
     } else if (principal > 0) {
       const faltan = items

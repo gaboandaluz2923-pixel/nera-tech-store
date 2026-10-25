@@ -20,7 +20,7 @@ export function CombosInicio({ combos, descuentoSinTarjeta }: { combos: ComboIni
         {todosRegalo ? "Comprá el celular y el accesorio va gratis." : "Celular + accesorio con ahorro, en un solo clic."}
       </p>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {combos.map(({ producto: p, combo: c }) => {
+        {combos.map(({ producto: p, combo: c, precioDesde, memoria }) => {
           const valorItems = c.items.reduce((s, i) => s + i.precio * i.cantidad, 0);
           const ahorro = Math.min(c.ahorro, valorItems);
           const regalo = esRegalo(c);
@@ -48,7 +48,10 @@ export function CombosInicio({ combos, descuentoSinTarjeta }: { combos: ComboIni
                 </span>
               </div>
               <div className="min-w-0 flex-1">
-                <p className="leading-tight font-semibold">{p.nombre}</p>
+                <p className="leading-tight font-semibold">
+                  {p.nombre}
+                  {memoria && c.memoria ? <span className="font-normal text-muted-foreground"> {memoria}</span> : null}
+                </p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
                   + {accesorios} <span className="line-through">{usd2(valorItems)}</span>
                 </p>
@@ -58,11 +61,12 @@ export function CombosInicio({ combos, descuentoSinTarjeta }: { combos: ComboIni
                   </span>
                 </p>
                 <p className="mt-1 text-sm">
-                  Desde <strong>{usd2(p.precioDesde)}</strong>
+                  {memoria && c.memoria ? "" : "Desde "}
+                  <strong>{usd2(precioDesde)}</strong>
                   {descuentoSinTarjeta > 0 ? (
                     <span className="text-xs text-muted-foreground">
                       {" "}
-                      · {usd2(precioConDescuento(p.precioDesde, descuentoSinTarjeta))} en efectivo
+                      · {usd2(precioConDescuento(precioDesde, descuentoSinTarjeta))} en efectivo
                     </span>
                   ) : null}
                 </p>

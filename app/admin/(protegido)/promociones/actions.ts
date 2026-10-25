@@ -131,7 +131,9 @@ export async function guardarOferta(_prev: EstadoAccion, form: FormData): Promis
 /** Datos de un combo desde el formulario (crear o editar): nombre, celular, accesorios y fechas */
 async function leerDatosCombo(form: FormData, supabase: Awaited<ReturnType<typeof superAdmin>>["supabase"]) {
   const nombre = texto(form.get("nombre")).slice(0, 80);
-  const principal = texto(form.get("producto_principal_id"));
+  // "producto|ram|almacenamiento": memoria vacía = cualquier memoria
+  const [principal = "", ramT = "", almT = ""] = texto(form.get("producto_principal_id")).split("|");
+  const memoria = almT ? { principal_ram_gb: ramT ? Number(ramT) : null, principal_almacenamiento_gb: Number(almT) } : null;
   const items = [1, 2, 3]
     .map((i) => ({ variante_id: texto(form.get(`item_${i}`)), cantidad: Math.max(1, Math.min(3, Number(numero(form.get(`cantidad_${i}`)) ?? 1))) }))
     .filter((i) => i.variante_id);
@@ -146,7 +148,7 @@ async function leerDatosCombo(form: FormData, supabase: Awaited<ReturnType<typeo
   const { data: precios } = await supabase.from("variantes").select("id, precio, producto_id").in("id", items.map((i) => i.variante_id));
   if ((precios ?? []).some((v) => v.producto_id === principal)) return { error: "El producto principal no puede ser también accesorio del combo." };
   const valor = items.reduce((s, i) => s + Number(precios?.find((v) => v.id === i.variante_id)?.precio ?? 0) * i.cantidad, 0);
-  return { nombre, principal, items, inicio, fin, valor };
+  return { nombre, principal, memoria, items, inicio, fin, valor };
 }
 
 const fechasCombo = (inicio: string | null, fin: string | null) => ({ inicio, fin });
@@ -163,7 +165,14 @@ export async function crearCombo(_prev: EstadoAccion, form: FormData): Promise<E
   const fechas = d.inicio || d.fin ? fechasCombo(d.inicio, d.fin) : {};
   const { data, error } = await supabase
     .from("bundles")
-    .insert({ nombre: d.nombre, producto_principal_id: d.principal, descuento: Math.round(ahorro * 100) / 100, activo: true, ...fechas })
+    .insert({
+      nombre: d.nombre,
+      producto_principal_id: d.principal,
+      descuento: Math.round(ahorro * 100) / 100,
+      activo: true,
+      ...fechas,
+      ...(d.memoria ?? {}),
+    })
     .select("id")
     .single();
   if (error) return falla(`No se pudo crear: ${error.message}`);
@@ -194,7 +203,16 @@ export async function editarCombo(_prev: EstadoAccion, form: FormData): Promise<
     );
   const { error } = await supabase
     .from("bundles")
-    .update({ nombre: d.nombre, producto_principal_id: d.principal, descuento: Math.round(ahorro * 100) / 100, activo, inicio: d.inicio, fin: d.fin })
+    .update({
+      nombre: d.nombre,
+      producto_principal_id: d.principal,
+      descuento: Math.round(ahorro * 100) / 100,
+      activo,
+      inicio: d.inicio,
+      fin: d.fin,
+      principal_ram_gb: d.memoria?.principal_ram_gb ?? null,
+      principal_almacenamiento_gb: d.memoria?.principal_almacenamiento_gb ?? null,
+    })
     .eq("id", id);
   if (error) return falla(`No se pudo guardar: ${error.message}`);
   // Accesorios: se reemplazan por los elegidos
